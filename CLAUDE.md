@@ -73,12 +73,12 @@ Node 24; if `node --version` shows another major version, run `export PATH=/usr/
 - In cloud sessions, GitHub's GraphQL API is blocked, so `gh pr ...` commands fail. Use the
   built-in GitHub tools, or the REST API through `gh api`. Write the path first, exactly as below
   (the permission rules match on it):
-  - open: `gh api repos/__REPO__/pulls -f title=... -f head=<branch> -f base=main -f body=...`
+  - open: `gh api repos/Mosaic-Foundation/river/pulls -f title=... -f head=<branch> -f base=main -f body=...`
     (fill `body` from `.github/pull_request_template.md`; REST doesn't apply the template)
-  - check CI: `gh api repos/__REPO__/commits/<head-sha>/check-runs`
-  - merge: `gh api repos/__REPO__/pulls/<n>/merge -X PUT -f merge_method=squash`
-  - label: `gh api repos/__REPO__/issues/<n>/labels -f "labels[]=needs-adam"`
-  - branch behind `main`: `gh api repos/__REPO__/pulls/<n>/update-branch -X PUT`, then wait for
+  - check CI: `gh api repos/Mosaic-Foundation/river/commits/<head-sha>/check-runs`
+  - merge: `gh api repos/Mosaic-Foundation/river/pulls/<n>/merge -X PUT -f merge_method=squash`
+  - label: `gh api repos/Mosaic-Foundation/river/issues/<n>/labels -f "labels[]=needs-adam"`
+  - branch behind `main`: `gh api repos/Mosaic-Foundation/river/pulls/<n>/update-branch -X PUT`, then wait for
     `ci` to pass again on the new head commit
   The repo ruleset refuses a merge until `ci` passes on an up-to-date branch, so wait rather than
   retrying. Never call endpoints for rulesets, settings, secrets, environments or deletes.

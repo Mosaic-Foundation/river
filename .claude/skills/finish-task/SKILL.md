@@ -24,6 +24,6 @@ description: Steps to take a completed task from working branch to merged PR in 
    - Otherwise wait for the `ci` check to pass on the PR's head commit, then squash-merge it.
      If CI fails, fix the cause and push again.
 8. If the PR added migrations, after the merge check the `deploy-migrations` run with
-   `gh api repos/__REPO__/actions/runs?branch=main&per_page=5` and report its result.
+   `gh api repos/Mosaic-Foundation/river/actions/runs?branch=main&per_page=5` and report its result.
 9. In your final message: what changed, the check summary lines, the PR link, and whether it
    merged or is waiting on Adam.

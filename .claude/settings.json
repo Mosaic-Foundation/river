@@ -49,10 +49,10 @@
       "Bash(git push -u origin claude/*)",
       "Bash(git push origin HEAD*)",
       "Bash(git push -u origin HEAD*)",
-      "Bash(gh api repos/__REPO__/pulls*)",
-      "Bash(gh api repos/__REPO__/commits/*)",
-      "Bash(gh api repos/__REPO__/issues/*)",
-      "Bash(gh api repos/__REPO__/actions/runs*)"
+      "Bash(gh api repos/Mosaic-Foundation/river/pulls*)",
+      "Bash(gh api repos/Mosaic-Foundation/river/commits/*)",
+      "Bash(gh api repos/Mosaic-Foundation/river/issues/*)",
+      "Bash(gh api repos/Mosaic-Foundation/river/actions/runs*)"
     ],
     "deny": [
       "Read(./.env)",
@@ -79,7 +79,7 @@
       "Bash(gh api *actions/permissions*)",
       "Bash(gh api *-X DELETE*)",
       "Bash(gh api *--method DELETE*)",
-      "Bash(gh api *-X PATCH repos/__REPO__ *)",
+      "Bash(gh api *-X PATCH repos/Mosaic-Foundation/river *)",
       "Bash(gh repo *)",
       "Bash(gh secret *)",
       "Bash(gh variable *)"
