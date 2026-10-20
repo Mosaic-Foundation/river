@@ -22,7 +22,7 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 ## M1 Schemas and access: roles, river tables with forced RLS, seed instance, isolation proven — 2026-10-20
 
-- Branch / PR: claude/vibrant-keller-6qnr0g → PR (needs-adam: roles, row-level security, `.github/`, `supabase/seed.sql`)
+- Branch / PR: claude/vibrant-keller-6qnr0g → #3 (needs-adam: roles, row-level security, `.github/`, `supabase/seed.sql`)
 - Migrations: `20261020213532_roles_and_schemas.sql`, `20261020213534_river_tables.sql`,
   `20261020213536_seed_instance.sql`; `supabase/seed.sql` (local and CI only)
 
