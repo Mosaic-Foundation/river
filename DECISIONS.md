@@ -26,6 +26,18 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-20 — The identity host's Vercel project is mosaic-id
+- Decision: the identity host deploys as the Vercel project `mosaic-id` (Root Directory
+  `identity/`), not `river-identity`. The River's project stays `river`. ADR-006, spec Appendix A
+  and hand-off 3.2 still say `river-identity`; read that name as `mosaic-id`.
+- Why: Adam's call (2026-10-20). The identity service will stand apart from the River long term
+  (ADR-006 already plans for it to move or be replaced without touching River code), so its
+  project carries the Mosaic name. Nothing in the code depends on the project name.
+- Alternatives: `river-identity`, as ADR-006 names it.
+- Proposed change: update the project name in ADR-006 and spec Appendix A when they're next
+  revised (an ADR change is `needs-adam`).
+- Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n)
+
 ## 2026-10-20 — Local Supabase runs only Postgres
 - Decision: `supabase/config.toml` turns off the Data API, Auth, Storage, Realtime, Studio, mail
   capture, edge runtime and analytics; `npx supabase start` runs just the database.

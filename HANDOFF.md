@@ -27,7 +27,7 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 **What it does.** `createApp("river" | "identity")` mounts only that side's routes; `/health`
 returns `{ ok: true, app }` with no database. `src/river/`, `src/identity/` and `src/shared/` each
-have an index and a placeholder route. `identity/` is the `river-identity` Vercel project (its own
+have an index and a placeholder route. `identity/` is the `mosaic-id` Vercel project (its own
 `vercel.json` and `api/index.ts`, static `public/passkey.js` bundled from `src/identity/client/`).
 supabase-js is gone: `src/db/pool.ts` (lazy, `max: 3`) and `src/db/context.ts` (forInstance,
 forAccount, forIdentity: transaction plus `set_config` with bind parameters) are the only `pg`
@@ -47,7 +47,7 @@ themes and no off-origin requests. `npm run check`: Test Files 6 passed (6), Tes
 UI built. `npm run test:e2e`: 5 passed.
 
 ### Follow-ups
-- Adam: create the `river-identity` Vercel project (Root Directory `identity/`) and confirm
+- Adam created the identity Vercel project as `mosaic-id` (Root Directory `identity/`); confirm
   `/health` on both previews. If its first build shows CommonJS errors, add
   `identity/package.json` with `{"private": true, "type": "module"}` (hand-off 3.2).
 - The session's local Supabase stack could not start: Docker Hub answered 429, public.ecr.aws
