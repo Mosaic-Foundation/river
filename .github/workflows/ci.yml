@@ -65,14 +65,27 @@ jobs:
         run: |
           if [ -f supabase/config.toml ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
 
+      # Applies supabase/migrations/ and then supabase/seed.sql, which makes river_app and
+      # identity_app LOGIN roles with the password local-only.
       - name: Start local Supabase
         if: steps.db.outputs.present == 'true'
         run: |
           npx supabase start
           npx supabase status
 
+      # Fails early, and plainly, if either role can't log in or has a way around row-level security.
+      - name: Connect as each app role
+        if: steps.db.outputs.present == 'true'
+        run: |
+          for role in river_app identity_app; do
+            got=$(psql "postgresql://$role:local-only@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -At -c \
+              "SELECT current_user, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user")
+            echo "$got"
+            [ "$got" = "$role|f|f" ] || { echo "$role is not a plain LOGIN role without BYPASSRLS"; exit 1; }
+          done
+
       # Local values only, written fresh for each run. Both apps connect as their own role on the
-      # local stack (the roles and their local-only passwords arrive in M1 with supabase/seed.sql).
+      # local stack (supabase/seed.sql sets the local-only passwords).
       # Secrets are generated per run and masked. The UI is served on 4173 below.
       - name: Write .env and .env.identity
         run: |
@@ -123,8 +136,13 @@ jobs:
             if [ "$ok" != true ]; then cat /tmp/api.log /tmp/identity.log; exit 1; fi
           done
 
+      # Includes tests/api/db/, which connects as river_app and identity_app (never postgres) to
+      # prove row-level security and schema isolation (acceptance check 27).
       - name: API tests
         if: steps.db.outputs.present == 'true' && hashFiles('tests/api/**/*.test.ts') != ''
+        env:
+          TEST_RIVER_DATABASE_URL: postgresql://river_app:local-only@127.0.0.1:54322/postgres
+          TEST_IDENTITY_DATABASE_URL: postgresql://identity_app:local-only@127.0.0.1:54322/postgres
         run: npm run test:api || (cat /tmp/api.log /tmp/identity.log; exit 1)
 
       # End-to-end against the production UI bundle (vite preview proxies /api like dev).

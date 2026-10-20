@@ -16,7 +16,7 @@
 ```bash
 npm run check                     # lint, typecheck, unit, UI lint + build
 npx supabase start                # once per session, for API and e2e tests
-npm run dev & npm run test:api    # API tests
+npm run dev & npm run test:api    # API tests, including tests/api/db/ (as river_app, identity_app)
 npm run test:e2e                  # starts the API, the identity host and the UI itself
 npm run test:live                 # @live tests against real hosts; never in check or CI
 ```
@@ -25,6 +25,16 @@ npm run test:live                 # @live tests against real hosts; never in che
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-20, M1: API (database) `db/catalog` (roles have no SUPERUSER, BYPASSRLS, CREATEROLE,
+  CREATEDB or REPLICATION; each has USAGE on its own schema only; river tables match
+  `src/db/tables.ts`, all with ENABLE + FORCE RLS and river_app-only policies; seed instance and
+  its lists; river_app can't write config) and `db/isolation` (check 27, all as river_app:
+  members see only their own follows, circles, circle members, read state, preferences and
+  account; can't read, change, delete or write the other's; plain SQL refused by RLS alone;
+  instance context sees no personal rows; cross-instance refused by policy and composite key; no
+  rows outside a context; river_app denied the identity schema, identity_app the river schema).
+  Unit `dbContext` grows stamping, refusal, uuid ids; `dbPool` grows TLS rules. Unit 48, API 19,
+  e2e 5. Mutation check: weakening the follows policy or dropping FORCE on one table fails 6.
 - 2026-10-20, M0: unit `health` (both apps, no DATABASE_URL), `env`, `dbContext`, `dbPool`,
   `vercelHandler`, `lintBoundaries`; e2e `apps` (both /health, identity page and passkey.js),
   `themes` (default Mosaic, Civic tokens, self-hosted fonts, no off-origin requests). Unit 35,

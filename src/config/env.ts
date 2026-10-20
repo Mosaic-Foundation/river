@@ -63,6 +63,18 @@ export const env = {
   get databaseUrl(): string {
     return requireEnv("DATABASE_URL");
   },
+  /**
+   * PEM certificate of the CA that signed the database server's certificate, for when Node's own
+   * store doesn't hold it (Supabase: Dashboard → Database → SSL Configuration). Optional; TLS is
+   * verified either way (src/db/pool.ts). A value pasted with literal `\n`s is accepted.
+   */
+  get databaseCaCert(): string | undefined {
+    const value = envVar("DATABASE_CA_CERT")?.replaceAll("\\n", "\n");
+    if (value !== undefined && !value.includes("-----BEGIN CERTIFICATE-----")) {
+      throw new Error("DATABASE_CA_CERT must be a PEM certificate (-----BEGIN CERTIFICATE-----)");
+    }
+    return value;
+  },
   /** Signs each app's own session cookie. */
   get sessionSecret(): string {
     return requireEnv("SESSION_SECRET");
