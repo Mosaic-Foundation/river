@@ -17,11 +17,15 @@
 npm run check                     # lint, typecheck, unit, UI lint + build
 npx supabase start                # once per session, for API and e2e tests
 npm run dev & npm run test:api    # API tests
-npm run test:e2e                  # starts both dev servers itself
+npm run test:e2e                  # starts the API, the identity host and the UI itself
+npm run test:live                 # @live tests against real hosts; never in check or CI
 ```
 
 ## Log
 
 Newest first: date, slice, tests added, counts.
 
-<!-- none yet -->
+- 2026-10-20, M0: unit `health` (both apps, no DATABASE_URL), `env`, `dbContext`, `dbPool`,
+  `vercelHandler`, `lintBoundaries`; e2e `apps` (both /health, identity page and passkey.js),
+  `themes` (default Mosaic, Civic tokens, self-hosted fonts, no off-origin requests). Unit 35,
+  e2e 5. No API tests yet (they arrive with the first endpoints that use the database).
