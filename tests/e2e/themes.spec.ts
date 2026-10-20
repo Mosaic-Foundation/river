@@ -6,6 +6,19 @@ async function token(page: Page, name: string): Promise<string> {
   return page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
 }
 
+// The browser's computed box-shadow for a token: normalized, so it doesn't depend on how the
+// production build minified the CSS (e.g. rgba(20, 51, 95, 0.08) becomes #14335f14).
+async function computedShadow(page: Page, name: string): Promise<string> {
+  return page.evaluate((n) => {
+    const probe = document.createElement("div");
+    probe.style.boxShadow = `var(${n})`;
+    document.body.append(probe);
+    const value = getComputedStyle(probe).boxShadow;
+    probe.remove();
+    return value;
+  }, name);
+}
+
 // Asks the browser to load the given faces (from the theme's @font-face rules), then lists the
 // families that loaded, so the check doesn't race a theme switch.
 async function loadedFamilies(page: Page, faces: string[]): Promise<string[]> {
@@ -29,7 +42,7 @@ test("Mosaic is the default theme, Civic swaps the tokens, fonts are self-hosted
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   expect(await page.locator("html").getAttribute("data-theme")).toBe("mosaic");
   expect(await token(page, "--color-primary")).toBe("#14335f");
-  expect(await token(page, "--shadow-card")).toBe("0 6px 24px rgba(20, 51, 95, 0.08)");
+  expect(await computedShadow(page, "--shadow-card")).toBe("rgba(20, 51, 95, 0.08) 0px 6px 24px 0px");
   expect(await loadedFamilies(page, ['16px "Nunito Sans Variable"', '16px "Newsreader Variable"'])).toEqual(
     expect.arrayContaining(["Nunito Sans Variable", "Newsreader Variable"]),
   );
