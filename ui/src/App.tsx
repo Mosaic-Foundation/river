@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-// Placeholder screen. The first thread replaces it with the app's real shell.
+// Placeholder screen until M6 builds the River's shell from the mockups.
 export default function App() {
   const [status, setStatus] = useState("checking");
 
@@ -13,7 +13,7 @@ export default function App() {
 
   return (
     <main>
-      <h1>App</h1>
+      <h1>Mosaic River</h1>
       <p data-testid="api-status">API: {status}</p>
     </main>
   );

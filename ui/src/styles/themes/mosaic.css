@@ -1,0 +1,75 @@
+/*
+ * Mosaic theme: the River's default (decisions log rows 19-20). Matches mosaic.social: navy,
+ * blue and gold on white, Newsreader headings, Nunito Sans body. Values come from Mosaic-Social
+ * client/src/index.css (docs/reuse/mosaic-social/). Fonts are self-hosted through Fontsource
+ * (OFL), so the browser makes no font requests to Google.
+ *
+ * Components use only the semantic tokens below (--color-*, --font-*, --radius-*, --shadow-*,
+ * --space-*, --font-size-*); civic.css redefines the same names. Active on <html> by default
+ * and with data-theme="mosaic".
+ */
+@import "@fontsource-variable/newsreader";
+@import "@fontsource-variable/nunito-sans";
+
+:root,
+[data-theme="mosaic"] {
+  /* Palette: the six logo facets plus neutrals */
+  --mosaic-navy: #14335f;
+  --mosaic-navy-deep: #0e2547;
+  --mosaic-blue: #2f6fa8;
+  --mosaic-sky: #5a9bd0;
+  --mosaic-sky-soft: #dceaf6;
+  --mosaic-gold: #f6b42c;
+  --mosaic-gold-soft: #fdf0d2;
+  --mosaic-red: #8c1d26;
+  --mosaic-ink: #2e3138;
+  --mosaic-slate: #5b6270;
+  --mosaic-mist: #f3f5f8;
+  --mosaic-line: #dfe4eb;
+  --mosaic-white: #ffffff;
+
+  /* Semantic tokens */
+  --color-bg: var(--mosaic-white);
+  --color-surface: var(--mosaic-white);
+  --color-surface-alt: var(--mosaic-mist);
+  --color-text: var(--mosaic-ink);
+  --color-text-muted: var(--mosaic-slate);
+  --color-heading: var(--mosaic-navy);
+  --color-primary: var(--mosaic-navy);
+  --color-primary-hover: var(--mosaic-navy-deep);
+  --color-on-primary: var(--mosaic-white);
+  --color-link: var(--mosaic-blue);
+  --color-accent: var(--mosaic-gold);
+  --color-accent-soft: var(--mosaic-gold-soft);
+  --color-info-soft: var(--mosaic-sky-soft);
+  --color-danger: var(--mosaic-red);
+  --color-border: var(--mosaic-line);
+  --color-focus: var(--mosaic-blue);
+  --color-selection: var(--mosaic-gold-soft);
+
+  --font-heading: "Newsreader Variable", "Newsreader", Georgia, "Times New Roman", serif;
+  --font-body: "Nunito Sans Variable", "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-weight-heading: 500;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 9999px;
+  --shadow-card: 0 6px 24px rgba(20, 51, 95, 0.08);
+
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1.0625rem;
+  --font-size-lg: 1.1875rem;
+  --font-size-xl: 1.375rem;
+  --font-size-2xl: 1.75rem;
+  --font-size-3xl: 2.25rem;
+  --line-height-tight: 1.15;
+  --line-height-normal: 1.65;
+
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+}
