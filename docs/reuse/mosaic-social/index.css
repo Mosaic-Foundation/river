@@ -1,0 +1,103 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* Mosaic Foundation design tokens. Colors come from the six logo facets. */
+@theme inline {
+  --color-navy: #14335F;
+  --color-navy-deep: #0E2547;
+  --color-blue: #2F6FA8;
+  --color-sky: #5A9BD0;
+  --color-sky-soft: #DCEAF6;
+  --color-gold: #F6B42C;
+  --color-gold-soft: #FDF0D2;
+  --color-red: #8C1D26;
+  --color-ink: #2E3138;
+  --color-slate: #5B6270;
+  --color-mist: #F3F5F8;
+  --color-line: #DFE4EB;
+
+  /* Semantic aliases used by the remaining shared components */
+  --color-background: #FFFFFF;
+  --color-foreground: #2E3138;
+  --color-primary: #14335F;
+  --color-primary-foreground: #FFFFFF;
+  --color-secondary: #5A9BD0;
+  --color-secondary-foreground: #14335F;
+  --color-muted: #F3F5F8;
+  --color-muted-foreground: #5B6270;
+  --color-accent: #F6B42C;
+  --color-accent-foreground: #14335F;
+  --color-border: #DFE4EB;
+  --color-input: #DFE4EB;
+  --color-ring: #2F6FA8;
+  --color-mosaic-blue: #2F6FA8;
+  --color-mosaic-gold: #F6B42C;
+
+  --font-sans: "Nunito Sans Variable", "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-heading: "Newsreader Variable", "Newsreader", Georgia, "Times New Roman", serif;
+  --font-serif: "Newsreader Variable", "Newsreader", Georgia, "Times New Roman", serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply font-sans antialiased bg-background text-ink;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    color: var(--color-navy);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+  p { text-wrap: pretty; }
+  a { text-underline-offset: 3px; }
+  :focus-visible {
+    outline: 3px solid var(--color-blue);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  ::selection { background: var(--color-gold-soft); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.font-heading { font-family: var(--font-heading); }
+
+/* Long-form text (archive page) */
+.prose-mosaic p { margin: 0 0 1.15em; }
+.prose-mosaic h2 { font-size: 1.75rem; margin: 2.2em 0 0.7em; }
+.prose-mosaic h3 { font-size: 1.3rem; margin: 1.8em 0 0.5em; }
+.prose-mosaic h4 { font-size: 1.1rem; margin: 1.5em 0 0.4em; }
+.prose-mosaic ul, .prose-mosaic ol { margin: 0.5em 0 1.2em 1.4em; list-style: disc; }
+.prose-mosaic ol { list-style: decimal; }
+.prose-mosaic li { margin: 0.3em 0; }
+.prose-mosaic blockquote { margin: 1.4em 0; padding: 0.8em 1.1em; border-left: 4px solid var(--color-sky); background: var(--color-mist); }
+
+/* Hex tiles settle in once on load */
+@keyframes hex-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.hex-tile { animation: hex-in 500ms ease-out both; }
+
+/* Foundation mission over Earthrise: a fade on desktop, an even tint on phones where text covers the Earth */
+.mission-bg { --mission-overlay: linear-gradient(rgba(14,37,71,0.88), rgba(14,37,71,0.88)); }
+@media (min-width: 768px) {
+  .mission-bg { --mission-overlay: linear-gradient(90deg, rgba(14,37,71,0.97) 0%, rgba(14,37,71,0.85) 45%, rgba(14,37,71,0.15) 80%); }
+}

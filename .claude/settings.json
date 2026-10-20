@@ -59,6 +59,7 @@
       "Read(./.env.local)",
       "Read(./.env.production)",
       "Read(./.env.*.local)",
+      "Read(./.env.identity)",
       "Bash(git push --force *)",
       "Bash(git push -f *)",
       "Bash(git push *--force*)",
