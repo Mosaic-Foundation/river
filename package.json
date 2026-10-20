@@ -10,7 +10,9 @@
   },
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "dev:identity": "APP=identity tsx watch --env-file-if-exists=.env.identity src/index.ts",
     "build": "tsc",
+    "build:identity-client": "esbuild src/identity/client/passkey.ts --bundle --format=esm --target=es2022 --minify --outfile=identity/public/passkey.js",
     "typecheck": "tsc -p tsconfig.check.json",
     "start": "node dist/index.js",
     "lint": "eslint",
@@ -19,17 +21,21 @@
     "test:api": "vitest run tests/api",
     "test:watch": "vitest",
     "test:e2e": "npx playwright test",
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "record-fixtures": "tsx scripts/record-fixtures.ts",
     "check": "npm run lint && npm run typecheck && npm run test:unit && npm run lint --prefix ui && npm run build --prefix ui"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.103.3",
-    "express": "^4.22.3"
+    "express": "^4.22.3",
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
     "@types/express": "^4.17.25",
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
     "@typescript-eslint/parser": "^8.70.1",
+    "esbuild": "0.28.2",
     "eslint": "^9.39.5",
     "supabase": "2.121.0",
     "tsx": "^4.19.0",

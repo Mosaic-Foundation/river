@@ -1,0 +1,67 @@
+/*
+ * Civic theme: used by Civic mode and civic web addresses (decisions log row 19). The green
+ * American Landscape palette, Libre Franklin headings and Inter body, from Civic.Social's
+ * canonical tokens.css (docs/reuse/design-system/tokens-american-landscape.css). Fonts are
+ * self-hosted through Fontsource (OFL), so the browser makes no font requests to Google.
+ *
+ * Redefines the semantic tokens from mosaic.css; active with data-theme="civic" on <html>.
+ * Imported after mosaic.css, so it wins at equal specificity.
+ */
+@import "@fontsource/libre-franklin/400.css";
+@import "@fontsource/libre-franklin/600.css";
+@import "@fontsource/libre-franklin/700.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+
+[data-theme="civic"] {
+  /* Palette: American Landscape primitives and their washes */
+  --civic-green: #386759;
+  --civic-green-hover: #2e564a;
+  --civic-green-wash: #e3ebe8;
+  --civic-teal: #294b52;
+  --civic-rust: #c37b51;
+  --civic-rust-wash: #f4e1d2;
+  --civic-yellow: #edc572;
+  --civic-yellow-wash: #faf0db;
+  --civic-cream: #f0ebe1;
+  --civic-cream-raise: #ffffff;
+  --civic-cream-sink: #e8e2d4;
+
+  /* Semantic tokens */
+  --color-bg: var(--civic-cream);
+  --color-surface: var(--civic-cream-raise);
+  --color-surface-alt: var(--civic-cream-sink);
+  --color-text: var(--civic-teal);
+  --color-text-muted: #5a6b6e;
+  --color-heading: var(--civic-teal);
+  --color-primary: var(--civic-green);
+  --color-primary-hover: var(--civic-green-hover);
+  --color-on-primary: var(--civic-cream-raise);
+  --color-link: var(--civic-green);
+  --color-accent: var(--civic-rust);
+  --color-accent-soft: var(--civic-rust-wash);
+  --color-info-soft: var(--civic-green-wash);
+  --color-danger: #a03a2a;
+  --color-border: var(--civic-cream-sink);
+  --color-focus: var(--civic-teal);
+  --color-selection: var(--civic-yellow-wash);
+
+  --font-heading: "Libre Franklin", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-weight-heading: 600;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --shadow-card: 0 1px 2px rgba(41, 75, 82, 0.06);
+
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+}

@@ -1,18 +1,67 @@
 /*
- * App theme. Like the Civic Hub, the design system is VENDORED, not installed:
- * ops/new-project.sh copies Civic-Social-Mono/shared/design-system/src/{tokens,base,components}.css
- * into ./design-system/, and this file maps --ds-* tokens to app names when needed.
- * Until those files exist, the imports below are commented out so the build stays green.
+ * App base styles. No design system is vendored (build hand-off decision, 2026-10-20): the River
+ * uses its own themes in ./themes/. mosaic.css is the default; civic.css applies with
+ * data-theme="civic" on <html> (Civic mode, M10). Use the semantic tokens; don't hard-code colors
+ * or sizes. The template's design-system imports stay commented out.
  */
 /* @import "./design-system/tokens.css"; */
 /* @import "./design-system/base.css"; */
 /* @import "./design-system/components.css"; */
+@import "./themes/mosaic.css";
+@import "./themes/civic.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-heading);
+  color: var(--color-heading);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+a {
+  color: var(--color-link);
+  text-underline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: var(--color-selection);
 }
 
 main {
-  padding: 2rem;
+  padding: var(--space-xl);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

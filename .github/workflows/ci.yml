@@ -58,35 +58,74 @@ jobs:
           npm run lint
           npm run build
 
-      # API tests need a database. They run once supabase/config.toml exists (the first
-      # thread creates it with `npx supabase init`). The CLI version comes from package.json.
+      # API tests need a database. supabase/config.toml (from `npx supabase init`) turns them on;
+      # config.toml runs only Postgres. The CLI version comes from package.json.
       - name: Detect database
         id: db
         run: |
           if [ -f supabase/config.toml ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
 
-      - name: Start local Supabase and export its keys
+      - name: Start local Supabase
         if: steps.db.outputs.present == 'true'
         run: |
           npx supabase start
-          status=$(npx supabase status -o json 2>/dev/null)
-          url=$(printf '%s' "$status" | jq -r '.API_URL // empty')
-          key=$(printf '%s' "$status" | jq -r '.SERVICE_ROLE_KEY // .SECRET_KEY // empty')
-          test -n "$url" || { echo "No API_URL in supabase status output"; exit 1; }
-          test -n "$key" || { echo "No SERVICE_ROLE_KEY or SECRET_KEY in supabase status output"; exit 1; }
-          echo "::add-mask::$key"
-          echo "SUPABASE_URL=$url" >> "$GITHUB_ENV"
-          echo "SUPABASE_SERVICE_ROLE_KEY=$key" >> "$GITHUB_ENV"
+          npx supabase status
 
-      - name: Start the API
+      # Local values only, written fresh for each run. Both apps connect as their own role on the
+      # local stack (the roles and their local-only passwords arrive in M1 with supabase/seed.sql).
+      # Secrets are generated per run and masked. The UI is served on 4173 below.
+      - name: Write .env and .env.identity
         run: |
+          river_session=$(openssl rand -hex 32)
+          identity_session=$(openssl rand -hex 32)
+          master_key=$(openssl rand -base64 32)
+          echo "::add-mask::$river_session"
+          echo "::add-mask::$identity_session"
+          echo "::add-mask::$master_key"
+          cat > .env <<EOF
+          APP=river
+          PORT=3000
+          DATABASE_URL=postgresql://river_app:local-only@127.0.0.1:54322/postgres
+          SESSION_SECRET=$river_session
+          RIVER_PUBLIC_ORIGIN=http://localhost:4173
+          IDENTITY_ORIGIN=http://localhost:3001
+          TRUSTED_DID_HOSTS=localhost
+          INSTANCE_HOST_ALIASES=localhost,127.0.0.1
+          FETCH_FIXTURES_DIR=tests/fixtures/http
+          TEST_ROUTES=1
+          EOF
+          cat > .env.identity <<EOF
+          APP=identity
+          PORT=3001
+          DATABASE_URL=postgresql://identity_app:local-only@127.0.0.1:54322/postgres
+          SESSION_SECRET=$identity_session
+          IDENTITY_MASTER_KEY=$master_key
+          RP_ID=localhost
+          IDENTITY_PUBLIC_ORIGIN=http://localhost:3001
+          RIVER_CLIENT_ORIGINS=http://localhost:5173,http://localhost:4173
+          EMAIL_TRANSPORT=capture
+          EMAIL_FROM="Mosaic ID <id@localhost>"
+          FETCH_FIXTURES_DIR=tests/fixtures/http
+          TEST_ROUTES=1
+          EOF
+
+      - name: Start the River API and the identity host
+        run: |
+          npm run build:identity-client
           npm run dev > /tmp/api.log 2>&1 &
-          for i in $(seq 1 30); do curl -sf http://localhost:3000/health && exit 0; sleep 1; done
-          cat /tmp/api.log; exit 1
+          npm run dev:identity > /tmp/identity.log 2>&1 &
+          for port in 3000 3001; do
+            ok=false
+            for i in $(seq 1 30); do
+              if curl -sf "http://localhost:$port/health"; then ok=true; echo; break; fi
+              sleep 1
+            done
+            if [ "$ok" != true ]; then cat /tmp/api.log /tmp/identity.log; exit 1; fi
+          done
 
       - name: API tests
         if: steps.db.outputs.present == 'true' && hashFiles('tests/api/**/*.test.ts') != ''
-        run: npm run test:api || (cat /tmp/api.log; exit 1)
+        run: npm run test:api || (cat /tmp/api.log /tmp/identity.log; exit 1)
 
       # End-to-end against the production UI bundle (vite preview proxies /api like dev).
       - name: End-to-end tests
@@ -94,7 +133,7 @@ jobs:
           npx playwright install --with-deps chromium
           npm run preview --prefix ui -- --port 4173 --strictPort > /tmp/ui.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:4173 > /dev/null && break; sleep 1; done
-          E2E_BASE_URL=http://localhost:4173 npx playwright test || (cat /tmp/api.log /tmp/ui.log; exit 1)
+          E2E_BASE_URL=http://localhost:4173 E2E_IDENTITY_URL=http://localhost:3001 npx playwright test || (cat /tmp/api.log /tmp/identity.log /tmp/ui.log; exit 1)
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
