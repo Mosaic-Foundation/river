@@ -26,6 +26,8 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   `forHost()`, which can read `instances` and nothing else (every other river policy requires
   `app.instance_id`).
 - Proposed change: CLAUDE.md constraint 2 names that fourth helper.
+- Resolved (Adam, 2026-10-20): approved. `forHost()` may read `river.instances` and nothing else.
+  The M6 PR amends CLAUDE.md constraint 2 to name it (that PR is `needs-adam`).
 - Thread / PR: M1 (claude/vibrant-keller-6qnr0g)
 
 ### 2026-10-20 — Shared tables still need an instance setting
@@ -35,6 +37,7 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   `app.instance_id` to be set. A query that skips forInstance()/forAccount() sees no rows at all,
   which makes a missed wrapper show up in tests instead of silently working.
 - Proposed change: spec 3 adds "inside an instance context".
+- Resolved (Adam, 2026-10-20): agreed; keep requiring `app.instance_id` on shared tables.
 - Thread / PR: M1
 
 ### 2026-10-20 — Which settings forIdentity() sets
@@ -131,6 +134,8 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   certificate chains to a CA in Node's store is not verified from this session (no hosted
   access); if the first hosted query fails with "self-signed certificate in certificate chain",
   set `DATABASE_CA_CERT` from Dashboard > Database > SSL Configuration.
+  Update (Adam, 2026-10-20): Supabase's verify-full needs its own CA, so Adam sets
+  `DATABASE_CA_CERT` on both Vercel projects (`river` and `mosaic-id`) from the start.
 - Alternatives: `rejectUnauthorized: false` (anyone on the path could read the role password and
   every row); leaving it to pg's URL parsing (changes meaning at pg 9).
 - Thread / PR: M1

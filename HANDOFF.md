@@ -20,6 +20,24 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M1 follow-up: Adam's rulings recorded — 2026-10-20
+
+- Branch / PR: claude/vibrant-keller-6qnr0g → docs PR
+- Migrations: none
+
+**What it does.** Records in `DECISIONS.md` Adam's answers to M1's spec questions: `forHost()` is
+approved (it reads `river.instances` only; M6 amends CLAUDE.md constraint 2 in a `needs-adam`
+PR), and shared tables keep requiring `app.instance_id`. `DATABASE_CA_CERT` is now documented as
+needed on hosted Supabase; Adam sets it on `river` and `mosaic-id` from the start. The identity
+project stays `mosaic-id`.
+
+**Keys.** None new.
+
+**Tests.** No code changed. `npm run check` green.
+
+### Follow-ups
+- M6: add `forHost()` in `src/db/context.ts` and the CLAUDE.md constraint 2 amendment.
+
 ## M1 Schemas and access: roles, river tables with forced RLS, seed instance, isolation proven — 2026-10-20
 
 - Branch / PR: claude/vibrant-keller-6qnr0g → #3 (needs-adam: roles, row-level security, `.github/`, `supabase/seed.sql`)
