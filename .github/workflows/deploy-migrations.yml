@@ -1,0 +1,63 @@
+name: deploy-migrations
+
+# Applies new Supabase migrations to the hosted dev project after they merge to main.
+# Threads never hold Supabase credentials. They live as SECRETS OF THE `supabase-dev`
+# ENVIRONMENT, which ops/new-project.sh restricts to the main branch, so a workflow on a
+# thread's branch can't read them even if it tries:
+#   secrets.SUPABASE_ACCESS_TOKEN  a Supabase access token scoped to the one dev project
+#   secrets.SUPABASE_DB_PASSWORD   that project's database password
+#   vars.SUPABASE_PROJECT_REF      that project's ref (a repository variable, not a secret)
+# The CLI version comes from package.json, so it matches threads and CI.
+
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/migrations/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-migrations
+  cancel-in-progress: false
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: supabase-dev
+    if: ${{ vars.SUPABASE_PROJECT_REF != '' }}
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Check the project is initialized
+        id: init
+        run: |
+          if [ -f supabase/config.toml ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; else echo "ok=false" >> "$GITHUB_OUTPUT"; echo "No supabase/config.toml yet; nothing to deploy."; fi
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: steps.init.outputs.ok == 'true'
+        with:
+          node-version: 24
+
+      - name: Install the pinned Supabase CLI
+        if: steps.init.outputs.ok == 'true'
+        run: |
+          npm i -g npm@12.2.0
+          npm ci --include=dev
+
+      - name: Link the dev project
+        if: steps.init.outputs.ok == 'true'
+        run: npx supabase link --project-ref "${{ vars.SUPABASE_PROJECT_REF }}"
+
+      - name: Preview the migrations to apply
+        if: steps.init.outputs.ok == 'true'
+        run: npx supabase db push --dry-run
+
+      - name: Apply migrations
+        if: steps.init.outputs.ok == 'true'
+        run: npx supabase db push

@@ -1,0 +1,18 @@
+/*
+ * App theme. Like the Civic Hub, the design system is VENDORED, not installed:
+ * ops/new-project.sh copies Civic-Social-Mono/shared/design-system/src/{tokens,base,components}.css
+ * into ./design-system/, and this file maps --ds-* tokens to app names when needed.
+ * Until those files exist, the imports below are commented out so the build stays green.
+ */
+/* @import "./design-system/tokens.css"; */
+/* @import "./design-system/base.css"; */
+/* @import "./design-system/components.css"; */
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+
+main {
+  padding: 2rem;
+}

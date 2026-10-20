@@ -1,0 +1,104 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Read-only token. This workflow uses no secrets, so thread branches can't leak any through it.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The job id "ci" is the status check the repo ruleset requires. Keep it, and keep every
+  # gate inside this one job so a single required check covers them all.
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Actions are pinned by commit SHA, as in the Civic Hub.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+
+      # Same npm as the Civic Hub CI and Vercel's Node 24 image. npm 10 fails to resolve
+      # vitest 4's peer set ("Cannot read properties of null (reading 'edgesOut')").
+      - name: Pin npm
+        run: npm i -g npm@12.2.0
+
+      - name: Install and audit (server)
+        run: |
+          npm ci --include=dev
+          npm audit --audit-level=high
+
+      - name: Build, typecheck, lint
+        run: |
+          npm run build
+          npm run typecheck
+          npm run lint
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Install, audit, lint, build (ui)
+        working-directory: ui
+        run: |
+          npm ci --include=dev
+          npm audit --audit-level=high
+          npm run lint
+          npm run build
+
+      # API tests need a database. They run once supabase/config.toml exists (the first
+      # thread creates it with `npx supabase init`). The CLI version comes from package.json.
+      - name: Detect database
+        id: db
+        run: |
+          if [ -f supabase/config.toml ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Start local Supabase and export its keys
+        if: steps.db.outputs.present == 'true'
+        run: |
+          npx supabase start
+          status=$(npx supabase status -o json 2>/dev/null)
+          url=$(printf '%s' "$status" | jq -r '.API_URL // empty')
+          key=$(printf '%s' "$status" | jq -r '.SERVICE_ROLE_KEY // .SECRET_KEY // empty')
+          test -n "$url" || { echo "No API_URL in supabase status output"; exit 1; }
+          test -n "$key" || { echo "No SERVICE_ROLE_KEY or SECRET_KEY in supabase status output"; exit 1; }
+          echo "::add-mask::$key"
+          echo "SUPABASE_URL=$url" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$key" >> "$GITHUB_ENV"
+
+      - name: Start the API
+        run: |
+          npm run dev > /tmp/api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/health && exit 0; sleep 1; done
+          cat /tmp/api.log; exit 1
+
+      - name: API tests
+        if: steps.db.outputs.present == 'true' && hashFiles('tests/api/**/*.test.ts') != ''
+        run: npm run test:api || (cat /tmp/api.log; exit 1)
+
+      # End-to-end against the production UI bundle (vite preview proxies /api like dev).
+      - name: End-to-end tests
+        run: |
+          npx playwright install --with-deps chromium
+          npm run preview --prefix ui -- --port 4173 --strictPort > /tmp/ui.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:4173 > /dev/null && break; sleep 1; done
+          E2E_BASE_URL=http://localhost:4173 npx playwright test || (cat /tmp/api.log /tmp/ui.log; exit 1)
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

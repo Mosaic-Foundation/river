@@ -1,0 +1,10 @@
+{
+  // Type-checks everything tsc's build doesn't: tests, scripts and the Vercel entry in api/.
+  // Vitest doesn't type-check and Vercel bundles api/ with esbuild, so this is the only gate.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": ["src", "tests", "scripts", "api", "*.ts"]
+}

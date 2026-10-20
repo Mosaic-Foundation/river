@@ -1,0 +1,16 @@
+node_modules/
+dist/
+ui/dist/
+coverage/
+playwright-report/
+test-results/
+.vercel/
+# Every env file except the examples, so a second process's file (e.g. .env.identity) stays out.
+.env
+.env.*
+!.env.example
+!.env.*.example
+supabase/.temp/
+supabase/.branches/
+.DS_Store
+*.log

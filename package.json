@@ -1,0 +1,43 @@
+{
+  "name": "greenfield-app",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "main": "dist/index.js",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc -p tsconfig.check.json",
+    "start": "node dist/index.js",
+    "lint": "eslint",
+    "test": "eslint && vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:api": "vitest run tests/api",
+    "test:watch": "vitest",
+    "test:e2e": "npx playwright test",
+    "check": "npm run lint && npm run typecheck && npm run test:unit && npm run lint --prefix ui && npm run build --prefix ui"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.3",
+    "express": "^4.22.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/express": "^4.17.25",
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/parser": "^8.70.1",
+    "eslint": "^9.39.5",
+    "supabase": "2.121.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.6"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "supabase@2.121.0": true
+  }
+}
