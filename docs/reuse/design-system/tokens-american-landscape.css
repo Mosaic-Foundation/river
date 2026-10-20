@@ -1,0 +1,77 @@
+/* =============================================================================
+   Civic.Social — Canonical Palette Values (American Landscape)
+   -----------------------------------------------------------------------------
+   THE one source-of-truth values file for the ecosystem's visual identity
+   (F1 of the 2026-07 realization plan). Apps do NOT import this file at
+   runtime — they deploy independently — so each app VENDORS these values
+   into its own primitive-token layer, keeping its semantic aliases
+   (--color-primary, --ds-color-*, Tailwind theme keys) pointed at them:
+
+     - civic-hub/ui/src/styles/design-system/tokens.css   (primitive hexes)
+     - representative-space/ui/src/styles/theme.css       (primitive hexes)
+     - citizen-dashboard/tailwind.config.js + src/index.css @theme
+
+   RULE: every palette hex lives in the single :root block below, so an
+   American-Landscape ↔ blue (or any future) retheme is a one-file edit here
+   followed by re-vendoring — never a hunt through component CSS.
+
+   The older indigo system in ./src/tokens.css remains for reference; this
+   file supersedes its VALUES (not its semantic-alias naming approach).
+   ========================================================================== */
+
+:root {
+  /* --- American Landscape primitives --- */
+  --civic-green:  #386759;  /* primary — actions, links, brand ink */
+  --civic-teal:   #294B52;  /* deep support — headers, emphasis, focus */
+  --civic-rust:   #C37B51;  /* warm accent — highlights, secondary CTAs */
+  --civic-yellow: #EDC572;  /* attention — badges, warnings, live markers */
+  --civic-cream:  #F0EBE1;  /* canonical cream — page background
+                               (reconciles the dashboard's #F7F8FA drift) */
+
+  /* Derived tints/shades — hover states and washes, generated from the
+     primitives above. Regenerate when the primitives change. */
+  --civic-green-hover: #2E564A;
+  --civic-green-wash:  #E3EBE8;
+  --civic-teal-hover:  #1F3A40;
+  --civic-rust-hover:  #A85D38;
+  --civic-rust-wash:   #F4E1D2;
+  --civic-yellow-wash: #FAF0DB;
+  --civic-cream-raise: #FFFFFF;  /* cards on cream */
+  --civic-cream-sink:  #E8E2D4;  /* pressed / alt surface on cream */
+
+  /* --- Typography --- */
+  --font-heading: "Libre Franklin", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  --font-body: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+
+  /* --- Type scale --- */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 2rem;
+  --font-size-4xl: 2.75rem;
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.65;
+
+  /* --- Spacing scale --- */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  /* --- Radii --- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-pill: 9999px;
+
+  /* --- Elevation --- */
+  --shadow-card: 0 1px 2px rgba(41, 75, 82, 0.06);
+  --shadow-popover: 0 8px 24px rgba(41, 75, 82, 0.14);
+}
