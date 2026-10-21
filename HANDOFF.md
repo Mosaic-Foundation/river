@@ -20,6 +20,28 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## deploy-migrations: db push through the session pooler — 2026-10-21
+
+- Branch / PR: claude/vibrant-keller-6qnr0g → PR (needs-adam: `.github/`)
+- Migrations: none
+
+**What it does.** `deploy-migrations` failed on hosted Supabase with "IPv6 is not supported on
+your current network": GitHub's runners have no IPv6 and `db push` used the IPv6-only direct
+database host. Both db push steps now pass `--db-url "$SUPABASE_DB_URL"` (the session pooler
+URI, port 5432, a `supabase-dev` secret Adam added); the preview keeps `--dry-run`. The link step
+stays. README Notes record the two lessons (scoped token permissions for link, pooler URL for push).
+
+**Keys.** `SUPABASE_DB_URL` (secret of the `supabase-dev` GitHub environment; never in threads).
+
+**Tests.** Workflow YAML parsed; `npm run check` green. Running `supabase db push` is not possible
+from the session (no hosted credentials, by design), so the first proof is the workflow run after
+merge: M1's migrations should apply and the run should go green.
+
+### Follow-ups
+- Adam: after merge, re-run `deploy-migrations` (workflow_dispatch) if no migration path changes
+  in this PR trigger it, then set the role passwords and DATABASE_URLs (M1 entry).
+- The runbook itself isn't in this repo; copy the two README notes into its lessons section.
+
 ## M1 follow-up: Adam's rulings recorded — 2026-10-20
 
 - Branch / PR: claude/vibrant-keller-6qnr0g → docs PR
