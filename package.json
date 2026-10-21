@@ -26,6 +26,7 @@
     "check": "npm run lint && npm run typecheck && npm run test:unit && npm run lint --prefix ui && npm run build --prefix ui"
   },
   "dependencies": {
+    "@vercel/functions": "^3.9.11",
     "express": "^4.22.3",
     "pg": "^8.23.1",
     "sanitize-html": "^2.18.1",

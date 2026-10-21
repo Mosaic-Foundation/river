@@ -10,6 +10,14 @@ export const IDENTITY_URL =
   process.env.TEST_IDENTITY_DATABASE_URL ??
   "postgresql://identity_app:local-only@127.0.0.1:54322/postgres";
 
+/**
+ * The local stack's postgres role, used ONLY by the daily-job test (the job runs as postgres under
+ * pg_cron, and river_app can't execute it) and to count rows river_app can't see (check 23). App
+ * code never connects as postgres; every isolation test runs as river_app.
+ */
+export const ADMIN_URL =
+  process.env.TEST_ADMIN_DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
+
 /** The seed instance (migration 20261020213536) and the second one supabase/seed.sql adds. */
 export const SEED_INSTANCE = "00000000-0000-4000-8000-000000000001";
 export const OTHER_INSTANCE = "00000000-0000-4000-8000-0000000000e2";

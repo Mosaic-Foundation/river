@@ -99,6 +99,16 @@ export async function forAccount<T>(
 }
 
 /**
+ * The River's hostname lookup (ADR-004, check 26), which runs before any instance is known. Opens
+ * a transaction with no settings, so row-level security lets it read `river.instances` (instance
+ * config is public) and nothing else: every other river policy requires `app.instance_id`.
+ * Approved by Adam (DECISIONS, 2026-10-20); use it for that lookup only.
+ */
+export async function forHost<T>(fn: (db: Db) => Promise<T>, source?: ClientSource): Promise<T> {
+  return inTransaction([], fn, source);
+}
+
+/**
  * The identity host's queries, as identity_app on the identity schema. The identity tables arrive
  * in M7, which decides which settings their policies read; until then this sets none.
  */

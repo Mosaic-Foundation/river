@@ -29,7 +29,7 @@ export const EMAIL_TRANSPORTS = ["log", "capture", "resend"] as const;
 export type EmailTransport = (typeof EMAIL_TRANSPORTS)[number];
 
 /** Variables that switch on test-only behavior. They must never reach a Vercel deployment. */
-export const TEST_ONLY_VARS = ["FETCH_FIXTURES_DIR", "TEST_ROUTES"] as const;
+export const TEST_ONLY_VARS = ["FETCH_FIXTURES_DIR", "TEST_ROUTES", "TEST_CLOCK_NOW"] as const;
 
 /** Reads a test-only variable, refusing when running on Vercel (which always sets VERCEL). */
 function testOnlyVar(name: (typeof TEST_ONLY_VARS)[number]): string | undefined {
@@ -87,6 +87,19 @@ export const env = {
   get testRoutes(): boolean {
     return testOnlyVar("TEST_ROUTES") === "1";
   },
+  /**
+   * A fixed "now" for the River's adapters (ISO 8601), so replayed feed URLs, which carry
+   * `since`, match the recordings (tests/fixtures/civicHubClock.ts). Database time is unchanged.
+   */
+  get testClockNow(): Date | undefined {
+    const value = testOnlyVar("TEST_CLOCK_NOW");
+    if (value === undefined) return undefined;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new Error(`TEST_CLOCK_NOW must be an ISO 8601 date, got "${value}"`);
+    }
+    return date;
+  },
 
   // --- River (spec Appendix D) ---
 
@@ -104,7 +117,14 @@ export const env = {
   },
   /** Extra hostnames that resolve to the seed instance (localhost, vercel.app hosts). */
   get instanceHostAliases(): string[] {
-    return envList("INSTANCE_HOST_ALIASES");
+    return envList("INSTANCE_HOST_ALIASES").map((host) => host.toLowerCase());
+  },
+  /**
+   * Vercel's deployment kind (`production`, `preview`, `development`), set by Vercel itself. On a
+   * preview every host gets the seed instance (spec check 26).
+   */
+  get vercelEnv(): string | undefined {
+    return envVar("VERCEL_ENV");
   },
 
   // --- Identity host (spec Appendix D) ---
@@ -152,4 +172,5 @@ export function checkEnv(): void {
   void env.emailTransport;
   void env.fetchFixturesDir;
   void env.testRoutes;
+  void env.testClockNow;
 }

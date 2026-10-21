@@ -1,0 +1,249 @@
+// GET /api/feed against the running dev server (`npm run dev`, reading .env with
+// FETCH_FIXTURES_DIR=tests/fixtures/http and TEST_CLOCK_NOW at the hub fixtures' clock), as a
+// visitor: checks 1, 2, 5, 6 and the visitor half of 23, plus check 26's API part.
+// Called over HTTP only; the one database connection counts rows river_app can't see.
+import http from "node:http";
+import pg from "pg";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { ADMIN_URL } from "./db/roles.js";
+
+const API = process.env.API_URL ?? "http://localhost:3000";
+
+interface FeedItem {
+  id: string;
+  kind: string;
+  publishedAt: string;
+  title: string | null;
+  summary: string | null;
+  contentHtml: string | null;
+  url: string | null;
+  source: "live" | "sample";
+  media: Array<{ url: string; alt?: string; duration?: number }>;
+  space: { id: string; name: string; iconUrl: string | null; category: string | null; adapter: string };
+}
+
+interface Feed {
+  instance: { name: string; theme: string; modes: string[]; defaultMode: string };
+  mode: string;
+  circles: Array<{ id: string; name: string; role: string | null }>;
+  items: FeedItem[];
+  nextCursor: string | null;
+  empty: boolean;
+  emptyMessage: string | null;
+  refresh: { claimed: string[]; pending: string[] };
+}
+
+async function getFeed(query: Record<string, string> = {}): Promise<Feed> {
+  const res = await fetch(`${API}/feed?${new URLSearchParams(query)}`);
+  if (res.status !== 200) throw new Error(`GET /feed answered ${res.status}: ${await res.text()}`);
+  return (await res.json()) as Feed;
+}
+
+/** Every page of a query, following nextCursor. */
+async function allItems(query: Record<string, string> = {}): Promise<FeedItem[]> {
+  const items: FeedItem[] = [];
+  let cursor: string | null = null;
+  for (let page = 0; page < 100; page++) {
+    const feed: Feed = await getFeed(cursor ? { ...query, cursor } : query);
+    items.push(...feed.items);
+    cursor = feed.nextCursor;
+    if (!cursor) return items;
+  }
+  throw new Error("more than 100 pages");
+}
+
+/** A GET with a chosen Host header (fetch won't send one). */
+function getWithHost(path: string, host: string): Promise<{ status: number; body: string }> {
+  const url = new URL(path, API);
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      { hostname: url.hostname, port: url.port, path: url.pathname + url.search, headers: { host } },
+      (res) => {
+        let body = "";
+        res.on("data", (chunk) => (body += chunk));
+        res.on("end", () => resolve({ status: res.statusCode ?? 0, body }));
+      },
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+let everything: FeedItem[] = [];
+
+beforeAll(async () => {
+  try {
+    await fetch(`${API}/health`);
+  } catch {
+    throw new Error(`No API at ${API}. Start it with \`npm run dev\` (see tests/api/README.md).`);
+  }
+  // The first open resolves and fetches the seed follows from the recordings. Replay is fast, but
+  // a refresh still running when the budget ends shows up on a later open: wait for it.
+  for (let i = 0; i < 20; i++) {
+    const feed = await getFeed();
+    if (feed.refresh.pending.length === 0) break;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  everything = await allItems();
+}, 60_000);
+
+describe("visitor feed (checks 1 and 2)", () => {
+  it("has Live items from each seed hub and at least five Samples, newest first", () => {
+    for (const hub of ["Demosville", "Floyd", "Longmont"]) {
+      expect(
+        everything.some((i) => i.source === "live" && i.space.adapter === "civic_hub" && i.space.name.includes(hub)),
+        hub,
+      ).toBe(true);
+    }
+    expect(everything.filter((i) => i.source === "sample").length).toBeGreaterThanOrEqual(5);
+    const times = everything.map((i) => Date.parse(i.publishedAt));
+    expect(times).toEqual([...times].sort((a, b) => b - a));
+    expect(new Set(everything.map((i) => i.id)).size).toBe(everything.length);
+  });
+
+  it("also has the fediverse seeds", () => {
+    expect(new Set(everything.filter((i) => i.space.adapter === "fediverse").map((i) => i.space.name)).size).toBe(6);
+  });
+
+  it("every item has its source name, kind, time and exactly one of Live or Sample", () => {
+    for (const item of everything) {
+      expect(item.space.name, item.id).toBeTruthy();
+      expect(["post", "article", "podcast", "video", "photo", "event", "civic"]).toContain(item.kind);
+      expect(Number.isNaN(Date.parse(item.publishedAt))).toBe(false);
+      expect(["live", "sample"]).toContain(item.source);
+      expect(item.source === "sample").toBe(item.space.adapter === "sample");
+      if (item.source === "sample") {
+        expect(item.url).toBeNull();
+      } else {
+        expect(item.url ?? "https://", item.id).toMatch(/^https:\/\//);
+      }
+      for (const media of item.media) {
+        // Samples use the UI's own placeholders; live media is https only.
+        expect(media.url).toMatch(item.source === "sample" ? /^\/samples\/[a-z-]+\.svg$/ : /^https:\/\//);
+      }
+    }
+  });
+
+  it("a sample event says when and where it starts", () => {
+    const event = everything.find((i) => i.source === "sample" && i.kind === "event") as
+      | (FeedItem & { event?: { startTime?: string; location?: string } })
+      | undefined;
+    expect(event?.event?.location).toBe("Elm Street and Fourth Avenue");
+    expect(Date.parse(event?.event?.startTime ?? "")).toBeGreaterThan(Date.parse(event?.publishedAt ?? ""));
+  });
+
+  it("names the instance's circles and default mode", async () => {
+    const feed = await getFeed();
+    expect(feed.mode).toBe("everything");
+    expect(feed.circles.map((c) => c.name)).toEqual(["Civic", "News and ideas", "Family", "Soccer", "Neighborhood"]);
+    expect(feed.circles.find((c) => c.role === "civic")?.name).toBe("Civic");
+  });
+});
+
+describe("filters (check 5)", () => {
+  it("News and ideas + Podcasts shows only the sample podcast episode", async () => {
+    const feed = await getFeed({ circle: "News and ideas", type: "podcasts" });
+    expect(feed.items).toHaveLength(1);
+    expect(feed.items[0]).toMatchObject({ kind: "podcast", source: "sample", space: { name: "Small Town Signals" } });
+    expect(feed.items[0]?.media[0]?.duration).toBeGreaterThan(0);
+    expect(feed.empty).toBe(false);
+  });
+
+  it("a combination with no matches returns the empty flag and sentence", async () => {
+    const feed = await getFeed({ circle: "Family", type: "videos" });
+    expect(feed.items).toEqual([]);
+    expect(feed.empty).toBe(true);
+    expect(feed.emptyMessage).toBe("Nothing of that type in this circle yet.");
+  });
+
+  it("a circle shows only its spaces; a type only its kind", async () => {
+    const family = await allItems({ circle: "Family" });
+    expect(family.length).toBeGreaterThan(0);
+    expect(new Set(family.map((i) => i.space.name))).toEqual(new Set(["The Okafor Family"]));
+    const events = await allItems({ type: "events" });
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((i) => i.kind === "event")).toBe(true);
+  });
+
+  it("civic mode shows only civic-category spaces and the Civic circle", async () => {
+    const civic = await allItems({ mode: "civic" });
+    expect(civic.length).toBeGreaterThan(0);
+    expect(civic.every((i) => i.space.category === "civic")).toBe(true);
+  });
+
+  it("refuses an unknown mode, circle, type or cursor", async () => {
+    for (const query of ["mode=party", "circle=Bowling", "type=memes", "cursor=nope", "type=a&type=b"]) {
+      const res = await fetch(`${API}/feed?${query}`);
+      expect(res.status, query).toBe(400);
+    }
+  });
+});
+
+describe("search (check 6)", () => {
+  it("a word from a fixture title returns that item and nothing unrelated", async () => {
+    const title = "How should Floyd County handle its growing bear population?";
+    expect(everything.some((i) => i.title === title)).toBe(true);
+    const found = await allItems({ q: "bear" });
+    expect(found.some((i) => i.title === title)).toBe(true);
+    for (const item of found) {
+      const text = [item.title, item.summary, item.contentHtml, item.space.name].join(" ");
+      expect(text, item.id).toMatch(/\bbear\b/i);
+    }
+    expect(found.length).toBeLessThan(everything.length);
+  });
+
+  it("matches the source name too", async () => {
+    const found = await allItems({ q: "Trailhead" });
+    expect(found.length).toBeGreaterThan(0);
+    expect(found.every((i) => i.space.name === "Trailhead TV")).toBe(true);
+  });
+
+  it("treats % and _ literally", async () => {
+    const feed = await getFeed({ q: "%" });
+    expect(feed.items).toEqual([]);
+    expect(feed.empty).toBe(true);
+  });
+});
+
+describe("visitors write nothing (check 23, visitor part)", () => {
+  const admin = new pg.Pool({ connectionString: ADMIN_URL, max: 1 });
+  afterAll(async () => {
+    await admin.end();
+  });
+
+  async function personalRows(): Promise<Record<string, number>> {
+    const { rows } = await admin.query(
+      `SELECT (SELECT count(*) FROM river.accounts)::int AS accounts, (SELECT count(*) FROM river.follows)::int AS follows,
+              (SELECT count(*) FROM river.circles)::int AS circles, (SELECT count(*) FROM river.circle_members)::int AS circle_members,
+              (SELECT count(*) FROM river.read_state)::int AS read_state, (SELECT count(*) FROM river.preferences)::int AS preferences`,
+    );
+    return rows[0] as Record<string, number>;
+  }
+
+  it("reading and filtering stores no account, follow, circle, read state or preference, and sets no cookie", async () => {
+    const before = await personalRows();
+    for (const query of ["", "circle=Soccer", "type=photos", "q=library", "mode=civic"]) {
+      const res = await fetch(`${API}/feed?${query}`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("set-cookie")).toBeNull();
+      expect(res.headers.get("cache-control")).toBe("no-store");
+    }
+    expect(await personalRows()).toEqual(before);
+  });
+
+  it("there is no server route for a visitor's read state", async () => {
+    const res = await fetch(`${API}/read`, { method: "POST" });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("instance by hostname (check 26, API part)", () => {
+  it("an alias gets the seed instance; an unknown host gets 404", async () => {
+    const ok = await getWithHost("/feed", "localhost");
+    expect(ok.status).toBe(200);
+    expect(JSON.parse(ok.body).instance).toMatchObject({ name: "Mosaic River", theme: "mosaic" });
+    const unknown = await getWithHost("/feed", "unknown.example");
+    expect(unknown.status).toBe(404);
+    expect(JSON.parse(unknown.body)).toMatchObject({ error: "unknown_host" });
+  });
+});

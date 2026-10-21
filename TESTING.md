@@ -21,9 +21,29 @@ npm run test:e2e                  # starts the API, the identity host and the UI
 npm run test:live                 # @live tests against real hosts; never in check or CI
 ```
 
+The dev server for API and e2e runs needs, in `.env`, `FETCH_FIXTURES_DIR=tests/fixtures/http`
+and `TEST_CLOCK_NOW=2026-10-21T00:00:00.000Z` (the hub recordings' clock), as CI writes them. The
+first `GET /api/feed` resolves and fetches every seed follow from the recordings.
+
 ## Log
 
 Newest first: date, slice, tests added, counts.
+
+- 2026-10-21, M5: API `feed` (dev server; checks 1, 2, 5, 6, 23 visitor part, 26 API part, filters,
+  civic mode, 400s, sample event). Database (`tests/api/db/`, river_app): `refresh` (check 24 with
+  a request-counting MockAgent, sequential and concurrent; check 20 with fake timers: answered at
+  6 s, not 5.999 s, with the fast hub's items, the slow source's note and released claim after its
+  fetch fails at 30 s; check 33 with the recorded empty-no-next probe, plus the empty-with-next
+  and 7-day cases; refresh window and 304; stream ends moving every account's follows to Ended;
+  final result only moves forward; resolving a new followed name; resolve back-off), `host`
+  (forHost reads instances only and writes nothing; hostname, alias and preview mapping),
+  `dailyJob` (as postgres in a rolled-back transaction: the cron entry; 120 days on, a followed
+  stream's final result and samples stay, everything else goes, the ended follow is cleared and
+  the result survives the next day; samples re-stamped), `catalog` (samples in seed_follows and
+  default_circles; function grants). Unit `feedScope`, `adapterRegistry`, `env`
+  (TEST_CLOCK_NOW, VERCEL_ENV), `dbContext` (forHost). E2E `feed` (the feed through the UI's
+  proxy; sample images served). Mutation check: removing the budget race fails check 20.
+  Unit 290, API 56 (fresh `db reset`), e2e 6.
 
 - 2026-10-21, M4: unit `fediverseInput`, `fediverseMap`, `fediverseAdapter` (check 15 adapter
   part, 22, all six seeds, REST fallback, blocked, refusals, 429, boost budget). Fixtures: 45

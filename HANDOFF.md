@@ -20,6 +20,57 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M5 Feed API and daily job: samples, refresh on open, filters, search, pg_cron — 2026-10-21
+
+- Branch / PR: claude/m5-feed-api → PR (needs-adam: a column and a SECURITY DEFINER function on
+  existing tables, `.github/`, CLAUDE.md constraint 2). Built on M2–M4 (unmerged); merge after
+  them, once its own diff is only M5.
+- Migrations: `20261021120000_daily_job.sql` (adds `streams.keep_final_result`;
+  `river.mark_stream_follows_ended()` with EXECUTE for river_app; `river.restamp_samples()`,
+  `river.daily_job()`; pg_cron job `river-daily` at 04:17 UTC), `20261021120100_sample_spaces.sql`
+  (seven sample spaces and 12 items; the seed instance's `seed_follows` and `default_circles`).
+
+**What it does.** `GET /api/feed?mode=&circle=&type=&q=&cursor=` resolves the instance from the
+hostname through the new `forHost()`, refreshes the visitor's River (seed follows, resolving any
+with no space yet) within a 6 s budget, then answers newest first with circle AND type AND mode
+filters, search over `items.search` and the source name, a keyset cursor and an empty flag.
+Refresh: spec 4.5's claim statement per space, parallel fetches through the adapters and the fetch
+guard, pages upserted on `(space_id, source_id)`, claims released in `finally`, late work under
+`waitUntil`; space columns, streams, final results and Ended follows written; quiet hub streams
+probed once a day and withdrawn ones hidden. Samples (spec 4.4) are seeded with URNs and SVG
+placeholders in `ui/public/samples/`. The daily job does retention, Ended follows, sign-in
+bookkeeping (once those tables exist) and sample re-stamping, SQL only.
+
+**Keys.** `TEST_CLOCK_NOW` (test-only, refused on Vercel; CI's `.env` has it), `VERCEL_ENV` (read,
+set by Vercel). Test-only: `TEST_ADMIN_DATABASE_URL` (tests read it; postgres for the daily-job
+test only). Dependency: `@vercel/functions` ^3.9.11. Helpers: `forHost()`; adapter registry
+`src/river/adapters/index.ts`.
+
+**Tests.** `npm run check`: Test Files 17 passed (17), Tests 290 passed (290), UI built.
+`npm run test:api` (both dev servers, fresh `db reset`): Test Files 6 passed (6), Tests 56 passed
+(56). `npm run test:e2e`: 6 passed. Checks: 1, 2, 5, 6, 23 (visitor), 26 (API part) in
+`tests/api/feed.test.ts`; 20, 24, 33 in `tests/api/db/refresh.test.ts`; retention (18's part) in
+`tests/api/db/dailyJob.test.ts`. pg_cron 1.6.4 is preloaded in the local stack; the job is
+scheduled by the migration (checked in the test).
+
+### Follow-ups
+- Adam: after merge, `deploy-migrations` creates the pg_cron job on the dev project. Check
+  Database > Cron (or `SELECT * FROM cron.job`) for `river-daily`; pg_cron on hosted is untested
+  from here.
+- M6: the 404 page for unknown hosts (the API answers JSON 404 `unknown_host`); cards read
+  `source`, `space`, `url`, `media` (sample media are same-origin `/samples/*.svg`; podcast and
+  video durations sit on the cover's media entry) and `event`; show `refresh.pending` as nothing
+  (items arrive on the next open). Boost dereferencing (`dereferenceBoost`, 20 per refresh) is for
+  when a boost is opened; no route yet.
+- M8/M9: build a member's `ReaderView` (follows, circles, civic-role circle) under `forAccount()`
+  and pass it to `scopeFor()`/`queryFeed()`; add mutes (a muted stream inside a followed space)
+  to `FeedScope`; refresh a member's follows with `refreshFollowed()`/`refreshSpaces()`. Member
+  circles are ids where visitor circles are names.
+- M7/M8: the daily job deletes `identity.auth_requests` by `expires_at` and
+  `river.auth_attempts` by `created_at`; keep those names or change the job.
+- Event start and place: samples keep them in `raw`, fediverse in `raw.object`; the feed returns
+  both as `event`. An additive `items.event` column is still a follow-up.
+
 ## M4 Fediverse adapter: WebFinger, actor, outbox, NodeInfo, REST fallback, boosts — 2026-10-21
 
 - Branch / PR: claude/m4-fediverse-adapter → PR. Branched from M2 (#6) plus M3's shared base
