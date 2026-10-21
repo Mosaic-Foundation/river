@@ -232,6 +232,17 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-21 — Several content types and networks in /api/feed (UI revisions 1, items 2 and 4)
+- Decision: `type` takes a comma-separated list (`type=posts,videos`); a new `network` parameter
+  takes `hubs` (adapter `civic_hub`) and/or `fediverse`. Empty means all. Unknown values are 400
+  (`bad_type`, `bad_network`). "Mark all read" takes the same fields. Sample entries belong to no
+  network, so any network filter hides them.
+- Why: the filters are AND across groups and OR inside one (item 2: none selected means All);
+  samples stand for clubs, families and podcasts, not hubs or the fediverse.
+- Alternatives: repeated `type=` parameters (refused before, kept refused); filtering on the
+  client (breaks paging and "Mark all read").
+- Thread / PR: UI revisions 1, PR 2
+
 ## 2026-10-21 — The export's shape and route (M11)
 - Decision: `GET /api/me/export` (members; visitors 401 `sign_in_required`) returns spec 3.3's
   seven keys and nothing else, with `Content-Disposition: attachment;

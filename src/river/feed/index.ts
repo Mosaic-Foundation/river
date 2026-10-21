@@ -3,7 +3,6 @@
 // members their own rows under forAccount() (memberView), with their read state. Both go through
 // the same scopeFor() and queryFeed().
 import { forAccount, forInstance, type Db } from "../../db/context.js";
-import type { ItemKind } from "../../shared/items/index.js";
 import { applyPendingSeeds, type Viewer } from "../accounts.js";
 import { riverNow } from "../clock.js";
 import type { Instance } from "../instances.js";
@@ -14,10 +13,12 @@ import {
   decodeCursor,
   EMPTY_MESSAGE,
   FeedInputError,
-  parseContentType,
+  parseContentTypes,
+  parseNetworks,
   markViewRead,
   queryFeed,
   queryViewItems,
+  type FeedFilter,
   type FeedItem,
   type FeedScope,
 } from "./query.js";
@@ -31,7 +32,10 @@ export { FeedInputError, EMPTY_MESSAGE } from "./query.js";
 export interface FeedParams {
   mode?: string;
   circle?: string;
+  /** One or more content types, comma-separated (ui-revisions-1 item 2). */
   type?: string;
+  /** One or more networks, comma-separated: hubs, fediverse (ui-revisions-1 item 4). */
+  network?: string;
   q?: string;
   cursor?: string;
 }
@@ -85,7 +89,7 @@ async function viewSurfaces(
   instance: Instance,
   mode: Mode,
   scope: FeedScope,
-  filter: { kind?: ItemKind; q?: string },
+  filter: Pick<FeedFilter, "kinds" | "adapters" | "q">,
   now: Date,
 ): Promise<Partial<Record<Surface, SurfaceOutput[]>>> {
   const placed = Object.entries(MODE_DEFINITIONS[mode].surfaces) as Array<[Surface, readonly string[]]>;
@@ -101,10 +105,11 @@ async function viewSurfaces(
 /** Validates the parameters every feed request shares, before any work. */
 function parseCommon(instance: Instance, params: FeedParams) {
   const mode = parseMode(params.mode, instance);
-  const kind = parseContentType(params.type);
+  const kinds = parseContentTypes(params.type);
+  const adapters = parseNetworks(params.network);
   const cursor = decodeCursor(params.cursor);
   if (params.q !== undefined && params.q.length > 200) throw new FeedInputError("q", "Search is too long");
-  return { mode, kind, cursor };
+  return { mode, cursor, filter: { kinds, adapters, q: params.q } };
 }
 
 export async function visitorFeed(
@@ -113,7 +118,7 @@ export async function visitorFeed(
   deps: RefreshDeps = {},
 ): Promise<FeedResponse> {
   // Validate before any work, so a bad request costs nothing.
-  const { mode, kind, cursor } = parseCommon(instance, params);
+  const { mode, cursor, filter } = parseCommon(instance, params);
   const circle = params.circle;
   if (circle && circle.toLowerCase() !== "all" && !instance.defaultCircles.some((c) => c.name === circle)) {
     throw new FeedInputError("circle", `Unknown circle "${circle}"`);
@@ -132,11 +137,11 @@ export async function visitorFeed(
       const spaces = await findSpaces(db, [...new Set([...inputs, ...circleInputs])]);
       const view = visitorView(instance, spaces);
       const scope = scopeFor(view, mode, params.circle);
-      const page = await queryFeed(db, scope, { kind, q: params.q, cursor });
+      const page = await queryFeed(db, scope, { ...filter, cursor });
       const empty = page.items.length === 0 && !cursor;
       const surfaces = cursor
         ? null
-        : await viewSurfaces(db, instance, mode, scope, { kind, q: params.q }, deps.now ?? riverNow());
+        : await viewSurfaces(db, instance, mode, scope, filter, deps.now ?? riverNow());
       return {
         instance: instanceSummary(instance),
         ...modeSummary(instance, mode),
@@ -173,7 +178,7 @@ export async function memberFeed(
   params: FeedParams,
   deps: RefreshDeps = {},
 ): Promise<FeedResponse> {
-  const { mode, kind, cursor } = parseCommon(instance, params);
+  const { mode, cursor, filter } = parseCommon(instance, params);
   const circle = parseMemberCircle(params.circle);
   const account = <T>(fn: Parameters<typeof forAccount<T>>[2]) =>
     forAccount(instance.id, viewer.accountId, fn, deps.source);
@@ -198,11 +203,11 @@ export async function memberFeed(
     if (!cursor) await applyPendingSeeds(db);
     const view = await memberView(db);
     const scope = scopeFor(view, mode, circle);
-    const page = await queryFeed(db, scope, { kind, q: params.q, cursor, withRead: true });
+    const page = await queryFeed(db, scope, { ...filter, cursor, withRead: true });
     const empty = page.items.length === 0 && !cursor;
     const surfaces = cursor
       ? null
-      : await viewSurfaces(db, instance, mode, scope, { kind, q: params.q }, deps.now ?? riverNow());
+      : await viewSurfaces(db, instance, mode, scope, filter, deps.now ?? riverNow());
     return {
       instance: instanceSummary(instance),
       ...modeSummary(instance, mode),
@@ -225,12 +230,12 @@ export async function memberMarkAllRead(
   params: Omit<FeedParams, "cursor">,
   deps: Pick<RefreshDeps, "source"> = {},
 ): Promise<number> {
-  const { mode, kind } = parseCommon(instance, { ...params, cursor: undefined });
+  const { mode, filter } = parseCommon(instance, { ...params, cursor: undefined });
   const circle = parseMemberCircle(params.circle);
   return forAccount(
     instance.id,
     viewer.accountId,
-    async (db) => markViewRead(db, scopeFor(await memberView(db), mode, circle), { kind, q: params.q }),
+    async (db) => markViewRead(db, scopeFor(await memberView(db), mode, circle), filter),
     deps.source,
   );
 }

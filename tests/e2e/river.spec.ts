@@ -251,7 +251,7 @@ test.describe("phone (390 px)", () => {
     await expect(page.getByRole("complementary", { name: "Filters" })).toBeHidden();
 
     const chips = page.getByRole("group", { name: "Filters" });
-    await chips.getByLabel("Content type").selectOption("podcasts");
+    await chips.getByRole("list", { name: "Content type" }).getByRole("button", { name: "Podcasts" }).click();
     await chips.getByRole("button", { name: "News and ideas" }).click();
     await expect(cards(page)).toHaveCount(1);
     await expect(cards(page).first()).toHaveAttribute("data-kind", "podcast");

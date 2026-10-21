@@ -165,6 +165,21 @@ describe("filters (check 5)", () => {
     expect(events.every((i) => i.kind === "event")).toBe(true);
   });
 
+  it("several types show any of those kinds; networks show only their adapters (ui-revisions-1)", async () => {
+    const mixed = await allItems({ type: "events,photos" });
+    expect(new Set(mixed.map((i) => i.kind))).toEqual(new Set(["event", "photo"]));
+    const hubs = await allItems({ network: "hubs" });
+    expect(hubs.length).toBeGreaterThan(0);
+    expect(hubs.every((i) => i.space.adapter === "civic_hub")).toBe(true);
+    const fedi = await allItems({ network: "fediverse" });
+    expect(fedi.length).toBeGreaterThan(0);
+    expect(fedi.every((i) => i.space.adapter === "fediverse")).toBe(true);
+    const both = await allItems({ network: "hubs,fediverse" });
+    expect(both.length).toBe(hubs.length + fedi.length);
+    const hubPhotos = await allItems({ network: "hubs", type: "photos" });
+    expect(hubPhotos.every((i) => i.kind === "photo" && i.space.adapter === "civic_hub")).toBe(true);
+  });
+
   it("civic mode shows only civic-category spaces and the Civic circle", async () => {
     const civic = await allItems({ mode: "civic" });
     expect(civic.length).toBeGreaterThan(0);
@@ -172,7 +187,7 @@ describe("filters (check 5)", () => {
   });
 
   it("refuses an unknown mode, circle, type or cursor", async () => {
-    for (const query of ["mode=party", "circle=Bowling", "type=memes", "cursor=nope", "type=a&type=b"]) {
+    for (const query of ["mode=party", "circle=Bowling", "type=memes", "cursor=nope", "type=a&type=b", "network=bluesky"]) {
       const res = await fetch(`${API}/feed?${query}`);
       expect(res.status, query).toBe(400);
     }

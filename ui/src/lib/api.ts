@@ -141,7 +141,10 @@ export interface FeedQuery {
   /** Empty or undefined: the instance's default mode. */
   mode?: string;
   circle?: string;
-  type?: string;
+  /** Content types; empty or undefined for All. */
+  types?: string[];
+  /** Networks; empty or undefined for every network. */
+  networks?: string[];
   q?: string;
   cursor?: string;
 }
@@ -161,7 +164,8 @@ export function feedSearch(query: FeedQuery): string {
   const params = new URLSearchParams();
   if (query.mode) params.set("mode", query.mode);
   if (query.circle && query.circle !== "All") params.set("circle", query.circle);
-  if (query.type && query.type !== "all") params.set("type", query.type);
+  if (query.types?.length) params.set("type", query.types.join(","));
+  if (query.networks?.length) params.set("network", query.networks.join(","));
   const q = query.q?.trim();
   if (q) params.set("q", q);
   if (query.cursor) params.set("cursor", query.cursor);
@@ -212,12 +216,13 @@ export async function saveReadState(change: { read?: string[]; unread?: string[]
   }
 }
 
-/** A member's "Mark all read" for the current view (its mode, circle, type and search). */
+/** A member's "Mark all read" for the current view (its mode, circle, types, networks and search). */
 export async function saveAllRead(query: Omit<FeedQuery, "cursor">): Promise<boolean> {
   const body: Record<string, string> = {};
   if (query.mode) body.mode = query.mode;
   if (query.circle && query.circle !== "All") body.circle = query.circle;
-  if (query.type && query.type !== "all") body.type = query.type;
+  if (query.types?.length) body.type = query.types.join(",");
+  if (query.networks?.length) body.network = query.networks.join(",");
   if (query.q?.trim()) body.q = query.q.trim();
   try {
     return (await post("/api/read-state/all", body)).ok;

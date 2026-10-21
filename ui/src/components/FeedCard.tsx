@@ -50,6 +50,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
       data-item-id={item.id}
       data-source={item.source}
       data-kind={item.kind}
+      data-adapter={item.space.adapter}
     >
       <header className="card-header">
         <SourceIcon name={item.space.name} iconUrl={item.space.iconUrl} />
