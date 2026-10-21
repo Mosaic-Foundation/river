@@ -103,15 +103,178 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Resolved (Adam, 2026-10-20): agreed; keep requiring `app.instance_id` on shared tables.
 - Thread / PR: M1
 
+### 2026-10-21 — Sign-up says when an address already has a Mosaic ID
+- Question: spec 4.6 makes "Lost your passkey?" answer the same for every address so the page
+  doesn't reveal who has an account, but sign-up needs a unique address and the account must work
+  before the link is clicked. Any sign-up that fails for a taken address reveals it.
+- Reading used: sign-up checks the address before the passkey is created and says "That address
+  already has a Mosaic ID. Sign in with your passkey, or use “Lost your passkey?”." (409), so no
+  orphan passkey is left on the device. Sign-up is rate-limited per IP (10 an hour). The recovery
+  page itself reveals nothing.
+- Proposed change: spec 4.6 says sign-up may reveal that an address is taken, or moves to
+  verify-before-create (which the "works before the link is clicked" rule rules out today).
+- Thread / PR: M7 (claude/m7-identity-host)
+
 ### 2026-10-20 — Which settings forIdentity() sets
 - Question: CLAUDE.md says forInstance(), forAccount() and forIdentity() all set `app.instance_id`
   and `app.account_id`, but identity tables (spec 3.2) have no instance or River account.
 - Reading used: M0's forIdentity() opens a transaction and sets nothing; M7 picks the setting its
   policies read (likely the person's id) when it creates the identity schema.
 - Proposed change: CLAUDE.md constraint 2 names the settings per helper.
-- Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n)
+- Resolved (M7, 2026-10-21): `forIdentity({ personId?, authRequestId? })` sets `app.person_id` and
+  `app.auth_request_id` (see the M7 log entry "forIdentity() settings and the lookups"). CLAUDE.md
+  constraint 2 still names only the River's two settings; the proposed wording stands: "forIdentity()
+  sets app.person_id and app.auth_request_id".
+- Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-21 — forIdentity() settings and the lookups (M7)
+- Decision: identity policies key on two transaction settings. `app.person_id` reaches a person's
+  own rows in people, passkeys, did_log, keys, audit_log and recovery_tokens; `app.auth_request_id`
+  reaches one auth_requests row (its random uuid is the browser's capability, like a ceremony id).
+  `forIdentity({ personId?, authRequestId? })` sets them with bound `set_config` calls; with
+  neither it sees nothing. Before a person is known, six SECURITY DEFINER functions (owner
+  postgres, `search_path = ''`, EXECUTE for identity_app only) each return an id or a boolean:
+  `person_by_credential` (sign-in), `person_by_code` (did.jsonl, recover-dids),
+  `person_for_recovery` (verified address only), `email_in_use`, `person_by_token` (emailed
+  links; the caller checks purpose, expiry and use in the person's context) and `person_codes`
+  (recover-dids `--all`). A new person's id is generated first and set as `app.person_id`
+  before the insert, so the same policy covers creation.
+- Why: spec 3 (ENABLE + FORCE RLS, one role per app, no BYPASSRLS) and the M1 spec question.
+  Unauthenticated flows need a way in that is narrower than "identity_app reads every row".
+- Alternatives: `USING (true)` policies for identity_app (RLS in name only); a lookup role with
+  BYPASSRLS (a second login to guard); one wide definer function returning rows.
+- Thread / PR: M7 (claude/m7-identity-host)
+
+## 2026-10-21 — didwebvh-ts 2.8.0 (M7)
+- Decision: pin `didwebvh-ts` 2.8.0 exactly. Checked 2026-10-21: the package's LICENSE file and
+  package.json say Apache-2.0 (its README still says MIT; the LICENSE governs), which is
+  compatible with AGPL-3.0. 2.8.0 (2026-06-26) is the latest; no 3.0.0 is published (dist-tag
+  latest = 2.8.0). It declares no `engines`; it is an ESM bundle (bun-built) with its runtime
+  dependencies inlined and no install scripts, and it runs on Node 24.22 (create, update, resolve
+  verified here). It installs with npm 12 into this repo's root package (the repo has no npm
+  workspaces; `ui/` is a separate package that doesn't use it). Use: `createDID`, `updateDID` and
+  `resolveDIDFromLog` only, in memory, with our own Ed25519 signer and verifier over node:crypto.
+  Its `resolveDID()` calls global `fetch`, so nothing calls it (constraint 3), and witness proofs
+  are always passed in as none so its witness fetch never runs. Two quirks: its `{DID}` document
+  placeholder produces logs its own resolver rejects, so the template uses `{SCID}`; and with
+  `NODE_ENV=test` (Vitest) it writes each log it creates to `./test/logs/` (gitignored).
+- Why: spec 4.6 ("pin an exact version after confirming its LICENSE, Node 24 support and whether
+  3.0.0 is released"). Hand-rolling did:webvh is out.
+- Alternatives: a `^2.8.0` range (a minor release could change log output); waiting for 3.0.0.
+- Thread / PR: M7
+
+## 2026-10-21 — Passkey options (M7)
+- Decision: `@simplewebauthn/server` 14.0.3 and `@simplewebauthn/browser` 14.0.0 (MIT), exact.
+  Registration: RP name "Mosaic ID", RP ID `RP_ID`, `residentKey: 'required'` (and
+  `requireResidentKey`), `userVerification: 'required'`, attestation `none`, algorithms EdDSA,
+  ES256, RS256, `user.id` = the 32 random bytes of `webauthn_user_id`, `user.name` = the email
+  address (only the authenticator keeps it), display name the optional name or the address.
+  Sign-in: empty `allowCredentials`, user verification required. Each options call writes a new
+  32-byte challenge to the auth_requests row; verification compares against that row only, and
+  the row is marked used (`UPDATE … WHERE used_at IS NULL AND expires_at > now`) before the note
+  is signed. A recovery passkey reuses the person's `webauthn_user_id`, so it is the same user.
+- Why: spec 4.6. Attestation adds nothing for a demo with no authenticator policy.
+- Thread / PR: M7
+
+## 2026-10-21 — Identity table shapes (M7)
+- Decision: beyond spec 3.2's columns: `auth_requests` has `purpose` (authorize, recover,
+  change_email), `person_id`, `pending` (jsonb: a sign-up's address, user handle and name; a new
+  address; a recovery's token id) and `created_at`; client fields are all set or all null.
+  `recovery_tokens` has `email` (the address a verify_email token confirms: the sign-up address
+  or the one being changed to), `auth_request_id` (the authorize request a recovery continues)
+  and `created_at`; CHECKs cap expiry at 15 minutes (recover) and 24 hours (verify_email).
+  `people.email` is stored lowercased with a plain unique index. `keys` stores iv||tag||data in
+  bytea for both the private key and the wrapped data key, `public_jwk` without `d`, at most one
+  active key per person. `did_log` rows are one JSON line each, append-only by grant and trigger.
+  `audit_log.action` adds recovery_requested, recovered, email_verified, email_change_requested
+  and did_recovered to 3.2's four. No DELETE grant on any identity table; UPDATE only on the
+  columns flows change. Every expiry is compared with a time the app passes in.
+- Why: spec 3.2 lists columns, not how ceremonies carry state between their two steps.
+- Thread / PR: M7
+
+## 2026-10-21 — The identity host keeps no session (M7)
+- Decision: no identity-host cookie at all. Sign-in, sign-up and recovery each finish in one
+  ceremony; changing the email starts with a fresh passkey check (spec 4.6) that identifies the
+  person. `SESSION_SECRET` stays unused on the identity host for now. Every POST must carry
+  `Origin: IDENTITY_PUBLIC_ORIGIN`. Pages send `Referrer-Policy: same-origin` (tokens in URLs
+  never leave as a Referer; with `no-referrer`, browsers send `Origin: null` on form posts).
+- Why: fewer secrets and nothing to steal; spec 4.6 asks for a fresh check anyway.
+- Thread / PR: M7
+
+## 2026-10-21 — Emailed links (M7)
+- Decision: a link's GET shows a page with one button; only the POST (or, for recovery, the
+  finished passkey registration) uses the token, so mail scanners that open links don't spend
+  them. A recovery token is marked used in the same transaction that adds the passkey; a
+  cancelled passkey prompt leaves the link working until it expires. A recovery link sent from the
+  authorize page carries that request's id; when the link is used while that request is still
+  open (10 minutes), the new passkey's ceremony copies its client, state and nonce and finishes
+  with the note; otherwise the page says "Go back to Mosaic River and sign in". A new verify link
+  makes the person's earlier unused verify links stop working. "Lost your passkey?" sends to
+  verified addresses only, at most 3 links per person per hour (counted in the database), and
+  writes recovery_requested (with a hashed IP prefix) to the audit log.
+- Why: spec 4.6 (single use, 15 minutes / 24 hours, continue the sign-in).
+- Thread / PR: M7
+
+## 2026-10-21 — Rate limits in memory (M7)
+- Decision: fixed windows per IP in the function's memory: /authorize and both sign-in steps 60
+  per 10 minutes, sign-up 10 per hour, recovery 10 per 15 minutes per IP and 3 per hour per
+  address (hashed, known or not, answered with the usual message), emailed links and change email
+  60 per 10 minutes. The IP is `x-real-ip` on Vercel, the socket address elsewhere. On Vercel each
+  warm instance counts alone, so this slows one client rather than capping globally; the
+  per-person recovery cap is the durable one.
+- Why: spec 4.6 asks for per-IP and per-address limits; a database table for counters would be
+  one more table and policy for a demo.
+- Alternatives: a `rate_limits` table (durable, global); Vercel's firewall rules (not code).
+- Thread / PR: M7
+
+## 2026-10-21 — The "confirm your email" reminder (M7)
+- Decision: after sign-up, and after any sign-in while the address is unconfirmed, the authorize
+  page shows "Please confirm your email" with the masked address and a "Continue to Mosaic River"
+  link holding the redirect (the note inside lives 120 seconds), plus a link to send it again
+  (the change-email page, which re-sends for the same address).
+- Why: spec 4.6 ("the account works before the link is clicked, with a reminder until it is").
+- Thread / PR: M7
+
+## 2026-10-21 — Test clock and test routes on the identity host (M7)
+- Decision: with `TEST_ROUTES=1` (refused on Vercel) the identity host mounts `GET/DELETE
+  /test/mailbox` (capture transport), `POST /test/clock {offsetMs}` (moves the identity clock that
+  every expiry check and note time reads) and `POST /test/rate-limits/reset`.
+- Why: checks 35 and 36 need links that fail after 24 hours and 15 minutes, and a mailbox.
+- Thread / PR: M7
+
+## 2026-10-21 — recover-dids (M7)
+- Decision: `npm run recover-dids -- --key-file <pem> (--code <code>… | --all)`, or without
+  `--key-file` a pasted PEM on stdin. The key is an Ed25519 PKCS#8 PEM (`openssl genpkey
+  -algorithm ed25519`); a file inside the working tree is refused, and no environment variable is
+  read for it. `--print-public-key` prints the multikey for `IDENTITY_RECOVERY_PUBLIC_KEY`. The
+  database (`DATABASE_URL` as identity_app) and the master key that seals the new custodial keys
+  come through env.ts, from `.env.recover` (gitignored) or the shell. Per person, one transaction
+  with the person's row lock: verify the log, check the key is an update key, retire the old
+  custodial key, seal a new one, append the entry (updateKeys [new, recovery]; `#key-1` the new
+  key), verify again (same SCID and DID), audit `did_recovered`.
+- Why: spec 4.6 and check 37. After a lost master key Adam deploys a new one first, then runs this
+  with it.
+- Thread / PR: M7
+
+## 2026-10-21 — Identity pages: CSP and styles (M7)
+- Decision: the Express pages and `identity/vercel.json` send the same CSP (a unit test keeps them
+  equal): `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:;
+  font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self';
+  frame-ancestors 'none'`. Styles are one small sheet at `/identity.css` with its own `--id-*`
+  tokens (light and dark), since the River's themes live in `ui/`. Changing `identity/vercel.json`
+  makes the PR needs-adam.
+- Why: spec Appendix B.
+- Thread / PR: M7
+
+## 2026-10-21 — Resend through the fetch guard (M7)
+- Decision: `EMAIL_TRANSPORT=resend` posts `{from, to: [address], subject, text}` with
+  `Authorization: Bearer RESEND_API_KEY` to `https://api.resend.com/emails` through the fetch
+  guard. A failed send is logged as one redacted line and never fails the request. No test calls
+  Resend; a unit test checks the request against a MockAgent.
+- Why: ADR-001 item 4; spec 4.6.
+- Thread / PR: M7
 
 ## 2026-10-21 — The River's CSP lives in vercel.json; vite preview serves the same header (M6)
 - Decision: `vercel.json` sends `Content-Security-Policy: default-src 'self'; script-src 'self';

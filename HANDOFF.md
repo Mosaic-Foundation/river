@@ -20,6 +20,77 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M7 Identity host: passkeys, did:webvh, sealed keys, audit log, authorize, email and recovery — 2026-10-21
+
+- Branch / PR: claude/m7-identity-host → PR (needs-adam: authentication, `src/identity/keys/`,
+  `src/identity/recovery/`, a new migration with RLS, `identity/vercel.json`, `.github/`, the
+  identity host's use of `api.resend.com`, CLAUDE.md Commands). Built on M2–M6 (unmerged);
+  merge after them, once its own diff is only M7.
+- Migrations: `20261021140000_identity_tables.sql` (people, passkeys, did_log, keys,
+  auth_requests, audit_log, recovery_tokens; ENABLE + FORCE RLS; identity_app-only policies and
+  grants; six SECURITY DEFINER lookups). River schema unchanged.
+
+**What it does.** `/authorize` checks `client_id` and the exact `redirect_uri` against the clients
+built from RIVER_CLIENT_ORIGINS, stores an auth request (10 min) and serves the page. People sign
+in with a discoverable passkey, or sign up with an email address and a new passkey: one
+transaction marks the request used, creates an Ed25519 key, a `did:webvh:{SCID}:{host}:u:{code}`
+log (didwebvh-ts 2.8.0; `portable: true`; update keys = the person's key and
+IDENTITY_RECOVERY_PUBLIC_KEY; `#key-1` authenticates), seals the key (per-person AES-256-GCM key
+wrapped by IDENTITY_MASTER_KEY, DID as AAD), stores the passkey, audits everything and signs the
+note: `redirect_uri?state=…&note={jws}` (EdDSA, `kid {did}#key-1`, `{iss, sub, aud, nonce, iat,
+exp = iat + 120}`). `GET /u/{code}/did.jsonl` serves the log as `text/jsonl`. Email: a 24-hour
+verify link on sign-up (the account works at once; a reminder shows until it's confirmed),
+"Lost your passkey?" (same answer always; a single-use 15-minute link for verified addresses
+that adds a passkey to the same person and DID and continues the sign-in; notice email), change
+email after a fresh passkey check (link to the new address, notice to the old). Transports
+`log` / `capture` / `resend`. `npm run recover-dids` re-keys DIDs with the offline recovery key.
+Pages are server-rendered with no inline script under the Appendix B CSP; `passkey.js` runs the
+ceremonies. No identity-host session at all (DECISIONS).
+
+**Keys.** `IDENTITY_RECOVERY_PUBLIC_KEY` (identity host; public half, multikey). `VERCEL` now read
+through env.ts (`env.onVercel`). Test-only: `TEST_RECOVERY_KEY_FILE` (e2e, path to the run's
+throwaway key), `IDENTITY_API_URL` (API tests, default :3001). Dependencies:
+`@simplewebauthn/server` 14.0.3, `didwebvh-ts` 2.8.0, dev `@simplewebauthn/browser` 14.0.0.
+Script `recover-dids` (reads `.env.recover` if present). Test routes under `/test/` with
+TEST_ROUTES. `forIdentity(scope, fn)` now takes `{ personId?, authRequestId? }`.
+
+**Tests.** `npm run check`: Test Files 24 passed (24), Tests 344 passed (344), UI built.
+`npm run test:api` (both dev servers, fresh `db reset`): Test Files 8 passed (8), Tests 84 passed
+(84). `npm run test:e2e`: 31 passed, against the dev servers and again against `vite preview` on
+4173 (CI's path). Checks 9, 12, 28, 35, 36, 37 in `tests/e2e/identity.spec.ts`
+(Chromium virtual authenticator); 27's identity part, 28 and 37 also in
+`tests/api/db/identity.test.ts`; check 12 and options in `tests/api/identity.test.ts`.
+
+### Follow-ups
+- **Adam, before the identity host is used for real:** generate the recovery key pair offline
+  (`openssl genpkey -algorithm ed25519 -out recovery.pem` on a machine you trust; keep it offline
+  with the master key's copy), print its public half with
+  `npm run recover-dids -- --print-public-key --key-file /path/recovery.pem`, and set
+  `IDENTITY_RECOVERY_PUBLIC_KEY` on the `mosaic-id` Vercel project. Also set
+  `IDENTITY_MASTER_KEY` (32 random bytes, base64), `RP_ID` (the identity host's name: the
+  vercel.app host until DNS, then `id.mosaic.social`; passkeys and DIDs made under one name don't
+  move), `IDENTITY_PUBLIC_ORIGIN`, `RIVER_CLIENT_ORIGINS`, `EMAIL_TRANSPORT=resend`,
+  `RESEND_API_KEY`, `EMAIL_FROM` and Resend's SPF/DKIM records for mosaic.social. Until then keep
+  `EMAIL_TRANSPORT=log` (links are not delivered; nobody can verify or recover).
+- Adam: check a `mosaic-id` preview: `/authorize` from the River's origin renders, passkey.js
+  loads with no CSP violation in the console, and `/u/{code}/did.jsonl` answers `text/jsonl`.
+- M8 (River sign-in): verify exactly this note. The DID document's `authentication` lists
+  `{did}#key-1` (absolute id) with a `Multikey` `publicKeyMultibase`; resolve with
+  `resolveDIDFromLog` over a log fetched through the fetch guard, never the library's
+  `resolveDID()` (it uses global fetch). Locally the DID host is `localhost%3A3001` and its log is
+  at `http://localhost:3001/u/{code}/did.jsonl`, which the https-only guard refuses: M8 needs a
+  local-only path (e.g. reading the log over loopback when TRUSTED_DID_HOSTS is `localhost`, test
+  routes only) or fixtures. After recover-dids the note is signed by the new key; resolve the
+  current document, not the first entry. `aud` is the River origin exactly as listed in
+  RIVER_CLIENT_ORIGINS. Prove check 37's "same River account" there.
+- M8: the River's callback is `{origin}/api/auth/callback`; the e2e helpers answer it in the
+  browser today (`catchCallback`). Replace that with the real callback.
+- Sign-up says when an address is taken (Spec questions). Rate limits are per warm instance on
+  Vercel (DECISIONS); a durable counter table is a later option.
+- "Send the link again" goes through the change-email page with a passkey check; a one-click
+  resend on the reminder would need an identity-host session.
+- No screen to list or remove passkeys (spec 5); no account deletion.
+
 ## M6 River UI: Everything mode on desktop and phone, Live and Sample cards, images, CSP — 2026-10-21
 
 - Branch / PR: claude/m6-river-ui → PR (needs-adam: `vercel.json` gains the CSP header). Built on
