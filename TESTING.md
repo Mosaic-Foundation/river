@@ -55,6 +55,9 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, sanitize-html CJS fix: unit `sanitizeCjsLoad` loads sanitize-html in a child Node
+  with `--no-experimental-require-module` (what Vercel's function loader does) and sanitizes one
+  string. Fails with ERR_REQUIRE_ESM if htmlparser2 12 comes back. Unit 453.
 - 2026-10-21, M11: unit `riverExport` (spec 3.3's document: exactly its keys, format and version;
   follows with stream keys, rules and circle names in circle order; circles with color and role;
   preferences without `seed_pending`; pending seeds exported as follows, deduplicated; a foreign
