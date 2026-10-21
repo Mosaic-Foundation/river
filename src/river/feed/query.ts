@@ -103,7 +103,7 @@ export interface FeedItem {
   boostOf: unknown;
   civic: unknown;
   isFinalResult: boolean;
-  /** For events: when and where, when the source says (raw.startTime, raw.location.name). */
+  /** For events: when and where, when the source says (raw or raw.object: startTime, location.name). */
   event?: { startTime?: string; location?: string };
   /** Exactly one of Live (a real source) or Sample (seeded demo entry). */
   source: "live" | "sample";
@@ -159,8 +159,8 @@ export async function queryFeed(
     `SELECT i.id, i.kind, i.published_at, i.published_at::text AS cursor_at, i.title,
             st.title AS stream_title, i.summary, i.content_html, i.url, i.stream_key, i.author,
             i.media, i.boost_of, i.civic, i.is_final_result,
-            CASE WHEN i.kind = 'event' THEN i.raw ->> 'startTime' END AS event_start,
-            CASE WHEN i.kind = 'event' THEN i.raw -> 'location' ->> 'name' END AS event_location,
+            CASE WHEN i.kind = 'event' THEN coalesce(i.raw ->> 'startTime', i.raw -> 'object' ->> 'startTime') END AS event_start,
+            CASE WHEN i.kind = 'event' THEN coalesce(i.raw -> 'location' ->> 'name', i.raw -> 'object' -> 'location' ->> 'name') END AS event_location,
             s.id AS space_id, s.name AS space_name, s.icon_url AS space_icon_url,
             s.category AS space_category, s.adapter AS space_adapter
        FROM river.items i

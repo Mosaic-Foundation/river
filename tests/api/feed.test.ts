@@ -124,6 +124,14 @@ describe("visitor feed (checks 1 and 2)", () => {
     }
   });
 
+  it("a sample event says when and where it starts", () => {
+    const event = everything.find((i) => i.source === "sample" && i.kind === "event") as
+      | (FeedItem & { event?: { startTime?: string; location?: string } })
+      | undefined;
+    expect(event?.event?.location).toBe("Elm Street and Fourth Avenue");
+    expect(Date.parse(event?.event?.startTime ?? "")).toBeGreaterThan(Date.parse(event?.publishedAt ?? ""));
+  });
+
   it("names the instance's circles and default mode", async () => {
     const feed = await getFeed();
     expect(feed.mode).toBe("everything");
