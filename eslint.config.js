@@ -109,4 +109,31 @@ export default [
       ],
     },
   },
+  // 5. River plugins (spec 4.7) get the current view's items through a typed API and nothing
+  //    else: a built-in plugin imports only src/river/plugins/api.ts (types), and reaches no
+  //    network, environment or module loader. These blocks come last, so they replace the River's
+  //    import and globals rules for these files (the ones above are covered by "nothing else").
+  {
+    files: ["src/river/plugins/builtin/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              regex: "^(?!\\.\\./api\\.js$)",
+              message: "A River plugin reads only its ViewApi (src/river/plugins/api.ts, spec 4.7).",
+            },
+          ],
+        },
+      ],
+      "no-restricted-globals": [
+        "error",
+        ...["fetch", "process", "require", "globalThis", "XMLHttpRequest", "WebSocket", "eval"].map((name) => ({
+          name,
+          message: "A River plugin reads only its ViewApi (spec 4.7).",
+        })),
+      ],
+    },
+  },
 ];

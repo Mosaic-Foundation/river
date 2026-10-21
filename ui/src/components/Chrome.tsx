@@ -1,7 +1,9 @@
-// The River's frame: the header (logo, phone search toggle, sign-in or the member's name and Sign
-// out on desktop, a member's Following link, Follow) and the phone's bottom tabs (spec 2, phone paragraph),
-// plus the You panel. The mode picker arrives with modes (M10).
-import { SIGN_IN_URL, viewerLabel, type Viewer } from "../lib/api";
+// The River's frame: the header (logo, the mode switch, phone search toggle, sign-in or the
+// member's name and Sign out on desktop, a member's Following link, Follow) and the phone's bottom
+// tabs (spec 2, phone paragraph), plus the You panel. The mode switch shows the instance's modes
+// and hides when there is only one (spec F9, check 8).
+import { SIGN_IN_URL, viewerLabel, type ModeOption, type Viewer } from "../lib/api";
+import { showModeSwitch } from "../lib/modes";
 import type { Tab } from "../lib/tabs";
 import { CirclesIcon, FeedIcon, FollowingIcon, PlusIcon, SearchIcon, YouIcon } from "./Icons";
 
@@ -22,7 +24,43 @@ export function Brand({ link = true }: { link?: boolean }) {
   );
 }
 
+/** Everything | Civic (spec F9): pressed buttons, one per mode the instance offers. */
+export function ModeSwitch({
+  modes,
+  current,
+  onChange,
+}: {
+  modes: readonly ModeOption[];
+  current: string;
+  onChange: (mode: string) => void;
+}) {
+  if (!showModeSwitch(modes)) return null;
+  return (
+    <div className="mode-switch" role="group" aria-label="Mode">
+      {modes.map((m) => (
+        <button
+          key={m.id}
+          type="button"
+          className="mode-option"
+          aria-pressed={current === m.id}
+          onClick={() => {
+            if (current !== m.id) onChange(m.id);
+          }}
+        >
+          {m.title}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export interface HeaderProps {
+  /** The instance's modes and the current one; empty while the first feed loads. */
+  modes: readonly ModeOption[];
+  mode: string;
+  onMode: (mode: string) => void;
+  /** The Following page, keeping the mode. */
+  followingHref: string;
   searchOpen: boolean;
   onToggleSearch: () => void;
   onFollow: (trigger: HTMLButtonElement) => void;
@@ -31,10 +69,14 @@ export interface HeaderProps {
   onSignOut: () => void;
 }
 
-export function Header({ searchOpen, onToggleSearch, onFollow, viewer, onSignOut }: HeaderProps) {
+export function Header({ modes, mode, onMode, followingHref, searchOpen, onToggleSearch, onFollow, viewer, onSignOut }: HeaderProps) {
+  const switchShown = showModeSwitch(modes);
   return (
-    <header className="topbar">
-      <Brand />
+    <header className={switchShown ? "topbar topbar-modes" : "topbar"}>
+      <div className="topbar-start">
+        <Brand />
+        <ModeSwitch modes={modes} current={mode} onChange={onMode} />
+      </div>
       <div className="topbar-actions">
         {viewer === null && (
           <a className="button button-quiet desktop-inline" href={SIGN_IN_URL}>
@@ -42,7 +84,7 @@ export function Header({ searchOpen, onToggleSearch, onFollow, viewer, onSignOut
           </a>
         )}
         {viewer && (
-          <a className="button button-quiet desktop-inline" href="/following">
+          <a className="button button-quiet desktop-inline" href={followingHref}>
             Following
           </a>
         )}

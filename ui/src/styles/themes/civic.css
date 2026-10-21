@@ -34,7 +34,7 @@
   --color-surface: var(--civic-cream-raise);
   --color-surface-alt: var(--civic-cream-sink);
   --color-text: var(--civic-teal);
-  --color-text-muted: #5a6b6e;
+  --color-text-muted: #526366; /* 4.9:1 on cream-sink, the page background (M10) */
   --color-heading: var(--civic-teal);
   --color-primary: var(--civic-green);
   --color-primary-hover: var(--civic-green-hover);

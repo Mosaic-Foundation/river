@@ -6,6 +6,8 @@ import { circleColor, CONTENT_TYPES } from "../lib/format";
 import { SearchIcon } from "./Icons";
 
 export interface FilterState {
+  /** The mode (spec F9): "" for the instance's default. Set by the header's switch, not here. */
+  mode: string;
   circle: string;
   type: string;
   q: string;

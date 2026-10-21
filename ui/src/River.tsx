@@ -1,7 +1,9 @@
-// The feed page at / (spec F1, F4, F5, F10; §7 M6, M8: Everything mode, desktop and phone). A
+// The feed page at / (spec F1, F4, F5, F9, F10; §7 M6, M8, M10: modes, desktop and phone). A
 // visitor's read state stays in this browser and the page makes no server write (check 23); a
 // signed-in member's is saved to their account through the API and comes back with the feed. On a phone,
 // members follow, unfollow and edit circles in the Following and Circles tabs (M9, spec F6-F8).
+// The mode (`?mode=`, else the instance's default) sets the scope, the theme and the plugin panel,
+// all as the API answers them (M10, spec 4.7).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   loadFeed,
@@ -11,8 +13,12 @@ import {
   SIGN_IN_URL,
   type FeedCircle,
   type FeedItem,
+  type ModeOption,
+  type SurfaceOutput,
   type Viewer,
 } from "./lib/api";
+import { modeFromSearch, withMode } from "./lib/modes";
+import { PluginPanel } from "./components/PluginPanel";
 import { CONTENT_TYPES, SAMPLE_EXPLAINER } from "./lib/format";
 import { browserStore, loadRead, markRead, markUnread, saveRead } from "./lib/readState";
 import { Header, TabBar, YouPanel } from "./components/Chrome";
@@ -39,7 +45,11 @@ type Load =
       items: FeedItem[];
       circles: FeedCircle[];
       mode: string;
+      modes: ModeOption[];
+      defaultMode: string;
       theme: string;
+      /** The river.panel surface's plugins, from the first page. */
+      panel: SurfaceOutput[];
       nextCursor: string | null;
       emptyMessage: string | null;
       viewer: Viewer | null;
@@ -52,6 +62,7 @@ function filtersFromUrl(): FilterState {
   const params = new URLSearchParams(window.location.search);
   const type = params.get("type") ?? "all";
   return {
+    mode: modeFromSearch(window.location.search),
     circle: params.get("circle") || "All",
     type: CONTENT_TYPES.some((t) => t.value === type) ? type : "all",
     q: params.get("q") ?? "",
@@ -60,6 +71,7 @@ function filtersFromUrl(): FilterState {
 
 function filtersToUrl(filters: FilterState): void {
   const params = new URLSearchParams();
+  if (filters.mode) params.set("mode", filters.mode);
   if (filters.circle !== "All") params.set("circle", filters.circle);
   if (filters.type !== "all") params.set("type", filters.type);
   if (filters.q) params.set("q", filters.q);
@@ -159,11 +171,16 @@ export function River() {
   useEffect(() => {
     filtersToUrl(filters);
     const controller = new AbortController();
-    loadFeed({ circle: filters.circle, type: filters.type, q: filters.q }, controller.signal)
+    loadFeed({ mode: filters.mode, circle: filters.circle, type: filters.type, q: filters.q }, controller.signal)
       .then((result) => {
         if (result.status === "bad_circle") {
           // A circle from another view (a visitor's circle name after sign-in): show All.
           setFilters((current) => ({ ...current, circle: "All" }));
+          return;
+        }
+        if (result.status === "bad_mode") {
+          // A mode this River doesn't offer (an old link): open its default mode.
+          setFilters((current) => ({ ...current, mode: "" }));
           return;
         }
         if (result.status !== "ok") {
@@ -176,7 +193,10 @@ export function River() {
           items: feed.items,
           circles: feed.circles,
           mode: feed.mode,
-          theme: feed.mode === "civic" ? "civic" : "mosaic",
+          modes: feed.modes ?? [],
+          defaultMode: feed.instance.defaultMode,
+          theme: feed.theme ?? "mosaic",
+          panel: feed.surfaces?.["river.panel"] ?? [],
           nextCursor: feed.nextCursor,
           emptyMessage: feed.empty ? feed.emptyMessage : null,
           viewer: feed.viewer ?? null,
@@ -188,16 +208,28 @@ export function River() {
     return () => controller.abort();
   }, [filters, retry]);
 
-  // Everything mode uses the Mosaic theme (spec 4.7); Civic mode's switch arrives in M10.
+  // The mode's theme, as the API names it (spec 4.7: Everything is Mosaic, Civic is Civic).
   const theme = load.status === "ok" ? load.theme : "mosaic";
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
-  const mode = load.status === "ok" ? load.mode : "everything";
+  // The chosen mode shows as pressed at once; the title, theme and panel follow the feed the API
+  // answered for it.
+  const chosenMode = load.status === "ok" ? filters.mode || load.defaultMode : filters.mode || "everything";
+  const mode = load.status === "ok" ? load.mode : chosenMode;
+  const modes = load.status === "ok" ? load.modes : [];
+  const modeTitle = modes.find((m) => m.id === mode)?.title ?? MODE_TITLES[mode] ?? "River";
+  // Links to the Following page keep a mode other than Everything (its theme follows).
+  const linkMode = mode === "everything" ? "" : mode;
   useEffect(() => {
-    if (load.status !== "unknown_host") document.title = `${MODE_TITLES[mode] ?? "River"} · Mosaic River`;
-  }, [mode, load.status]);
+    if (load.status !== "unknown_host") document.title = `${modeTitle} · Mosaic River`;
+  }, [modeTitle, load.status]);
+
+  const changeMode = (next: string) => {
+    setTab("feed");
+    setFilter({ mode: load.status === "ok" && next === load.defaultMode ? "" : next });
+  };
 
   const setFilter = (patch: Partial<FilterState>) => {
     setFilters((current) => ({ ...current, ...patch }));
@@ -234,6 +266,7 @@ export function River() {
   if (load.status === "unknown_host") return <NotFound message={load.message} homeLink={false} />;
 
   const circles = load.status === "ok" ? load.circles : [];
+  const panel = load.status === "ok" ? load.panel : [];
   const items = load.status === "ok" ? load.items : [];
   const unread = items.filter((i) => !reads.isRead(i.id));
   const filterProps = {
@@ -250,6 +283,10 @@ export function River() {
         Skip to the feed
       </a>
       <Header
+        modes={modes}
+        mode={chosenMode}
+        onMode={changeMode}
+        followingHref={withMode("/following", linkMode)}
         searchOpen={searchOpen}
         onToggleSearch={() => setSearchOpen((open) => !open)}
         onFollow={(trigger) => {
@@ -259,7 +296,7 @@ export function River() {
           else if (window.matchMedia(PHONE_QUERY).matches) {
             setTab("following");
             window.setTimeout(() => document.getElementById("follow-input-phone")?.focus(), 0);
-          } else window.location.assign("/following#follow");
+          } else window.location.assign(withMode("/following#follow", linkMode));
         }}
         viewer={viewer}
         onSignOut={endSession}
@@ -273,16 +310,14 @@ export function River() {
         <FilterChips {...filterProps} />
       </div>
 
-      <div className="layout">
+      <div className={panel.length > 0 ? "layout layout-panel" : "layout"}>
         <div className="desktop-only">
           <FilterSidebar {...filterProps} />
         </div>
 
         <main className={tab === "feed" ? "feed" : "feed hidden-phone"} id="feed" tabIndex={-1}>
           <div className="feed-head">
-            <h1 className="feed-title">
-              {MODE_TITLES[mode] ?? "River"}
-            </h1>
+            <h1 className="feed-title">{modeTitle}</h1>
             <p className="feed-summary">
               {load.status === "ok" && items.length > 0 ? `${unread.length} unread · newest first` : "Newest first"}
             </p>
@@ -347,6 +382,12 @@ export function River() {
             </div>
           )}
         </main>
+
+        {panel.length > 0 && (
+          <div className={tab === "feed" ? "plugin-column" : "plugin-column hidden-phone"}>
+            <PluginPanel plugins={panel} label={`${modeTitle} panel`} />
+          </div>
+        )}
 
         {tab === "you" && (
           <section className="tab-placeholder phone-only" aria-labelledby="tab-title">

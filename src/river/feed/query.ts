@@ -6,6 +6,7 @@
 // their follows, circles and stream rules), so this module only knows spaces and streams.
 import type { Db } from "../../db/context.js";
 import type { ItemKind } from "../../shared/items/index.js";
+import type { PluginItem } from "../plugins/api.js";
 import type { SpaceRow } from "./spaces.js";
 
 export const PAGE_SIZE = 30;
@@ -229,6 +230,57 @@ export async function queryFeed(
     items: page.map(toFeedItem),
     nextCursor: rows.length > limit && last ? encodeCursor({ at: last.cursor_at, id: last.id }) : null,
   };
+}
+
+/** Most items of a view that plugins read (newest first). */
+export const VIEW_ITEMS_LIMIT = 500;
+
+/**
+ * The current view's items as plugins see them (src/river/plugins/api.ts PluginItem): the same
+ * scope and filters as the feed, every page rather than one, newest first, up to
+ * VIEW_ITEMS_LIMIT. Only what a card shows: no raw activity, no read state.
+ */
+export async function queryViewItems(db: Db, scope: FeedScope, filter: Omit<FeedFilter, "cursor" | "limit">): Promise<PluginItem[]> {
+  if (scope.spaceIds.length === 0 && scope.streams.length === 0) return [];
+  const where = feedWhere(scope, { ...filter, cursor: undefined });
+  const { rows } = await db.query<{
+    id: string;
+    kind: ItemKind;
+    published_at: Date;
+    title: string | null;
+    url: string | null;
+    stream_key: string | null;
+    deadline: string | null;
+    event_start: string | null;
+    space_id: string;
+    space_name: string;
+    space_category: string | null;
+    space_adapter: string;
+  }>(
+    `SELECT i.id, i.kind, i.published_at, coalesce(i.title, st.title) AS title, i.url, i.stream_key,
+            i.civic ->> 'deadline' AS deadline,
+            CASE WHEN i.kind = 'event' THEN coalesce(i.raw ->> 'startTime', i.raw -> 'object' ->> 'startTime') END AS event_start,
+            s.id AS space_id, s.name AS space_name, s.category AS space_category, s.adapter AS space_adapter
+       FROM river.items i
+       JOIN river.spaces s ON s.id = i.space_id
+       LEFT JOIN river.streams st ON st.space_id = i.space_id AND st.key = i.stream_key
+      WHERE ${where.sql}
+      ORDER BY i.published_at DESC, i.id DESC
+      LIMIT $${where.values.length + 1}`,
+    [...where.values, VIEW_ITEMS_LIMIT],
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    publishedAt: row.published_at.toISOString(),
+    title: row.title,
+    url: row.url,
+    streamKey: row.stream_key,
+    deadline: row.deadline,
+    eventStart: row.event_start,
+    source: row.space_adapter === "sample" ? "sample" : "live",
+    space: { id: row.space_id, name: row.space_name, category: row.space_category },
+  }));
 }
 
 /** Most items "Mark all read" marks in one go (newest first). */

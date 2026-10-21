@@ -74,4 +74,15 @@ describe("lint boundaries", () => {
   it("lets the identity host's browser script call fetch", async () => {
     expect(await ruleIds("src/identity/client/x.ts", 'export const r = fetch("/api");\n')).toEqual([]);
   });
+
+  it("lets a River plugin import only its ViewApi (spec 4.7)", async () => {
+    const file = "src/river/plugins/builtin/x.ts";
+    expect(await ruleIds(file, 'import type { ViewApi } from "../api.js";\nexport type A = ViewApi;\n')).toEqual([]);
+    for (const mod of ["../../feed/query.js", "../../../db/context.js", "../registry.js", "pg", "undici", "node:fs", "../../../config/env.js"]) {
+      expect(await ruleIds(file, `import x from "${mod}";\nexport default x;\n`), mod).toContain("no-restricted-imports");
+    }
+    for (const global of ["fetch", "process", "globalThis", "require"]) {
+      expect(await ruleIds(file, `export const r = ${global};\n`), global).toContain("no-restricted-globals");
+    }
+  });
 });
