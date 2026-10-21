@@ -2,10 +2,21 @@
 // the left sidebar still beside it. Full sanitized content (src/shared/sanitize/, the only HTML;
 // CLAUDE.md constraint 8), every image, the author and the source. "Back to River" returns to
 // the feed where it was; "Open original" opens the item where it lives, in a new tab. Nothing is
-// fetched from outside: the item comes from the loaded feed or GET /api/items/{id}.
+// fetched from outside: the item comes from the loaded feed or GET /api/items/{id}. Audio and
+// video from https sources play here, straight from the source, and load only when played
+// (preload="none"; CSP media-src 'self' https:).
 import { useEffect, useRef } from "react";
 import type { FeedItem } from "../lib/api";
-import { deadlineLabel, eventDate, formatDuration, fullDateTime, kindLabel, linkHost } from "../lib/format";
+import {
+  deadlineLabel,
+  eventDate,
+  formatDuration,
+  fullDateTime,
+  kindLabel,
+  linkHost,
+  playableMedia,
+  safeMediaUrl,
+} from "../lib/format";
 import { CardMedia } from "./CardMedia";
 import { BoostIcon, ExternalIcon } from "./Icons";
 import { SourceIcon } from "./SourceIcon";
@@ -67,7 +78,9 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
   const duration = formatDuration(item.media.find((m) => m.duration)?.duration, item.kind);
   const civicLabel = item.kind === "civic" || item.civic ? item.civic?.label : undefined;
   const heading = item.title || `${kindLabel(item.kind)} from ${item.space.name}`;
-  const playable = item.media.some((m) => m.type === "audio" || m.type === "video");
+  const players = playableMedia(item.media);
+  // Media the reader can't play here (not https) still says where it plays.
+  const elsewhere = players.length === 0 && item.media.some((m) => m.type === "audio" || m.type === "video");
 
   return (
     <article className="reader" aria-labelledby="reader-title" data-testid="reader" data-item-id={item.id}>
@@ -150,7 +163,34 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
       )}
 
       <CardMedia media={item.media} limit={20} />
-      {playable && host && <p className="card-muted">This {kindLabel(item.kind).toLowerCase()} plays on {host}.</p>}
+      {players.map((m, i) => {
+        const label = `${m.type === "video" ? "Video" : "Audio"}${players.length > 1 ? ` ${i + 1}` : ""} from ${linkHost(m.url) ?? item.space.name}`;
+        return m.type === "video" ? (
+          <video
+            key={m.url}
+            className="reader-media reader-video"
+            src={safeMediaUrl(m.url)}
+            controls
+            preload="none"
+            playsInline
+            width={m.width}
+            height={m.height}
+            aria-label={m.alt ? `${label}: ${m.alt}` : label}
+            data-testid="reader-player"
+          />
+        ) : (
+          <audio
+            key={m.url}
+            className="reader-media reader-audio"
+            src={safeMediaUrl(m.url)}
+            controls
+            preload="none"
+            aria-label={m.alt ? `${label}: ${m.alt}` : label}
+            data-testid="reader-player"
+          />
+        );
+      })}
+      {elsewhere && host && <p className="card-muted">This {kindLabel(item.kind).toLowerCase()} plays on {host}.</p>}
 
       {(civicLabel || deadline || duration || item.isFinalResult) && (
         <ul className="card-chips" aria-label="Details">

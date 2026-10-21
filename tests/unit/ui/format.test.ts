@@ -7,6 +7,8 @@ import {
   deadlineLabel,
   NETWORKS,
   parseList,
+  playableMedia,
+  safeMediaUrl,
   toggleValue,
   eventDate,
   formatDuration,
@@ -34,6 +36,20 @@ describe("card helpers", () => {
       "posts", "articles", "podcasts", "videos", "photos", "events", "civic",
     ]);
     expect(NETWORKS.map((n) => n.value)).toEqual(["hubs", "fediverse"]);
+  });
+
+  it("plays audio and video from https sources only", () => {
+    expect(safeMediaUrl("https://files.example/a.mp4")).toBe("https://files.example/a.mp4");
+    for (const bad of ["http://files.example/a.mp4", "javascript:alert(1)", "/samples/a.mp3", "https://u:p@files.example/a.mp4", "", null]) {
+      expect(safeMediaUrl(bad)).toBeUndefined();
+    }
+    const media = [
+      { type: "image" as const, url: "https://files.example/a.png" },
+      { type: "video" as const, url: "https://files.example/a.mp4" },
+      { type: "audio" as const, url: "http://files.example/a.mp3" },
+      { type: "audio" as const, url: "https://files.example/b.mp3" },
+    ];
+    expect(playableMedia(media).map((m) => m.url)).toEqual(["https://files.example/a.mp4", "https://files.example/b.mp3"]);
   });
 
   it("reads and toggles filter lists in their own order (ui-revisions-1 items 2, 4)", () => {
