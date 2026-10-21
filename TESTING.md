@@ -25,6 +25,10 @@ npm run test:live                 # @live tests against real hosts; never in che
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, M3: unit `sanitize` (check 22 sanitizer half, allowlist, https-only links) and
+  `civicHub/` (`allowlist`, `hubTemplates`, `map`, `adapter`: checks 18 adapter part, 22, 25,
+  plus 13/14/16 through resolve). Fixtures: 36 recorded hub responses; derived cases inline and
+  labelled. Unit 174.
 - 2026-10-21, M2: unit `fetchGuard` (address table from the hub; check 16 with an injected
   resolver and a counting MockAgent: refused, F6 wording, zero requests; redirect targets never
   requested; pinned lookup and rebinding; redirects; 2 MB; timeout; 2 per host; Retry-After;
