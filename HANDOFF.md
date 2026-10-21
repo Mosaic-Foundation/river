@@ -20,6 +20,31 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M2 Fetch guard: every outbound request checked, pinned, capped; fixture replay — 2026-10-21
+
+- Branch / PR: claude/m2-fetch-guard → PR (needs-adam: fetch guard, ADR-001 scope)
+- Migrations: none
+
+**What it does.** `src/shared/fetch/` ports the Civic Hub's ssrfGuard onto undici: https only,
+every address checked (private, loopback, link-local, CGNAT, multicast, metadata, IPv4-in-IPv6
+forms, localhost names), connections pinned to the checked address through the Agent's
+`connect.lookup`, redirects by hand (3, each checked), 2 MB, 6 s, 2 per host, Retry-After honored,
+the River's User-Agent. `FetchError` codes plus `followMessage()` give the F6 wording. Fixture
+format and replay (FETCH_FIXTURES_DIR, MockAgent) are defined. Lint keeps undici, node:http(s)
+and global fetch inside the folder.
+
+**Keys.** None new (`FETCH_FIXTURES_DIR` existed). Dependency: `undici` ^7.30.1.
+
+**Tests.** `fetchGuard` (37: the hub's address table, all of check 16 with zero requests sent, pinning
+and rebinding, redirects, limits, Retry-After, replay) and `lintBoundaries` (+8). Mutation check:
+removing the resolved-address check, the per-host limit or the redirect re-check each fails tests.
+One manual request through the real pinned Agent to demosville.civic.social returned 200.
+
+### Follow-ups
+- M3/M4 adapters take a `FetchGuard` (default `getFetchGuard()`); recorders use `saveFixture` and
+  `fixtureFromResponse`, and register in `scripts/record-fixtures.ts`.
+- Constraint 3 note: DID resolution (M8) and Resend (M7) go through this guard too.
+
 ## deploy-migrations: db push through the session pooler — 2026-10-21
 
 - Branch / PR: claude/vibrant-keller-6qnr0g → PR (needs-adam: `.github/`)

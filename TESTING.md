@@ -25,6 +25,11 @@ npm run test:live                 # @live tests against real hosts; never in che
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, M2: unit `fetchGuard` (address table from the hub; check 16 with an injected
+  resolver and a counting MockAgent: refused, F6 wording, zero requests; redirect targets never
+  requested; pinned lookup and rebinding; redirects; 2 MB; timeout; 2 per host; Retry-After;
+  304/HEAD; abort; fixture write, load and replay) and `lintBoundaries` (network imports, global
+  fetch). Mutation check on three guard checks. Unit 94.
 - 2026-10-20, M1: API (database) `db/catalog` (roles have no SUPERUSER, BYPASSRLS, CREATEROLE,
   CREATEDB or REPLICATION; each has USAGE on its own schema only; river tables match
   `src/db/tables.ts`, all with ENABLE + FORCE RLS and river_app-only policies; seed instance and

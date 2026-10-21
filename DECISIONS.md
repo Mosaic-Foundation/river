@@ -50,6 +50,45 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-21 — The fetch guard's shape (M2)
+- Decision: `src/shared/fetch/` exports `createFetchGuard(options)` and a process-wide
+  `getFetchGuard()` / `guardedFetch()`. It runs on an undici `Agent` whose `connect.lookup`
+  resolves, checks every answer and pins the socket to the first, so the address checked is the
+  address connected to (the hub did the same through node:http). Before any hop is sent, the
+  host is checked: IP literals against the ranges, names through the resolver (any blocked answer
+  refuses), and `localhost` / `*.localhost` before DNS. https only at every hop, at most 3
+  redirects, 2 MB, 6 s across all hops and queueing, 2 in flight per host (per process, with a
+  queue), User-Agent and Host always the guard's. A 429 or 503 with Retry-After (seconds or a
+  date, capped at an hour) makes the guard refuse that host until then (`retry_later`); it never
+  retries. Errors are `FetchError` with a code; `followMessage()` maps the four "off limits" codes
+  to "This address can't be followed" and the rest to "We couldn't reach that address" (spec F6).
+  The hub's dev flag that allowed private addresses is not ported: Appendix B forbids any such
+  override, and an injected resolver's answers are checked like any other. Adapters should take a
+  `FetchGuard` parameter that defaults to `getFetchGuard()`.
+- Why: spec Appendix B, ADR-001; the hub's guard, with an injectable resolver and Dispatcher.
+- Alternatives: a new Agent per request pinned to one IP (no connection reuse); node:http as the
+  hub has it (no way to inject a MockAgent).
+- Thread / PR: M2 (claude/m2-fetch-guard)
+
+## 2026-10-21 — Fixture format and replay (M2)
+- Decision: one JSON file per request under `tests/fixtures/http/<host>/` (`url`, optional
+  `method` and `requestHeaders`, `status`, `headers`, text `body`); see its README. Replay builds a
+  MockAgent from the files and a resolver that answers only recorded hosts with a stand-in public
+  address, and runs the real guard, so checks behave as in production with no network.
+- Why: spec 6 and CLAUDE.md "Code" (replay through FETCH_FIXTURES_DIR in API and e2e tests, MockAgent
+  in unit tests); the README left the format to M2.
+- Alternatives: one file per host (large diffs on re-record); a HAR file (much more than tests read).
+- Thread / PR: M2
+
+## 2026-10-21 — undici and the network lint rules
+- Decision: `undici` `^7.30.1` (MIT), the major Node 24 bundles, is a dependency. Lint forbids
+  `undici`, `node:http(s)` and `http2` imports, and the global `fetch`, everywhere on the server but
+  `src/shared/fetch/`. `src/shared/http/` (the inbound Vercel adapter, node:http types only) and
+  the identity host's browser script are exempt. ESLint replaces a rule's options when two config
+  blocks match one file, so the import rules are three blocks with disjoint files.
+- Why: ADR-001 ("no other module imports undici, node:http or node:https, or calls global fetch").
+- Thread / PR: M2
+
 ## 2026-10-20 — M1 tables, and what waits
 - Decision: M1 creates the river schema of spec 3.1 except `login_methods` and `auth_attempts`
   (sign-in, M8) and the hub allowlist table (M3). The `identity` schema exists with
