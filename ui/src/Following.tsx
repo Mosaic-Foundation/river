@@ -4,6 +4,7 @@
 // Circles tabs (River.tsx); this page works at that width too.
 import { useEffect } from "react";
 import { SIGN_IN_URL } from "./lib/api";
+import { modeFromSearch, themeForMode, withMode } from "./lib/modes";
 import { Brand } from "./components/Chrome";
 import { CirclesPanel } from "./components/CirclesPanel";
 import { FollowBox } from "./components/FollowBox";
@@ -29,10 +30,14 @@ export function SignUpPrompt({ text }: { text: string }) {
 
 export function FollowingPage() {
   const { state, busy, run, reload } = useFollowing(true);
+  // The River links here with its mode (`?mode=civic`): the page wears that mode's theme, and its
+  // way back keeps the mode.
+  const mode = modeFromSearch(window.location.search);
 
   useEffect(() => {
     document.title = "Following · Mosaic River";
-  }, []);
+    document.documentElement.dataset.theme = themeForMode(mode);
+  }, [mode]);
 
   // /following#follow (the header's Follow button) puts the cursor in the follow box.
   useEffect(() => {
@@ -49,7 +54,7 @@ export function FollowingPage() {
       <header className="topbar">
         <Brand />
         <div className="topbar-actions">
-          <a className="button button-quiet" href="/">
+          <a className="button button-quiet" href={withMode("/", mode)}>
             ‹ Back to your River
           </a>
         </div>

@@ -78,9 +78,45 @@ export interface FeedCircle {
   role: "civic" | null;
 }
 
+/** A dated entry from the Coming up plugin (src/river/plugins/api.ts DateEntry). */
+export interface DateEntry {
+  date: string;
+  what: "deadline" | "event";
+  title: string;
+  spaceName: string;
+  itemId: string;
+  url: string | null;
+  source: "live" | "sample";
+}
+
+/** What a plugin returned; the UI draws each type with its own component. */
+export type PluginOutput =
+  | { type: "dates"; intro: string; entries: DateEntry[] }
+  | { type: "placeholder"; text: string; waitingOn: string[] };
+
+export interface SurfaceOutput {
+  id: string;
+  title: string;
+  version: string;
+  output: PluginOutput;
+}
+
+export type Surface = "river.panel" | "river.mode-header" | "river.card-action";
+
+export interface ModeOption {
+  id: string;
+  title: string;
+}
+
 export interface FeedResponse {
   instance: { name: string; theme: string; modes: string[]; defaultMode: string };
   mode: string;
+  /** The instance's modes, for the switch (hidden when there is one). */
+  modes: ModeOption[];
+  /** The current mode's theme. */
+  theme: "mosaic" | "civic";
+  /** Plugin outputs per surface, on the first page; null on later pages. */
+  surfaces: Partial<Record<Surface, SurfaceOutput[]>> | null;
   circles: FeedCircle[];
   items: FeedItem[];
   nextCursor: string | null;
@@ -102,6 +138,8 @@ export function viewerLabel(viewer: Viewer): string {
 }
 
 export interface FeedQuery {
+  /** Empty or undefined: the instance's default mode. */
+  mode?: string;
   circle?: string;
   type?: string;
   q?: string;
@@ -114,11 +152,14 @@ export type FeedResult =
   | { status: "unknown_host"; message: string }
   /** The circle isn't one of the reader's (e.g. a visitor's circle name after signing in). */
   | { status: "bad_circle" }
+  /** The mode isn't enabled on this instance (e.g. an old link): the UI opens the default. */
+  | { status: "bad_mode" }
   | { status: "error"; message: string };
 
 /** The query string for /api/feed; empty values and "All" are left out. */
 export function feedSearch(query: FeedQuery): string {
   const params = new URLSearchParams();
+  if (query.mode) params.set("mode", query.mode);
   if (query.circle && query.circle !== "All") params.set("circle", query.circle);
   if (query.type && query.type !== "all") params.set("type", query.type);
   const q = query.q?.trim();
@@ -145,6 +186,7 @@ export async function loadFeed(query: FeedQuery, signal?: AbortSignal): Promise<
     };
   }
   if (res.status === 400 && error.error === "bad_circle") return { status: "bad_circle" };
+  if (res.status === 400 && error.error === "bad_mode") return { status: "bad_mode" };
   if (!res.ok || !body) {
     return { status: "error", message: "The River couldn't load right now. Try again in a moment." };
   }
@@ -170,9 +212,10 @@ export async function saveReadState(change: { read?: string[]; unread?: string[]
   }
 }
 
-/** A member's "Mark all read" for the current view (its circle, type and search). */
+/** A member's "Mark all read" for the current view (its mode, circle, type and search). */
 export async function saveAllRead(query: Omit<FeedQuery, "cursor">): Promise<boolean> {
   const body: Record<string, string> = {};
+  if (query.mode) body.mode = query.mode;
   if (query.circle && query.circle !== "All") body.circle = query.circle;
   if (query.type && query.type !== "all") body.type = query.type;
   if (query.q?.trim()) body.q = query.q.trim();

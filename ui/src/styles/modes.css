@@ -1,0 +1,221 @@
+/*
+ * Modes and the plugin panel (M10, spec F9, 4.7; docs/design/mockups/civic-desktop.png): the
+ * header's mode switch and the river.panel surface. Theme tokens only (themes/mosaic.css,
+ * themes/civic.css) plus the layout tokens in theme.css. Civic mode wears civic.css through
+ * data-theme="civic" on <html>; nothing here names a mode's colors.
+ *
+ * Desktop: the panel is a third column from 80rem, and sits above the feed (beside the filters)
+ * from 56rem to 80rem. Phone: above the feed on the Feed tab.
+ */
+
+/* ---------- Header and mode switch ---------- */
+
+.topbar-start {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.mode-switch {
+  display: inline-flex;
+  flex: none;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  background: var(--color-surface-alt);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.mode-option {
+  min-height: calc(var(--size-control) - var(--space-sm) * 2);
+  padding: 0 var(--space-md);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.mode-option:hover {
+  color: var(--color-heading);
+}
+
+.mode-option[aria-pressed="true"] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+/* ---------- The panel (river.panel) ---------- */
+
+.plugin-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.plugin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.plugin-slot {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.plugin-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.plugin-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.plugin-tag {
+  flex: none;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.plugin-text,
+.plugin-intro {
+  margin: 0;
+}
+
+.plugin-text {
+  font-size: var(--font-size-sm);
+}
+
+.plugin-intro {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.plugin-dates {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plugin-date {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.plugin-date .card-event-date {
+  background: var(--color-surface-alt);
+}
+
+.plugin-date-detail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+}
+
+.plugin-date-title {
+  color: var(--color-heading);
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.plugin-date-meta {
+  display: flex;
+  flex-direction: column;
+  color: var(--color-text-muted);
+}
+
+/* ---------- Phone (below 56rem) ---------- */
+
+@media (max-width: 55.99rem) {
+  /* The switch takes the brand's words; the mark stays and the link keeps its name. */
+  .topbar-modes .brand-name,
+  .topbar-modes .brand-product {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .topbar-start {
+    gap: var(--space-sm);
+  }
+
+  .mode-option {
+    padding: 0 var(--space-sm);
+  }
+
+  .plugin-column {
+    order: -1;
+    padding: var(--space-md) var(--space-md) 0;
+  }
+
+  .plugin {
+    padding: var(--space-sm) var(--space-md);
+  }
+}
+
+/* ---------- Desktop (56rem and up) ---------- */
+
+@media (min-width: 56rem) {
+  .layout-panel > .desktop-only {
+    grid-row: 1 / span 2;
+  }
+
+  .layout-panel > .plugin-column {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .layout-panel > main.feed {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+
+@media (min-width: 80rem) {
+  .layout-panel {
+    grid-template-columns: var(--layout-sidebar) minmax(0, var(--layout-feed)) var(--layout-panel);
+    max-width: var(--layout-page-wide);
+  }
+
+  .layout-panel > .desktop-only {
+    grid-row: 1;
+  }
+
+  .layout-panel > main.feed {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .layout-panel > .plugin-column {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: start;
+    position: sticky;
+    top: calc(var(--size-control) + var(--space-lg) * 1.5);
+  }
+}
