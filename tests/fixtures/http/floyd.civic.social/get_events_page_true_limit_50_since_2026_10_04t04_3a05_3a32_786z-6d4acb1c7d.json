@@ -1,0 +1,15 @@
+{
+  "url": "https://floyd.civic.social/events?page=true&limit=50&since=2026-10-04T04%3A05%3A32.786Z",
+  "requestHeaders": {
+    "if-none-match": "W/\"d117-91hBxQC9lxHdAMHVdfFVY/M4rWM\""
+  },
+  "status": 304,
+  "headers": {
+    "cache-control": "public, max-age=0, must-revalidate",
+    "etag": "W/\"d117-91hBxQC9lxHdAMHVdfFVY/M4rWM\"",
+    "server": "Vercel",
+    "x-vercel-cache": "MISS",
+    "x-vercel-id": "cle1::iad1::mrlwb-1792544686663-4187ebd43817"
+  },
+  "body": ""
+}

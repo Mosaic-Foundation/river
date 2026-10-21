@@ -20,6 +20,40 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M3 Civic Hub adapter: resolve, paging, allowlist, templates, stream end; sanitizer and item model — 2026-10-21
+
+- Branch / PR: claude/m3-civic-hub-adapter → PR (needs-adam: sanitizer allowlist). Branched from
+  M2 (#6, needs-adam, unmerged); merge M2 first.
+- Migrations: none
+
+**What it does.** `src/shared/sanitize/` (Appendix B allowlist) and `src/shared/items/` (item
+model, Adapter contract) are shared with M4. `src/river/adapters/civicHub/` resolves hubs from
+`/.well-known/civic.json`, maps UI URLs to stream keys and validates them, fetches the first 90
+days (5 pages) or refreshes from newest − 14 days (3 pages) with If-None-Match only for the same
+URL, maps activities through a closed-by-default allowlist and `hubTemplates.ts`, keeps public
+items only, and reports stream ends and final results. 36 recorded fixtures from Demosville,
+Floyd and Longmont; recorder in `scripts/recorders/civicHub.ts`.
+
+**Keys.** None. Dependencies: `sanitize-html` ^2.18.1, `@types/sanitize-html` (dev).
+
+**Tests.** `sanitize` (6) and `tests/unit/civicHub/` (74): every allowlist row and the hidden
+list, each template, mapping, check 18 adapter part (real Floyd End → Aggregation → Result; a
+derived split across fetches), 22 (sanitized content), 25 (real 5-page first fetch, short page
+with next, refresh window, If-None-Match only for the same URL, real 304s from all three hubs), and
+resolve (13, 14, 16 through the adapter). `npm run check`: Test Files 12 passed (12), Tests 174
+passed (174), UI built.
+
+### Follow-ups
+- M5 refresh: call `fetchNew(space, { guard, now, onPage })`; insert per page in `forInstance()`
+  with `ON CONFLICT (space_id, source_id)`; on `notModified` only stamp `last_fetched_at`; upsert
+  streams from `StreamUpdate`s, set follows' `ended_at` for `ends_with_stream`, and move
+  `is_final_result` to `finalItemSourceId` only when it is at least as new. Withdrawn check (33)
+  uses `probeStream().exists`. Show `streams.title` when an item has none.
+- API/e2e replay of hub feeds needs the server clock at `CIVIC_HUB_FIXTURE_NOW`.
+- No real `no_hub` recording: the session proxy reaches only the three seed hubs. A derived body
+  is tested instead.
+- M9: try the hub adapter before the fediverse adapter for URLs; fall back on `not_a_space`.
+
 ## M2 Fetch guard: every outbound request checked, pinned, capped; fixture replay — 2026-10-21
 
 - Branch / PR: claude/m2-fetch-guard → PR (needs-adam: fetch guard, ADR-001 scope)
