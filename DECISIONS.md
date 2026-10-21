@@ -16,6 +16,35 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-21 — TRUSTED_DID_HOSTS names a host with its port
+- Question: spec 4.6 and Appendix D say "DIDs whose host is in TRUSTED_DID_HOSTS (v1:
+  id.mosaic.social)", and CI wrote `localhost`, but a local DID's host component is
+  `localhost%3A3001` (did:webvh puts the port in the host).
+- Reading used: an entry matches the DID's decoded host exactly, port included
+  (`localhost:3001`); an entry without a port matches only a DID without one. Local and CI:
+  `TRUSTED_DID_HOSTS=localhost:3001,localhost:3005` (the identity dev server, and the DID logs the
+  API tests serve). Production is unchanged: `id.mosaic.social`.
+- Proposed change: Appendix D says "host[:port], as in the DID; locally localhost:3001".
+- Thread / PR: M8 (claude/m8-sign-in)
+
+### 2026-10-21 — What "kid starts with that DID" allows
+- Question: spec 4.6 step 4 requires `kid` to start with the DID, which `{did}x#key-1` (another
+  DID's text) also does, and doesn't say which of the document's keys verifies.
+- Reading used: `kid` must be `{did}#` plus a non-empty fragment, and the key is the Ed25519
+  Multikey of the verification method with exactly that id listed under the resolved document's
+  `authentication` (relative `#key-1` ids read against the DID). Anything else is refused. The
+  note's lifetime (`exp − iat`) is capped at 10 minutes as well; the identity host issues 120 s.
+- Proposed change: spec 4.6 says "kid is `{did}#fragment` and names an `authentication` method".
+- Thread / PR: M8
+
+### 2026-10-21 — "Mark all read for the current view" for members
+- Question: F4 says "Mark all read for the current view"; M6 read that as the items loaded on the
+  page (visitors keep only what they have seen, in the browser).
+- Reading used: for a member it is the whole view on the server (same mode, circle, type and
+  search as the feed), newest first, up to 5,000 items; items arriving later stay unread.
+  Visitors keep M6's loaded-items behavior.
+- Thread / PR: M8
+
 ### 2026-10-21 — "Final results of streams any account followed" outlives the follow
 - Question: spec 3.1 keeps "is_final_result items of streams any account followed", and F7 clears
   Ended follows 90 days after their stream ends, about when the final result turns 90 days old.
@@ -128,6 +157,131 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-21 — Sessions are signed, stateless cookies (M8)
+- Decision: the River's session is a cookie `__Host-river-session` holding
+  `base64url({v: 1, instance, account, iat, exp}).HMAC-SHA256`, 30 days, HttpOnly, Secure,
+  SameSite=Lax, Path=/, host-only. Each purpose (session, sign-in state) signs with its own key
+  derived from SESSION_SECRET (at least 32 characters). Every request that reads it checks the MAC
+  in constant time, the expiry, that the instance is the request's, and that the account row
+  still exists under forAccount(); otherwise the request is a visitor's and the cookie is cleared.
+  Sign out (F10, `POST /api/auth/signout`) clears the cookie. A cookie name sent twice is trusted
+  neither way. No sessions table.
+- Why: spec 3.1 lists no sessions table; the River holds nothing worth a server-side session
+  (no tokens, no keys), and a stateless cookie needs no write per request and no cleanup job.
+- Trade-off: sign-out ends the session in this browser, but a copied cookie stays valid until it
+  expires; rotating SESSION_SECRET signs everyone out. A `river.sessions` table with RLS (revoke on
+  sign-out, "sign out everywhere") is the upgrade path if that matters.
+- Alternatives: a sessions table (a write per sign-in, a lookup per request, a table and policy to
+  review); an encrypted cookie (nothing in it is secret).
+- Thread / PR: M8 (claude/m8-sign-in)
+
+## 2026-10-21 — Local DID logs over loopback, without touching the guard (M8)
+- Decision: locally and in CI the identity host's DIDs are `did:webvh:…:localhost%3A3001:…` and
+  their logs live at `http://localhost:3001/…`, which the fetch guard refuses (https only, loopback
+  blocked) and must keep refusing. A new test-only variable, `TEST_DID_LOOPBACK=1` (read through
+  env.ts, refused on Vercel like FETCH_FIXTURES_DIR, TEST_ROUTES and TEST_CLOCK_NOW, so a deployment
+  with it fails /health), lets the River's DID resolver read a log over http through
+  `src/shared/fetch/loopback.ts` only when the DID's host is in TRUSTED_DID_HOSTS AND is
+  `localhost`/`127.0.0.1` with a port. That module refuses unless the variable is set, and refuses
+  any URL that isn't `http://{localhost|127.0.0.1|[::1]}:{port}/path` without credentials or query;
+  it follows no redirect and caps the body like the guard. Every other DID, and every DID in
+  production, is read over https through the unchanged guard. The guard itself is not modified;
+  the new file sits beside it so undici stays inside `src/shared/fetch/` (ADR-001), which still
+  makes this a `needs-adam` change.
+- Why: M7's follow-up; Appendix B forbids any private-address override in a production path.
+- Alternatives: an option on the guard (touches the guard and its one rule); recorded fixtures
+  (the e2e DIDs are made live); serving the identity host over https on a public name locally.
+- Thread / PR: M8
+
+## 2026-10-21 — The sign-in callback, step by step (M8)
+- Decision: `GET /api/auth/callback` runs spec 4.6 step 4 in this order (src/river/auth/note.ts):
+  the signed state cookie equals `state` (constant time; a missing or different cookie spends
+  nothing, so it can't burn another tab's sign-in); `river.consume_auth_attempt(state)` marks the
+  attempt used and returns its nonce (unknown, used, older than 10 minutes or another instance's:
+  refused); the JWS's header says `alg: "EdDSA"` exactly and has no `crit`; `iss == sub`, a
+  did:webvh; `kid` is `{did}#fragment`; the DID's host is trusted (before any request); `aud` is
+  RIVER_PUBLIC_ORIGIN; `nonce` matches (constant time); `iat ≤ now + 60`, `exp ≥ now − 60`,
+  `exp − iat ≤ 600`; then the DID log is read (through the guard; cached 10 minutes per URL),
+  verified with didwebvh-ts `resolveDIDFromLog` (our Ed25519 verifier, no witnesses, the DID's
+  SCID), and the signature checked with the key the CURRENT document lists under
+  `authentication` for `kid`. Keys in the header are never read. When a cached document doesn't
+  verify the note, the log is read once more, fresh, so a DID re-keyed by `recover-dids` inside
+  the cache window still signs in; the resolved DID must equal `iss` and not be deactivated.
+  Success: the account is found or made, a 303 to `/` with the session cookie, the state cookie
+  cleared, `Referrer-Policy: no-referrer` and `Cache-Control: no-store`. Any failure, including a
+  database error, is a 401 HTML page ("Sign-in didn't work", a link home) with no session; the
+  log line names the reason code only, never the note, state or cookie.
+- Why: spec 4.6 step 4 and check 11; check 37 needs the current document.
+- Thread / PR: M8
+
+## 2026-10-21 — login_methods and auth_attempts (M8)
+- Decision: migration `20261021180000_sign_in.sql`. `login_methods` is an account table
+  (ENABLE + FORCE RLS, own rows only), UNIQUE (instance_id, kind, scid), kind `did` only, river_app
+  may SELECT, INSERT and UPDATE only `did` and `last_used_at` (the stored DID follows a move; the
+  SCID doesn't change). `auth_attempts` (`state` PK, `instance_id`, `nonce`, `created_at`,
+  `used_at`) is an instance table river_app may only INSERT, unused, for its own instance. Two
+  SECURITY DEFINER functions (owner postgres, empty search_path, EXECUTE for river_app only),
+  scoped to the transaction's `app.instance_id`, each return one value: `account_for_login(kind,
+  scid)` (the account, before one is known) and `consume_auth_attempt(state)` (an atomic UPDATE …
+  WHERE used_at IS NULL AND created_at > now() − 10 minutes RETURNING nonce). The M5 daily job
+  already deletes attempts older than a day by `created_at` (tested). State and nonce are 32
+  random bytes, base64url.
+- Why: spec 3.1 ("the sign-in callback consumes a row atomically"), ADR-004; the same pattern as
+  the identity host's lookups (M7).
+- Alternatives: instance-wide SELECT/UPDATE on attempts (every request could read every pending
+  nonce); a setting such as `app.auth_state` for a policy (one more setting for one statement).
+- Thread / PR: M8
+
+## 2026-10-21 — Accounts and the seed copy (M8)
+- Decision: `signInAccount()` (src/river/accounts.ts) looks the SCID up with
+  `account_for_login`; a known account gets its login method's `did` and `last_used_at` updated.
+  A new one is made in ONE forAccount() transaction with a fresh uuid: the account row, its `did`
+  login method, a follow for each seed follow (stream follows included) and the default circles
+  in order (`sort` = position, color, `role = civic` for Civic) with their members. Two first
+  sign-ins of one DID at once: the second hits the unique key and uses the first's account. A seed
+  name whose space isn't stored yet (nobody has opened this River since the instance was seeded) is
+  kept in the member's `seed_pending` preference with what it was for (follow, circle ids); the
+  member's feed copies it as soon as the space exists and resolves it meanwhile. `display_name`
+  stays null: the note carries no name, so the River shows the DID.
+- Why: spec F2 ("copies the instance's seed follows and default circles"), check 10; a seed must
+  not be lost because its space was never resolved.
+- Thread / PR: M8
+
+## 2026-10-21 — A member's feed and read state (M8)
+- Decision: `GET /api/feed` with a session reads the member's own rows under forAccount():
+  follows with `rule = follow` (stream follows by key; ended follows still show until M9 builds
+  Ended), circles by id (`circle=<uuid>`; a name is a 400 `bad_circle`, which the UI answers by
+  showing All), the same scopeFor()/queryFeed() as visitors, refresh of every followed space, and
+  `read` on each item (an EXISTS on `read_state`, own rows only). The response gains `viewer`
+  (`{did, displayName}`, null for visitors); visitor items carry no `read`. `POST
+  /api/read-state {read: [ids], unread: [ids]}` (at most 500 each; unknown ids ignored) and `POST
+  /api/read-state/all {mode, circle, type, q}` (the whole view, newest 5,000) are members-only (401
+  otherwise). The UI marks read optimistically and undoes a change the server refuses; opening a
+  link marks read with `keepalive`. Visitors keep localStorage and make no write (check 23).
+- Why: spec F4, check 23; M5's hook points.
+- Thread / PR: M8
+
+## 2026-10-21 — Sign up and Sign in are one link; Origin on every write (M8)
+- Decision: both buttons are links to `GET /api/auth/signin`, which makes the attempt, sets the
+  state cookie (`__Host-river-signin`, 10 minutes) and 303s to `{IDENTITY_ORIGIN}/authorize`; the
+  identity host's page offers both sign-in and sign-up. A link, not a form POST: the CSP's
+  `form-action 'self'` would block a form's redirect to the identity host. Every River request
+  but GET/HEAD/OPTIONS must carry `Origin` equal to RIVER_PUBLIC_ORIGIN or gets 403 (Appendix B);
+  that includes sign-out and read state. Previews, whose origin differs, can't write, as they
+  can't sign in (Appendix D). `vercel.json` adds `Referrer-Policy: no-referrer` for `/api/auth/*`
+  after the every-path rule, so Vercel's header can't override the callback's own.
+- Why: spec 4.6 step 1, Appendix B.
+- Thread / PR: M8
+
+## 2026-10-21 — Lint keeps the River and the identity host apart (M8)
+- Decision: eslint's import rules now refuse `**/identity/**` in `src/river/` and `**/river/**`
+  in `src/identity/` (CLAUDE.md constraint 7), next to the pg and network rules; a lint test proves
+  it. The River's DID code (src/river/auth/did.ts) has its own small Ed25519/multikey helpers
+  instead of importing the identity host's.
+- Why: constraint 7 was enforced by review only; M8 is the first River code that reads what the
+  identity host produces.
+- Thread / PR: M8
 
 ## 2026-10-21 — forIdentity() settings and the lookups (M7)
 - Decision: identity policies key on two transaction settings. `app.person_id` reaches a person's

@@ -20,6 +20,66 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M8 Sign-in: the note, auth_attempts, sessions, accounts, login methods, seed copy, member read state — 2026-10-21
+
+- Branch / PR: claude/m8-sign-in → PR (needs-adam: authentication and sessions, a migration
+  with RLS and SECURITY DEFINER functions, a new file in `src/shared/fetch/`, `vercel.json`,
+  `.github/`). Built on M5–M7 (unmerged); merge after them, once its own diff is only M8.
+- Migrations: `20261021180000_sign_in.sql` (`river.login_methods`, `river.auth_attempts`, ENABLE +
+  FORCE RLS, river_app policies and grants; `river.account_for_login()` and
+  `river.consume_auth_attempt()`, EXECUTE for river_app only). No existing table changed.
+
+**What it does.** Sign up and Sign in (header, You tab, Follow dialog) go to `GET
+/api/auth/signin`: an auth_attempts row, a 10-minute `__Host-river-signin` cookie and a redirect
+to `{IDENTITY_ORIGIN}/authorize`. `GET /api/auth/callback` runs spec 4.6 step 4 exactly
+(`src/river/auth/note.ts`): state cookie, atomic consume, EdDSA only, iss = sub, kid of that DID,
+trusted host, aud, nonce, iat/exp with 60 s leeway, the DID log read through the fetch guard
+(10-minute cache), verified with didwebvh-ts, the key from the CURRENT document's
+`authentication` (a cached document that fails is re-read once, so recover-dids works). Success:
+the account by (instance, did, SCID), made on first sign-in with the seed follows and default
+circles (Civic's role included), a 30-day `__Host-river-session` cookie (signed, stateless),
+no-referrer, 303 to `/`. Failure: 401 page, no session. Sign out clears it. Members' feeds come
+from their own rows under forAccount() with read state; Mark read / unread / all read and opening
+a link write `river.read_state`; visitors keep localStorage. Every non-GET River route checks
+Origin. Lint now enforces constraint 7.
+
+**Keys.** `TEST_DID_LOOPBACK` (test-only, refused on Vercel): read a trusted loopback DID host's
+log over http (`src/shared/fetch/loopback.ts`). `SESSION_SECRET` is now required by the River (at
+least 32 characters). `TRUSTED_DID_HOSTS` entries are host[:port] (local and CI:
+`localhost:3001,localhost:3005`). Feed response gains `viewer` and members' `read`. Routes `GET
+/api/auth/signin`, `GET /api/auth/callback`, `POST /api/auth/signout`, `POST /api/read-state`,
+`POST /api/read-state/all`. No new dependency.
+
+**Tests.** `npm run check`: Test Files 26 passed (26), Tests 388 passed (388), UI built.
+`npm run test:api` (both dev servers, fresh `db reset`): Test Files 9 passed (9), Tests 109 passed
+(109). `npm run test:e2e`: 36 passed, against the dev servers and again against `vite preview` on
+4173. Check 10 and 23 (member) in `tests/e2e/signin.spec.ts`; check 11 in
+`tests/unit/riverSignIn.test.ts` (by reason) and `tests/api/signin.test.ts` (over HTTP); 36 and 37
+River part in `tests/e2e/identity.spec.ts`; 27 with real sign-ups in `tests/api/db/isolation.test.ts`.
+
+### Follow-ups
+- **Adam:** set `SESSION_SECRET` (e.g. `openssl rand -hex 32`, different per project) on `river`
+  (now required for sign-in) and on `mosaic-id` (still unused there). On `river` set
+  `RIVER_PUBLIC_ORIGIN` (exactly the origin listed in the identity host's `RIVER_CLIENT_ORIGINS`),
+  `IDENTITY_ORIGIN` (the `mosaic-id` production origin) and `TRUSTED_DID_HOSTS` (that origin's
+  host; `id.mosaic.social` after DNS). Never set `TEST_DID_LOOPBACK` on Vercel (it fails /health).
+- Adam: on a production deployment (previews can't sign in), sign up from the River and check:
+  you land on `/` signed in, the response to `/api/auth/callback` carries `Referrer-Policy:
+  no-referrer` (vercel.json now adds it for `/api/auth/*` too), and Sign out works.
+- Sessions are stateless: sign-out ends this browser's session, but a copied cookie stays valid
+  for 30 days unless `SESSION_SECRET` changes (DECISIONS). A sessions table is the upgrade.
+- M9: follows are read with `rule = follow` only, ended follows included; add mutes to the scope,
+  the Ended and Quiet tabs, the follow box (members only now: `res.locals.viewer`) and circle
+  editing (member circles are uuids; the chips already send ids). New follows go through
+  `refreshFollowed()`/`refreshSpaces()` like the seed copy. The `seed_pending` preference holds
+  seed names that had no space at sign-up; keep it working or fold it into the follow flow.
+- M9/M10: `accounts.display_name` is never set (the note carries no name); the UI shows the DID. A
+  "Your name" field on the You tab would be a small addition.
+- M10: the mode switch can keep using `GET /api/feed?mode=`; members' civic circle is the circle
+  with `role = civic`.
+- M11: `GET /api/me/export` can read the member through `readSession()` + `requireMember()`.
+- A visitor's localStorage read marks are not moved to the account at sign-up (spec doesn't ask).
+
 ## M7 Identity host: passkeys, did:webvh, sealed keys, audit log, authorize, email and recovery — 2026-10-21
 
 - Branch / PR: claude/m7-identity-host → PR (needs-adam: authentication, `src/identity/keys/`,

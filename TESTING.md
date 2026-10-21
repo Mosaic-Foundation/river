@@ -25,6 +25,13 @@ The dev server for API and e2e runs needs, in `.env`, `FETCH_FIXTURES_DIR=tests/
 and `TEST_CLOCK_NOW=2026-10-21T00:00:00.000Z` (the hub recordings' clock), as CI writes them. The
 first `GET /api/feed` resolves and fetches every seed follow from the recordings.
 
+Sign-in (M8) also needs, in `.env`: `RIVER_PUBLIC_ORIGIN` equal to the UI's origin
+(`http://localhost:5173` for `npm run test:e2e`, `http://localhost:4173` against `vite preview`,
+as CI runs it), `TRUSTED_DID_HOSTS=localhost:3001,localhost:3005` (the identity dev server, and
+the DID logs `tests/api/signin.test.ts` serves on :3005; keep :3005 and :3006 free) and
+`TEST_DID_LOOPBACK=1`, which lets the River read those logs over loopback http. A
+`SESSION_SECRET` of at least 32 characters (`openssl rand -hex 32`).
+
 The identity host (`npm run dev:identity`) needs `.env.identity` as CI writes it:
 `EMAIL_TRANSPORT=capture`, `TEST_ROUTES=1` (the capture mailbox, the identity clock and the
 rate-limit reset under `/test/`) and a throwaway recovery key pair made outside the repo:
@@ -44,6 +51,35 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 ## Log
 
 Newest first: date, slice, tests added, counts.
+
+- 2026-10-21, M8: unit `riverSignIn` (check 11 with test keys and didwebvh-ts logs: every
+  refusal by its reason, wrong aud, expired exp, iat ahead, nonce, alg none/ES256/eddsa, iss ≠ sub,
+  kid of another DID or not `{did}#…`, a kid the document doesn't list, a different key even with
+  a key in the header, a tampered payload, an untrusted host with zero requests, unknown and used
+  state, missing or different state cookie without spending the attempt, malformed notes, a log
+  that doesn't verify; leeway edges; the 10-minute cache; recover-dids re-key verified through a
+  fresh read; DID parsing; production resolution through the guard with a MockAgent; loopback
+  refused without the flag and for any non-loopback URL; signed cookies and sessions). Mutation
+  check: dropping the alg, trusted-host, state-cookie, nonce, aud or kid-prefix check each fails
+  tests. API `signin` (dev server; a DID log server on :3005 and an untrusted one on :3006): the
+  start redirect and cookie, a good note (303 to `/`, 30-day HttpOnly Secure Lax cookie,
+  no-referrer, one account, the session works, the state is spent), check 11's eight note cases
+  plus untrusted host (no request), unknown and used state, missing, different or forged state
+  cookie (attempt kept), an attempt older than 10 minutes — all 401, no session, no account;
+  Origin refusals, tampered session, sign-out; member read state (mark, unmark, bad ids, Mark all
+  read for one circle only; visitors 401). `feed` (visitors can't write read state). Database:
+  `isolation` adds real sign-ups through `signInAccount()` (seeds copied, members isolated, same
+  account by SCID, login methods invisible and immovable, auth_attempts insert-only and consumed
+  once per instance), `catalog` (the two sign-in functions), `dailyJob` (stale auth_attempts
+  deleted). e2e `signin` (check 10 through the River's Sign up: login method, SCID, seed follows,
+  default circles with Civic's role, cookie flags, member circles by id, sign-in again finds the
+  account; check 23 member: Mark read, opened link, Mark unread, Mark all read, each after reload,
+  nothing in localStorage; sign-out; phone You tab with axe; a stray callback gets the 401 page).
+  `identity` now starts every flow at `/api/auth/signin` and finishes at the real callback
+  (`catchCallback` is gone); checks 36 and 37 prove the same River account after recovery and
+  after `recover-dids`. Unit `env`, `lintBoundaries` (constraint 7), `ui/csp` (no-referrer rule),
+  `ui/viewer`. Ran against the dev servers and against `vite preview` on 4173. Unit 388, API 109
+  (fresh `db reset`), e2e 36.
 
 - 2026-10-21, M7: e2e `identity` with Chromium's virtual WebAuthn authenticator (CDP
   `WebAuthn.addVirtualAuthenticator`, ctap2, internal, resident keys, user verification): checks

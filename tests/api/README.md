@@ -27,7 +27,12 @@ defaulting to the local-only passwords from `supabase/seed.sql`. Each run makes 
 and spaces; `npx supabase db reset` clears them.
 
 The refresh tests (`db/refresh.test.ts`) also call the feed modules directly, with recorded
-responses replayed through the real fetch guard and a MockAgent that counts requests.
+responses replayed through the real fetch guard and a MockAgent that counts requests, and
+`db/isolation.test.ts` signs members up through the callback's own `signInAccount()`.
+
+`signin.test.ts` (M8) signs notes with test keys and serves their DID logs itself, on
+`localhost:3005` (listed in the dev server's `TRUSTED_DID_HOSTS`, read over loopback because
+`TEST_DID_LOOPBACK=1`) and `localhost:3006` (not trusted; it must receive no request).
 
 Two tests connect as the local stack's `postgres` role (`TEST_ADMIN_DATABASE_URL`, default
 `postgresql://postgres:postgres@127.0.0.1:54322/postgres`): `db/dailyJob.test.ts`, because the
