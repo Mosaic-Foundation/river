@@ -55,6 +55,13 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, UI revisions 1 (items 2-4): unit `feedScope` (several types, networks, refusals)
+  and `ui/format` (list parsing and toggling, query string); API `feed` (type lists, `network`
+  hubs/fediverse/both, `network=bluesky` is 400); e2e `revisions.spec.ts`: type pills (pressed,
+  check mark, dark fill, URL, reload, deselect, keyboard, phone, no checkbox or select), active
+  chips (four filters, each ✕, Clear all), Networks (order, each network, both, samples back when
+  none) and collapsible sections.
+
 - 2026-10-21, UI revisions 1 (items 5, 8): e2e `revisions.spec.ts`: Civic mode lists only All
   and the civic circle (desktop and phone) and falls back to All; the visitor's Sample River line
   sits above the header with a Sign in link and no sideways scroll. `modes.spec.ts`: a member sees

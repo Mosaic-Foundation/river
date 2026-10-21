@@ -20,6 +20,27 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 1, items 2-4: toggle pills, active filter chips, Networks — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → PR 2 of the UI revisions series (self-merge)
+- Migrations: none.
+
+**What it does.** Content types are toggle pills (several at once, dark fill and a check mark,
+none means All) on desktop and in the phone chip row; the phone's type select is gone. A
+Networks section (Civic Hubs; Fediverse, "Mastodon and compatible") works the same way. Circles,
+Content type and Networks collapse from their heading buttons. Above the feed, one chip per active
+filter with an ✕, plus "Clear all". `/api/feed` and `POST /api/read-state/all` take `type` as a
+comma-separated list and a new `network` list (DECISIONS.md).
+
+**Keys.** None.
+
+**Tests.** Unit `feedScope` (parseContentTypes, parseNetworks), `ui/format` (parseList,
+toggleValue, the query string); API `feed` (several types, each network, both); e2e
+`revisions.spec.ts` items 2, 3, 4; `river.spec.ts` check 30 uses the phone pills.
+
+### Follow-ups
+- Collapsed sections aren't remembered across reloads.
+
 ## UI revisions 1, items 5 and 8: Civic circles and the Sample River line — 2026-10-21
 
 - Branch / PR: claude/eloquent-newton-v3ftlr → PR 1 of the UI revisions series (self-merge)
