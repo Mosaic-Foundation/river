@@ -10,6 +10,7 @@ import { forAccount } from "../db/context.js";
 import type { Viewer } from "./accounts.js";
 import { authRoutes } from "./auth/routes.js";
 import { checkOrigin, readSession, requireMember } from "./auth/session.js";
+import { memberExport } from "./export/index.js";
 import { FeedInputError, memberFeed, memberMarkAllRead, visitorFeed, type FeedParams } from "./feed/index.js";
 import { followingRoutes } from "./following/routes.js";
 import { requireInstance, type Instance } from "./instances.js";
@@ -127,6 +128,22 @@ export function riverRoutes(): Router {
       res.set("Cache-Control", "no-store").json({ marked });
     } catch (err) {
       feedError(err, res, next);
+    }
+  });
+
+  // A member's export (spec 3.3, check 29): follows, circles and preferences as JSON, offered as a
+  // download. Visitors get 401. Holds no email address or key (the River has neither).
+  router.get("/me/export", requireInstance(), readSession(), requireMember(), async (_req, res, next) => {
+    try {
+      const instance = res.locals.instance as Instance;
+      const viewer = res.locals.viewer as Viewer;
+      const doc = await forAccount(instance.id, viewer.accountId, (db) => memberExport(db, viewer.did, new Date()));
+      res
+        .set("Cache-Control", "no-store")
+        .set("Content-Disposition", 'attachment; filename="mosaic-river-export.json"')
+        .json(doc);
+    } catch (err) {
+      next(err);
     }
   });
 
