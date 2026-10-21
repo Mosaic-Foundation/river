@@ -1,0 +1,28 @@
+{
+  "url": "https://mastodon.social/.well-known/nodeinfo",
+  "status": 200,
+  "headers": {
+    "accept-ranges": "bytes",
+    "age": "222559",
+    "alt-svc": "h3=\":443\";ma=86400,h3-29=\":443\";ma=86400,h3-27=\":443\";ma=86400",
+    "cache-control": "max-age=259200, public",
+    "content-length": "115",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; frame-ancestors 'none'; font-src 'self' https://mastodon.social; img-src 'self' data: blob: https://mastodon.social https://files.mastodon.social; media-src 'self' data: https://mastodon.social https://files.mastodon.social; manifest-src 'self' https://mastodon.social; form-action 'self'; child-src 'self' blob: https://mastodon.social; worker-src 'self' blob: https://mastodon.social; connect-src 'self' data: blob: https://mastodon.social https://files.mastodon.social wss://streaming.mastodon.social; script-src 'self' https://mastodon.social 'wasm-unsafe-eval'; frame-src 'self' https:; style-src 'self' https://mastodon.social 'nonce-UIRHgEJU6WzzgSuXFU4f2w=='",
+    "content-type": "application/json; charset=utf-8",
+    "etag": "W/\"2e5c6a3d0480ec4e1aca2c01d42f0238\"",
+    "referrer-policy": "same-origin",
+    "strict-transport-security": "max-age=31557600",
+    "vary": "Origin, Accept-Encoding",
+    "via": "1.1 varnish, 1.1 varnish",
+    "x-cache": "MISS, HIT, HIT",
+    "x-cache-hits": "0, 4794, 1",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "2d43fc575499eff0da4218e417b05193",
+    "x-runtime": "0.006428",
+    "x-served-by": "cache-fra-etou8220107-FRA, cache-fra-etou8220091-FRA, cache-chi-klot8100109-CHI",
+    "x-timer": "S1792544753.695311,VS0,VE2",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"links\":[{\"rel\":\"http://nodeinfo.diaspora.software/ns/schema/2.0\",\"href\":\"https://mastodon.social/nodeinfo/2.0\"}]}"
+}

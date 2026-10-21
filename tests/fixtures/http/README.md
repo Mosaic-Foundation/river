@@ -33,3 +33,18 @@ cookies and connection headers.
 - **Unit tests:** build a guard with
   `createFetchGuard({ dispatcher: mockAgentFromFixtures(fixtures), resolver: fixtureResolver(fixtures) })`,
   or `replayOptions(dir)`, and pass it to the code under test.
+
+## Fediverse (M4)
+
+Recorded on 2026-10-21 by `scripts/recorders/fediverse.ts`, which runs the adapter itself through
+a saving guard, so each file is a request the adapter really sends: WebFinger, the actor, NodeInfo
+(well-known and document), the outbox, its first two pages, one boosted object where it lives on a
+seed host, and Mastodon's REST lookup and statuses for `@eff@mastodon.social`. Seeds:
+`@w3c@w3c.social`, `@wearenew_public@mastodon.social`, `@eff@mastodon.social`,
+`@internetarchive@mastodon.archive.org`, `@wikipedia@wikis.world`, `@swf@socialwebfoundation.org`.
+
+- mastodon.social answers unsigned actor reads with 401 (recorded as such) but serves outboxes;
+  the adapter reads those profiles through `/api/v1/accounts/lookup`.
+- Responses the seeds don't give (a 401/403 outbox, a 429, a post with `<script>`) are not in this
+  folder. Tests derive them from a recorded response at run time (`tests/unit/helpers/fediverseFixtures.ts`).
+- `fedizen.net` is not recorded: ADR-001 allows it only once Adam approves.

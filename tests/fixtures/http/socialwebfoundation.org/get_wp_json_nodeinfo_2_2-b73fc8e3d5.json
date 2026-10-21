@@ -1,0 +1,26 @@
+{
+  "url": "https://socialwebfoundation.org/wp-json/nodeinfo/2.2",
+  "status": 200,
+  "headers": {
+    "access-control-allow-headers": "Authorization, X-WP-Nonce, Content-Disposition, Content-MD5, Content-Type",
+    "access-control-expose-headers": "X-WP-Total, X-WP-TotalPages, Link",
+    "allow": "GET",
+    "alt-svc": "clear",
+    "cache-control": "max-age=300, must-revalidate",
+    "content-type": "application/json; charset=UTF-8",
+    "host-header": "WordPress.com",
+    "last-modified": "Wed, 21 Oct 2026 01:05:50 GMT",
+    "link": "<https://socialwebfoundation.org/wp-json/>; rel=\"https://api.w.org/\"",
+    "server": "nginx",
+    "server-timing": "a8c-cdn, dc;desc=dca, cache;desc=MISS;dur=1030.0",
+    "strict-transport-security": "max-age=31536000",
+    "vary": "Accept-Encoding,accept, content-type, cookie,Origin",
+    "x-ac": "2.dca _atomic_dca MISS",
+    "x-content-type-options": "nosniff",
+    "x-hacker": "Want root?  Visit join.a8c.com and mention this header.",
+    "x-nananana": "Batcache-Set",
+    "x-remembering": "Eric Binnion <https://friendsofericbinnion.wordpress.com/>",
+    "x-robots-tag": "noindex"
+  },
+  "body": "{\"version\":\"2.2\",\"software\":{\"name\":\"wordpress\",\"version\":\"7.1\",\"repository\":\"https:\\/\\/github.com\\/Automattic\\/wordpress-activitypub\",\"homepage\":\"https:\\/\\/wordpress.org\\/plugins\\/activitypub\\/\"},\"usage\":{\"users\":{\"total\":7,\"activeMonth\":2,\"activeHalfyear\":2},\"localPosts\":92,\"localComments\":886},\"protocols\":[\"activitypub\"],\"services\":{\"inbound\":[\"atom1.0\",\"rss2.0\",\"pop3\",\"gnusocial\"],\"outbound\":[\"atom1.0\",\"rss2.0\",\"wordpress\",\"smtp\",\"friendica\",\"gnusocial\",\"mediagoblin\",\"wordpress\"]},\"metadata\":{\"nodeName\":\"Social Web Foundation\",\"nodeDescription\":\"Towards a bigger, better fediverse\",\"nodeIcon\":\"https:\\/\\/i0.wp.com\\/socialwebfoundation.org\\/wp-content\\/uploads\\/2024\\/09\\/cropped-logo-1.png?fit=512%2C512&ssl=1\",\"federation\":{\"enabled\":true},\"staffAccounts\":[\"evanprodromou@socialwebfoundation.org\",\"tecoates@socialwebfoundation.org\",\"kimclow@socialwebfoundation.org\",\"wpconcierge@socialwebfoundation.org\",\"jonathan.bouganim@socialwebfoundation.org\"]},\"openRegistrations\":false,\"instance\":{\"name\":\"Social Web Foundation\",\"description\":\"Towards a bigger, better fediverse\"}}"
+}

@@ -1,0 +1,22 @@
+{
+  "url": "https://w3c.social/nodeinfo/2.0",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=1800, public",
+    "content-length": "500",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; frame-ancestors 'none'; font-src 'self' https://w3c.social; img-src 'self' data: blob: https://w3c.social https://w3csocial.files.fedi.monster; media-src 'self' data: https://w3c.social https://w3csocial.files.fedi.monster; manifest-src 'self' https://w3c.social; form-action 'self'; child-src 'self' blob: https://w3c.social; worker-src 'self' blob: https://w3c.social; connect-src 'self' data: blob: https://w3c.social https://w3csocial.files.fedi.monster wss://w3c.social; script-src 'self' https://w3c.social 'wasm-unsafe-eval'; frame-src 'self' https:; style-src 'self' https://w3c.social 'nonce-QH/umeo98lqMRkvnExTXtQ=='",
+    "content-type": "application/json; charset=utf-8",
+    "etag": "W/\"4f40b842fabd9d339e095bde98532840\"",
+    "referrer-policy": "same-origin",
+    "server": "nginx/1.18.0",
+    "strict-transport-security": "max-age=63072000; includeSubDomains",
+    "vary": "Accept-Encoding,Origin",
+    "x-cached": "HIT",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "f29e28fe-1bf2-4e84-8205-74b2afaa6533",
+    "x-runtime": "0.228767",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"version\":\"2.0\",\"software\":{\"name\":\"mastodon\",\"version\":\"4.7.2\"},\"protocols\":[\"activitypub\"],\"services\":{\"outbound\":[],\"inbound\":[]},\"usage\":{\"users\":{\"total\":617,\"activeMonth\":98,\"activeHalfyear\":300},\"localPosts\":20887},\"openRegistrations\":true,\"metadata\":{\"nodeName\":\"w3c.social\",\"nodeDescription\":\"w3c.social is a friendly and respectful instance for people involved in the activities of the World Wide Web Consortium (W3C). The instance is run on a volunteer basis by a few of the W3C team. \"}}"
+}

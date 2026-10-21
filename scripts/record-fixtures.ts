@@ -5,6 +5,7 @@
 // Floyd and Longmont, the fediverse adapter (M4) for the seed accounts. Recorders fetch through
 // the fetch guard (src/shared/fetch/, M2, ADR-001), so the file format matches its replay mode.
 import { civicHubRecorders } from "./recorders/civicHub.js";
+import { fediverseRecorder } from "./recorders/fediverse.js";
 
 interface Recorder {
   /** e.g. "civic-hub: demosville.civic.social". */
@@ -15,7 +16,7 @@ interface Recorder {
 
 const OUT_DIR = "tests/fixtures/http";
 
-const recorders: Recorder[] = [...civicHubRecorders];
+const recorders: Recorder[] = [...civicHubRecorders, fediverseRecorder];
 
 async function main(): Promise<void> {
   if (recorders.length === 0) {

@@ -1,0 +1,22 @@
+{
+  "url": "https://w3c.social/users/w3c/outbox",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=180, public",
+    "content-length": "260",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'; form-action 'none'",
+    "content-type": "application/activity+json; charset=utf-8",
+    "etag": "W/\"c2bff84fc3f6ece815eb82f20e248c37\"",
+    "referrer-policy": "same-origin",
+    "server": "nginx/1.18.0",
+    "strict-transport-security": "max-age=63072000; includeSubDomains",
+    "vary": "Accept",
+    "x-cached": "EXPIRED",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "c427e3b1-f311-4962-a054-9a57cc14f9c4",
+    "x-runtime": "0.007636",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"@context\":\"https://www.w3.org/ns/activitystreams\",\"id\":\"https://w3c.social/users/w3c/outbox\",\"type\":\"OrderedCollection\",\"totalItems\":1856,\"first\":\"https://w3c.social/users/w3c/outbox?page=true\",\"last\":\"https://w3c.social/users/w3c/outbox?min_id=0&page=true\"}"
+}
