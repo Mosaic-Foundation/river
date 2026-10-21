@@ -19,12 +19,12 @@ import {
 } from "./lib/api";
 import { modeFromSearch, withMode } from "./lib/modes";
 import { PluginPanel } from "./components/PluginPanel";
-import { CONTENT_TYPES, SAMPLE_EXPLAINER } from "./lib/format";
+import { CONTENT_TYPES, NETWORKS, parseList, SAMPLE_EXPLAINER, toggleValue } from "./lib/format";
 import { browserStore, loadRead, markRead, markUnread, saveRead } from "./lib/readState";
 import { Header, TabBar, YouPanel } from "./components/Chrome";
 import { TAB_PLACEHOLDERS, type Tab } from "./lib/tabs";
 import { FeedCard } from "./components/FeedCard";
-import { FilterChips, FilterSidebar, SearchField, type FilterState } from "./components/Filters";
+import { ActiveFilters, FilterChips, FilterSidebar, SearchField, type FilterState } from "./components/Filters";
 import { InfoDialog } from "./components/InfoDialog";
 import { NotFound } from "./components/NotFound";
 import { CirclesPanel } from "./components/CirclesPanel";
@@ -65,11 +65,11 @@ const MODE_TITLES: Record<string, string> = { everything: "Everything", civic: "
 /** Filters from the address bar, so a reload or a shared link keeps them. */
 function filtersFromUrl(): FilterState {
   const params = new URLSearchParams(window.location.search);
-  const type = params.get("type") ?? "all";
   return {
     mode: modeFromSearch(window.location.search),
     circle: params.get("circle") || "All",
-    type: CONTENT_TYPES.some((t) => t.value === type) ? type : "all",
+    types: parseList(params.get("type"), CONTENT_TYPES),
+    networks: parseList(params.get("network"), NETWORKS),
     q: params.get("q") ?? "",
   };
 }
@@ -78,7 +78,8 @@ function filtersToUrl(filters: FilterState): void {
   const params = new URLSearchParams();
   if (filters.mode) params.set("mode", filters.mode);
   if (filters.circle !== "All") params.set("circle", filters.circle);
-  if (filters.type !== "all") params.set("type", filters.type);
+  if (filters.types.length > 0) params.set("type", filters.types.join(","));
+  if (filters.networks.length > 0) params.set("network", filters.networks.join(","));
   if (filters.q) params.set("q", filters.q);
   const search = params.toString();
   window.history.replaceState(null, "", search ? `/?${search}` : "/");
@@ -176,7 +177,10 @@ export function River() {
   useEffect(() => {
     filtersToUrl(filters);
     const controller = new AbortController();
-    loadFeed({ mode: filters.mode, circle: filters.circle, type: filters.type, q: filters.q }, controller.signal)
+    loadFeed(
+      { mode: filters.mode, circle: filters.circle, types: filters.types, networks: filters.networks, q: filters.q },
+      controller.signal,
+    )
       .then((result) => {
         if (result.status === "bad_circle") {
           // A circle from another view (a visitor's circle name after sign-in): show All.
@@ -285,7 +289,8 @@ export function River() {
     circles: shownCircles,
     value: filters,
     onCircle: (circle: string) => setFilter({ circle }),
-    onType: (type: string) => setFilter({ type }),
+    onType: (type: string) => setFilter({ types: toggleValue(filters.types, type, CONTENT_TYPES) }),
+    onNetwork: (network: string) => setFilter({ networks: toggleValue(filters.networks, network, NETWORKS) }),
     onSearch: (q: string) => setFilter({ q: q.trim() }),
   };
 
@@ -355,6 +360,8 @@ export function River() {
               </button>
             )}
           </div>
+
+          <ActiveFilters circles={shownCircles} value={filters} onChange={setFilter} />
 
           {load.status === "loading" && (
             <p className="feed-status" role="status">

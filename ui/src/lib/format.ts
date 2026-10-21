@@ -1,9 +1,11 @@
 // Pure helpers for cards (spec F1, 4.8). No React, no DOM: tests/unit/ui/ covers them.
 import type { ItemKind, MediaRef } from "./api";
 
-/** Content-type filters (spec F5), in order; `value` is what /api/feed's `type` accepts. */
+/**
+ * Content-type filters (spec F5), in order; `value` is what /api/feed's `type` accepts, several
+ * comma-separated (ui-revisions-1 item 2). None selected means All.
+ */
 export const CONTENT_TYPES: ReadonlyArray<{ value: string; label: string }> = [
-  { value: "all", label: "All" },
   { value: "posts", label: "Posts" },
   { value: "articles", label: "Articles" },
   { value: "podcasts", label: "Podcasts" },
@@ -12,6 +14,27 @@ export const CONTENT_TYPES: ReadonlyArray<{ value: string; label: string }> = [
   { value: "events", label: "Events" },
   { value: "civic", label: "Civic activity" },
 ];
+
+/** Network filters (ui-revisions-1 item 4); `value` is what /api/feed's `network` accepts. */
+export const NETWORKS: ReadonlyArray<{ value: string; label: string; detail?: string }> = [
+  { value: "hubs", label: "Civic Hubs" },
+  { value: "fediverse", label: "Fediverse", detail: "Mastodon and compatible" },
+];
+
+/** Keeps the known values of a comma-separated list, in the list's own order, once each. */
+export function parseList(raw: string | null, known: ReadonlyArray<{ value: string }>): string[] {
+  if (!raw) return [];
+  const wanted = new Set(raw.split(",").map((v) => v.trim().toLowerCase()));
+  return known.filter((k) => wanted.has(k.value)).map((k) => k.value);
+}
+
+/** Adds the value if absent, removes it if present, keeping `known`'s order. */
+export function toggleValue(list: readonly string[], value: string, known: ReadonlyArray<{ value: string }>): string[] {
+  const next = new Set(list);
+  if (next.has(value)) next.delete(value);
+  else next.add(value);
+  return known.filter((k) => next.has(k.value)).map((k) => k.value);
+}
 
 const KIND_LABELS: Record<ItemKind, string> = {
   post: "Post",
