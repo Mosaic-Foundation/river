@@ -52,6 +52,36 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, M10: unit `plugins` (the manifest: the spec's shape on every River surface, frozen;
+  refuses another kind, unknown surface or capability, bad id or version, extra fields; the
+  registry: three v1 plugins, repeats refused, every plugin a mode places exists and declares that
+  surface, an instance can turn one off; `runSurface`: items only with `read:items`, frozen copies,
+  nothing but `items` and `now`, a throwing or meddling plugin left out; Coming up: date order,
+  five at most, past and bad dates out, start times only for events, one entry per process, title
+  fallback; the placeholders' sources; modes: definitions, order, check 8's parse, the civic circle
+  by role and not by name), `ui/modes` (switch shown for two or more modes, `?mode=` in links and
+  the feed query, the Following page's theme, panel words), `lintBoundaries` (a plugin imports only
+  its ViewApi; no fetch, process, globalThis, require). Database `modes` (river_app, own member and
+  hub spaces reading the recorded Longmont and Demosville feeds): check 7 for a member (Civic
+  shows the civic hub plus the space in the circle whose role is civic, "Our town", and not the
+  one in a circle merely named "Civic"; Coming up has the recorded 2026-11-08 deadline once, in
+  date order; the slots follow; later pages carry no surfaces), Coming up reads the view (posts or
+  an unmatched search: no dates, slots stay), Mark all read in Civic marks only that view; check 8
+  (an instance inserted as postgres with modes_enabled = [civic] opens in Civic with the panel and
+  refuses Everything; `instances.plugins` turns Coming up off). API `modes` (dev server): the seed
+  instance's modes and themes, the Civic panel over HTTP, the panel follows filters and the first
+  page, `bad_mode`; check 8 by Host header on a civic-only instance inserted as postgres. e2e
+  `modes`: check 7 as a visitor (switch, Civic theme tokens, panel with Coming up in date order and
+  the recorded deadline, only civic-category cards, no samples, axe, panel beside the feed, reload
+  keeps the mode, back to Everything), on a phone (picker in the header, panel above the feed, no
+  sideways scroll, tabs and filters, axe), as a member (rename Civic to "Our town" and add the
+  campaign sample on the Following page, which wears the Civic theme; Civic mode then shows it;
+  circle filter in Civic), and check 8 on `civic-only-*.localhost` (no switch on desktop or phone,
+  opens in Civic with the panel, `?mode=everything` falls back to Civic, axe). The recordings hold
+  one voting_closes_at, so date order across several dates is proved in the unit tests. Ran
+  against the dev servers and against `vite preview` on 4173. Unit 437, API 132 (fresh `db
+  reset`), e2e 46.
+
 - 2026-10-21, M9: unit `followResolve` (the follow box's resolve through recorded fixtures: check
   13 preview, 14 stream key validated with probeStream, 15 preview with avatar and kind, the hub →
   fediverse fallback on a DERIVED 404 civic.json, check 16 refusals with zero requests, not a

@@ -20,6 +20,52 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M10 Modes and plugins: mode switch, Civic theme, panel surface, plugin registry, Coming up — 2026-10-21
+
+- Branch / PR: claude/m10-modes-plugins → PR. Built on M5–M9 (unmerged); merge after them, once
+  its own diff is only M10. No needs-adam trigger of its own: no migration, no table, policy or
+  grant change, no auth or session change, no new outbound host (plugins make no request), no
+  `.github/`, `vercel.json` or CLAUDE.md change. Touches `eslint.config.js` (a new plugin rule)
+  and `ui/src/styles/themes/civic.css` (one token).
+- Migrations: none.
+
+**What it does.** Modes are definitions in code (`src/river/modes/`): Everything (all follows,
+Mosaic, no panel) and Civic (civic-category spaces plus the reader's circle whose `role` is civic,
+found by role, never by name; Civic theme; the panel). The header's Everything | Civic switch
+shows the instance's `modes_enabled` and hides when there is one; an instance with only Civic opens
+in it (check 8). The mode lives in `?mode=`; links to the Following page keep it and that page
+wears its theme. Plugins (`src/river/plugins/`): manifests in the spec's shape, checked at load; a
+registry of first-party plugins; each runs in-process on the feed's first page with a frozen
+ViewApi (the current view's items, newest 500, and the River's clock) and returns data the UI
+draws. v1 plugins on `river.panel`: Coming up (up to 5 upcoming deadlines and event starts, date
+order, hidden when none) and the two placeholder slots naming Open States, Geocodio or Cicero and
+Democracy Works or Ballotpedia. Lint keeps built-in plugins importing only their ViewApi.
+
+**Keys.** None. Feed response gains `modes` ([{id, title}]), `theme` and `surfaces`
+(`{"river.panel": [{id, title, version, output}]}` on the first page, `null` on later ones);
+`bad_mode` 400 for a mode the instance doesn't offer (the UI opens the default). `POST
+/api/read-state/all` now gets the mode from the UI. `instances.plugins` entries `{id, enabled:
+false}` turn a plugin off (seed row unchanged). Layout tokens `--layout-panel`,
+`--layout-page-wide`. UI stylesheet `ui/src/styles/modes.css`. No new dependency.
+
+**Tests.** `npm run check`: Test Files 29 passed (29), Tests 437 passed (437), UI built.
+`npm run test:api` (both dev servers, fresh `db reset`): Test Files 13 passed (13), Tests 132
+passed (132). `npm run test:e2e` (fresh `db reset`): 46 passed, against the dev servers and again
+against `vite preview` on 4173. Checks 7 and 8 in `tests/e2e/modes.spec.ts`, with database proofs
+in `tests/api/db/modes.test.ts`, HTTP proofs in `tests/api/modes.test.ts` and logic in
+`tests/unit/plugins.test.ts` and `tests/unit/ui/modes.test.ts`. Check 8's instance is inserted as
+postgres under a random `civic-only-*.localhost` hostname and deleted afterwards.
+
+### Follow-ups
+- Adam: on a preview, switch to Civic and check the panel and theme; on a phone the panel sits
+  above the feed and takes most of the first screen (the placeholders could fold away later).
+- `river.mode-header` and `river.card-action` are valid surfaces with no v1 plugin; a card action
+  would need an item-level ViewApi (one item) and a per-card output type.
+- A member's chosen mode isn't saved (`preferences` could hold it); the URL keeps it per tab.
+- Spec questions logged: `instances.theme` next to the modes' themes; "the current items" for
+  Coming up (read as the whole view); plugins with empty capabilities.
+- M11: `GET /api/me/export`'s `preferences` stays `{}` (no mode preference yet).
+
 ## M9 Following: follow box, Following page, stream rules, Ended, Quiet, circles — 2026-10-21
 
 - Branch / PR: claude/m9-following → PR. Built on M5–M8 (unmerged); merge after them, once its own

@@ -16,6 +16,31 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-21 — instances.theme next to the modes' themes
+- Question: 3.1 gives instances a `theme` (mosaic, civic), while 4.7 gives each mode its theme
+  (Everything is Mosaic, Civic is Civic) and check 26 says the seed instance gets the Mosaic theme.
+  When they differ, which wins?
+- Reading used: the mode's theme, always; `instances.theme` is returned in the feed's `instance`
+  block and otherwise unused. The civic-only test instance sets both to civic.
+- Proposed change: 3.1 says `instances.theme` is the theme for pages outside any mode (or drop it
+  until modes can name their own theme per instance).
+- Thread / PR: M10
+
+### 2026-10-21 — "The current items" for Coming up
+- Question: 4.7 says Coming up takes dates "from the current items"; the feed loads 30 at a time,
+  so the dates could be those of the loaded cards or of the whole view.
+- Reading used: the whole current view (mode, circle, type, search), newest 500 items, read on the
+  server with the River's clock. A vote opened weeks ago still shows its closing date.
+- Proposed change: 4.7 says "the current view's items".
+- Thread / PR: M10
+
+### 2026-10-21 — Plugins that read nothing
+- Question: 4.7's manifest shows `capabilities: ["read:items"]`; the placeholder slots read no item.
+- Reading used: the placeholders declare `capabilities: []` and receive no items (declare what you
+  need). The manifest still allows only `read:items` in v1.
+- Proposed change: 4.7 says capabilities may be empty.
+- Thread / PR: M10
+
 ### 2026-10-21 — A stream-only follow's final result after 90 days
 - Question: F7 clears Ended follows 90 days after the stream ends, and retention keeps the final
   result for good; but once the stream-only follow is gone, the member's River no longer includes
@@ -167,6 +192,68 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-21 — Modes are code definitions; the mode lives in the URL (M10)
+- Decision: `src/river/modes/` defines Everything (`scope: all`, Mosaic, no surfaces) and Civic
+  (`scope: civic`, Civic theme, `river.panel`: Coming up, Your representatives, Elections and
+  ballot). `instances.modes_enabled` picks and orders them; `default_mode` opens first. Civic's
+  scope is civic-category spaces plus the reader's circle with `role = civic`, found by role (a
+  renamed civic circle still counts; a circle merely named "Civic" doesn't). The feed answers
+  `modes: [{id, title}]` (the switch shows when there are two or more), `theme` (the mode's) and
+  `surfaces`. The UI keeps the mode in `?mode=` (left out for the default; a mode the instance
+  doesn't offer opens the default, `bad_mode`). Links to `/following` carry `?mode=` when it isn't
+  Everything, so that page wears the mode's theme and links back to it. A member's mode is not
+  saved as a preference.
+- Why: spec F9, 3.1 ("built-in definitions in code plus `instances.modes_enabled`"), 4.7; decisions
+  log row 23; the M9 follow-up (find the civic circle by role).
+- Alternatives: a `mode` preference for members (spec doesn't ask; the URL serves visitors too);
+  separate stylesheets per mode (DECISIONS M0: one attribute switch).
+- Thread / PR: M10
+
+## 2026-10-21 — Plugins run in-process on the server and return data (M10)
+- Decision: a first-party plugin is `{ manifest, render(api) }` in `src/river/plugins/builtin/`,
+  bundled with the server. The registry checks each manifest at load (`kind: "view"`, surfaces
+  from `river.panel | river.mode-header | river.card-action`, capabilities from `read:items`, a
+  `1.0.0` version, no unknown fields) and refuses repeats. On the feed's first page the River runs
+  the plugins the mode places, in order, with a frozen `ViewApi { items, now }`: the current
+  view's items (same mode, circle, type and search as the feed, newest 500, card fields only: no
+  raw activity, read state or reader) and the River's clock. A plugin without `read:items` gets
+  no items. It returns data (`dates` or `placeholder`), never markup; the UI draws each type with
+  its own component. One that throws is left out and logged by id. Lint lets a built-in plugin
+  import only `../api.js` and use no `fetch`, `process`, `globalThis` or `require`.
+- Why: spec 4.7 ("read-only access to the current view's items through a typed API and nothing
+  else"; first-party, bundled at build time; no sandboxing in v1). Running on the server gives
+  plugins the whole view, not only the 30 loaded cards, and the River's clock (TEST_CLOCK_NOW in
+  tests), and keeps them away from the page's session, network and DOM.
+- Alternatives: plugins as React components in the UI bundle (they'd see only loaded items and the
+  browser clock, and could call `fetch` with the member's cookie); a separate `/api/panel` request.
+- Thread / PR: M10
+
+## 2026-10-21 — Coming up and the placeholders (M10)
+- Decision: Coming up lists `civic.deadline` (voting_closes_at) and event start times at or after
+  the River's clock, soonest first, at most 5; one entry per (stream, kind, date), from the newest
+  item (a hub repeats a deadline on Create and civic:Start); titled by the item's title (else the
+  stream's, else the space's name); linked to the item's URL for live items. Hidden when there are
+  none. The two placeholders are plugins too, `capabilities: []`, naming their sources: "Waiting
+  on a data source (Open States, Geocodio or Cicero)." and "(Democracy Works or Ballotpedia)." The
+  panel is a third column from 80rem, above the feed from 56rem to 80rem and on phones (Feed tab).
+- Why: spec F9, 4.7; the civic mockup.
+- Thread / PR: M10
+
+## 2026-10-21 — instances.plugins turns plugins off (M10)
+- Decision: `instances.plugins` lists changes to the defaults: `[{ "id": "coming-up", "enabled":
+  false }]` turns one plugin off for that instance. Empty (the seed instance, unchanged) runs
+  every plugin its modes place. Other entries are ignored. No migration.
+- Why: spec 3.1 names the column without a shape; decisions log row 25 (instances hold plugins as
+  data). Placement stays with the modes (row 23).
+- Alternatives: a full list of enabled ids (the seed row would need a data migration).
+- Thread / PR: M10
+
+## 2026-10-21 — Civic muted text is #526366 (M10)
+- Decision: civic.css `--color-text-muted` goes from `#5a6b6e` to `#526366`.
+- Why: Civic mode is the first page wearing civic.css; axe (check 31) found `#5a6b6e` on the page
+  background (cream-sink `#e8e2d4`) at 4.3:1. `#526366` is 4.9:1 there and 6.3:1 on white.
+- Thread / PR: M10
 
 ## 2026-10-21 — Following API (M9)
 - Decision: members-only routes under `/api` (src/river/following/routes.ts), each running in
