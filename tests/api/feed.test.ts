@@ -194,6 +194,42 @@ describe("filters (check 5)", () => {
   });
 });
 
+describe("one item for the reader view (ui-revisions-1 item 1)", () => {
+  it("answers a stored item of the reader's River, the same as the feed shows it", async () => {
+    for (const sample of [everything.find((i) => i.source === "live")!, everything.find((i) => i.source === "sample")!]) {
+      const res = await fetch(`${API}/items/${sample.id}`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      const { item } = (await res.json()) as { item: FeedItem };
+      expect(item).toEqual(sample);
+    }
+  });
+
+  it("404 for an unknown item, 400 for a malformed id", async () => {
+    const missing = await fetch(`${API}/items/00000000-0000-4000-8000-00000000abcd`);
+    expect(missing.status).toBe(404);
+    expect(((await missing.json()) as { error: string }).error).toBe("not_found");
+    const bad = await fetch(`${API}/items/nope`);
+    expect(bad.status).toBe(400);
+    expect(((await bad.json()) as { error: string }).error).toBe("bad_item");
+  });
+
+  it("never shows an item outside the reader's follows", async () => {
+    const db = new pg.Client({ connectionString: ADMIN_URL });
+    await db.connect();
+    try {
+      const followed = [...new Set(everything.map((i) => i.space.id))];
+      const { rows } = await db.query<{ id: string }>(
+        "SELECT id FROM river.items WHERE NOT (space_id = ANY($1::uuid[])) OR hidden LIMIT 5",
+        [followed],
+      );
+      for (const row of rows) expect((await fetch(`${API}/items/${row.id}`)).status, row.id).toBe(404);
+    } finally {
+      await db.end();
+    }
+  });
+});
+
 describe("search (check 6)", () => {
   it("a word from a fixture title returns that item and nothing unrelated", async () => {
     const title = "How should Floyd County handle its growing bear population?";

@@ -55,6 +55,14 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, UI revisions 1 (item 1): API `feed` `GET /items/{id}` (equal to the feed's item,
+  404 unknown, 400 malformed, 404 outside the follows or hidden); e2e `revisions.spec.ts` reader
+  view (click opens `/item/{id}` beside the sidebar, reload loads it from the API, scroll restored
+  by Back to River and browser Back, Forward reopens, Mark read/links/Sample keep their behavior,
+  keyboard and focus return, axe, marks read, unknown item, phone width); `river.spec.ts` check 4
+  revised (host in the footer, Open original's target and rel); read-state tests (visitor and
+  member) open items in the reader instead of a new tab.
+
 - 2026-10-21, UI revisions 1 (items 2-4): unit `feedScope` (several types, networks, refusals)
   and `ui/format` (list parsing and toggling, query string); API `feed` (type lists, `network`
   hubs/fediverse/both, `network=bluesky` is 400); e2e `revisions.spec.ts`: type pills (pressed,

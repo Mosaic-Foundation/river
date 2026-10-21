@@ -53,7 +53,7 @@ test.describe("feed cards", () => {
     await expect(label).toBeFocused();
   });
 
-  test("check 4: Live cards open on their host in a new tab; Sample cards have no Open link", async ({ page }) => {
+  test("check 4 (as revised by ui-revisions-1 item 1): cards name their host; the reader's Open original opens it in a new tab", async ({ page }) => {
     await openFeed(page);
     const live = cards(page).and(page.locator('[data-source="live"]'));
     const sample = cards(page).and(page.locator('[data-source="sample"]'));
@@ -63,19 +63,32 @@ test.describe("feed cards", () => {
     for (const card of await live.all()) {
       await expect(card.getByText("Live", { exact: true })).toBeVisible();
       await expect(card.getByRole("button", { name: "Sample", exact: true })).toHaveCount(0);
-      const open = card.getByRole("link", { name: /^Open on / });
-      await expect(open).toHaveCount(1);
-      const href = (await open.getAttribute("href"))!;
-      await expect(open).toHaveAccessibleName(new RegExp(`^Open on ${new URL(href).host.replace(/\./g, "\\.")}`));
-      expect(new URL(href).protocol).toBe("https:");
-      await expect(open).toHaveAttribute("target", "_blank");
-      expect((await open.getAttribute("rel"))!.split(/\s+/)).toEqual(expect.arrayContaining(["noopener", "noreferrer"]));
+      await expect(card.getByRole("link", { name: /^Open on / })).toHaveCount(0);
+      await expect(card.getByTestId("card-host")).toHaveText(/^[a-z0-9.-]+\.[a-z]+$/);
     }
     for (const card of await sample.all()) {
       await expect(card.getByRole("button", { name: "Sample", exact: true })).toBeVisible();
       await expect(card.getByText("Live", { exact: true })).toHaveCount(0);
-      await expect(card.getByRole("link", { name: /^Open on / })).toHaveCount(0);
+      await expect(card.getByTestId("card-host")).toHaveCount(0);
     }
+
+    // The reader's Open original: the item URL, https, a new tab, noopener noreferrer.
+    for (const card of (await live.all()).slice(0, 3)) {
+      const host = (await card.getByTestId("card-host").textContent())!;
+      await card.locator(".card-source").click();
+      const open = page.getByTestId("reader").getByRole("link", { name: /^Open original/ });
+      await expect(open).toBeVisible();
+      const href = (await open.getAttribute("href"))!;
+      expect(new URL(href).protocol).toBe("https:");
+      expect(new URL(href).host).toBe(host);
+      await expect(open).toHaveAttribute("target", "_blank");
+      expect((await open.getAttribute("rel"))!.split(/\s+/)).toEqual(expect.arrayContaining(["noopener", "noreferrer"]));
+      await page.getByRole("button", { name: "Back to River" }).click();
+      await expect(page.getByTestId("reader")).toHaveCount(0);
+    }
+    await sample.first().locator(".card-source").click();
+    await expect(page.getByTestId("reader")).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Open original/ })).toHaveCount(0);
   });
 
   test("cards show source, kind, relative time; boosts say who boosted from where", async ({ page }) => {
@@ -106,7 +119,7 @@ test.describe("feed cards", () => {
     const livePhoto = cards(page).and(page.locator('[data-source="live"][data-kind="photo"]')).first();
     await livePhoto.scrollIntoViewIfNeeded();
     await expect(livePhoto.locator("img")).toHaveCount(0);
-    await expect(livePhoto.getByRole("link", { name: /^Open on / })).toBeVisible();
+    await expect(livePhoto.getByTestId("card-host")).toBeVisible();
 
     // Images that did load are real images with lazy loading, no referrer and alt text.
     const sampleImage = page.locator('img[src^="/samples/"]').first();
@@ -159,7 +172,7 @@ test.describe("filters and empty state", () => {
 });
 
 test.describe("read state (visitor)", () => {
-  test("Mark read, opening a link and Mark all read stay in this browser, with no server write", async ({ page, context }) => {
+  test("Mark read, opening an item and Mark all read stay in this browser, with no server write", async ({ page }) => {
     const apiCalls: string[] = [];
     page.on("request", (req) => {
       if (new URL(req.url()).pathname.startsWith("/api/")) apiCalls.push(`${req.method()} ${new URL(req.url()).pathname}`);
@@ -171,12 +184,13 @@ test.describe("read state (visitor)", () => {
     await expect(first.getByTestId("unread-dot")).toHaveCount(0);
     await expect(first.getByRole("button", { name: "Mark unread" })).toBeVisible();
 
-    // Opening a live item's link marks it read (the new tab's request to the real host is blocked).
+    // Opening a live item in the reader marks it read.
     const live = cards(page).and(page.locator('[data-source="live"]')).nth(1);
-    const popup = context.waitForEvent("page");
-    await live.getByRole("link", { name: /^Open on / }).click();
-    await (await popup).close();
-    await expect(live.getByTestId("unread-dot")).toHaveCount(0);
+    const liveId = (await live.getAttribute("data-item-id"))!;
+    await live.locator(".card-source").click();
+    await expect(page.getByTestId("reader")).toBeVisible();
+    await page.getByRole("button", { name: "Back to River" }).click();
+    await expect(page.locator(`[data-item-id="${liveId}"]`).getByTestId("unread-dot")).toHaveCount(0);
 
     await page.reload();
     await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });

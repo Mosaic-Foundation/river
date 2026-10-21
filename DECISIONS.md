@@ -232,6 +232,20 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-21 — The reader view's address and data (UI revisions 1, item 1)
+- Decision: `/item/{id}` keeps the feed's query string (mode, filters). An item already in the
+  loaded feed opens from memory; otherwise `GET /api/items/{id}` returns it from the reader's own
+  Everything scope (all their follows, whatever the mode), or 404. Opening an item marks it read
+  (as opening a link did, spec F4). The title, or the time on untitled cards, is the keyboard
+  link; a click anywhere else on the card except its links and buttons opens it. Audio and video
+  stay on their source ("plays on {host}"): `<audio>` and `<video>` from other hosts would break
+  the CSP's `default-src 'self'`.
+- Why: a URL per item so Back works (item 1); vercel.json already serves index.html for every path,
+  so no config change. Nothing new is fetched from outside.
+- Alternatives: `/?item={id}` (no vercel.json change either, but a worse link); always calling the
+  API (an extra request per open).
+- Thread / PR: UI revisions 1, PR 3
+
 ## 2026-10-21 — Several content types and networks in /api/feed (UI revisions 1, items 2 and 4)
 - Decision: `type` takes a comma-separated list (`type=posts,videos`); a new `network` parameter
   takes `hubs` (adapter `civic_hub`) and/or `fediverse`. Empty means all. Unknown values are 400

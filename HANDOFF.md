@@ -20,6 +20,27 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 1, item 1: the reader view — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → PR 3 of the UI revisions series (self-merge)
+- Migrations: none.
+
+**What it does.** A click anywhere on a card (outside its links and buttons) opens the item at
+`/item/{id}` inside the River, sidebar still visible: full sanitized content, all images, author,
+source, details, "Open original" (new tab, `noopener noreferrer`, live items only) and Mark
+read/unread. "Back to River" and the browser's Back return to the same scroll position and focus
+the opened card. Card footers show only the source host. New `GET /api/items/{id}` (reader's own
+follows, 404 otherwise) serves a reloaded or shared item link; nothing is fetched from outside.
+
+**Keys.** None.
+
+**Tests.** API `feed` (one item: live and sample equal to the feed's, 404, 400, nothing outside
+the follows); e2e `revisions.spec.ts` item 1 (six tests); `river.spec.ts` check 4 rewritten for
+the host footer and Open original; visitor and member read-state tests open items in the reader.
+
+### Follow-ups
+- Spec F1's "Open on {host}" card link is superseded by ui-revisions-1 item 1.
+
 ## UI revisions 1, items 2-4: toggle pills, active filter chips, Networks — 2026-10-21
 
 - Branch / PR: claude/eloquent-newton-v3ftlr → PR 2 of the UI revisions series (self-merge)

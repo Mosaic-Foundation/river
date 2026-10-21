@@ -154,13 +154,13 @@ test("check 23: a member's Mark read, Mark unread, opened links and Mark all rea
   await expect(first.getByRole("button", { name: "Mark unread" })).toBeVisible();
   await expect.poll(reads).toEqual([firstId]);
 
-  // Opening a live item's link marks it read too.
+  // Opening a live item in the reader view marks it read too (ui-revisions-1 item 1).
   const live = cards(page).and(page.locator('[data-source="live"]')).nth(1);
   const liveId = (await live.getAttribute("data-item-id")) ?? "";
-  const popup = context.waitForEvent("page");
-  await live.getByRole("link", { name: /^Open on / }).click();
-  await (await popup).close();
-  await expect(live.getByTestId("unread-dot")).toHaveCount(0);
+  await live.locator(".card-source").click();
+  await expect(page.getByTestId("reader")).toBeVisible();
+  await page.getByRole("button", { name: "Back to River" }).click();
+  await expect(page.locator(`[data-item-id="${liveId}"]`).getByTestId("unread-dot")).toHaveCount(0);
   await expect.poll(async () => (await reads()).sort()).toEqual([firstId, liveId].sort());
 
   // A reload (a new page view) still shows both read: the state is on the server.

@@ -5,9 +5,9 @@ import { useState } from "react";
 import type { MediaRef } from "../lib/api";
 import { cardImages, safeImageUrl } from "../lib/format";
 
-export function CardMedia({ media }: { media: MediaRef[] }) {
+export function CardMedia({ media, limit }: { media: MediaRef[]; limit?: number }) {
   const [failed, setFailed] = useState<ReadonlySet<string>>(() => new Set());
-  const images = cardImages(media).filter((m) => !failed.has(m.url));
+  const images = cardImages(media, limit).filter((m) => !failed.has(m.url));
   if (images.length === 0) return null;
   return (
     <div className={`card-media card-media-${Math.min(images.length, 4)}`} data-testid="card-media">

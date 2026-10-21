@@ -511,6 +511,22 @@ main.feed:focus {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--color-primary);
+}
+
+.card-title-link,
+.card-permalink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.card-title-link:hover,
+.card-permalink:hover {
+  text-decoration: underline;
 }
 
 .card-header {
@@ -740,23 +756,11 @@ main.feed:focus {
   border-top: var(--border-width) solid var(--color-border);
 }
 
-.card-open {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  min-height: var(--size-control);
+/* The footer names the source host only (ui-revisions-1 item 1). */
+.card-host {
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-bold);
-  text-decoration: none;
-}
-
-.card-open:hover {
-  text-decoration: underline;
-}
-
-.card-open .icon {
-  width: var(--font-size-sm);
-  height: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
 }
 
 .card-action {
@@ -1002,4 +1006,66 @@ a.button {
 .sample-banner a {
   color: var(--color-link);
   font-weight: 700;
+}
+
+/* ---------- Reader view (ui-revisions-1 item 1) ---------- */
+
+.reader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow-wrap: anywhere;
+}
+
+.reader-back {
+  align-self: flex-start;
+}
+
+.reader-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.reader-title {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  line-height: var(--line-height-tight);
+}
+
+.reader-title:focus {
+  outline: none;
+}
+
+.reader-author {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+}
+
+.reader-content {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.reader-content.card-html > * + * {
+  margin-top: var(--space-md);
+}
+
+.reader-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  padding-top: var(--space-md);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.reader-footer .icon {
+  width: var(--font-size-sm);
+  height: var(--font-size-sm);
 }

@@ -4,9 +4,10 @@
 // members follow, unfollow and edit circles in the Following and Circles tabs (M9, spec F6-F8).
 // The mode (`?mode=`, else the instance's default) sets the scope, the theme and the plugin panel,
 // all as the API answers them (M10, spec 4.7).
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   loadFeed,
+  loadItem,
   saveAllRead,
   saveReadState,
   signOut,
@@ -31,6 +32,8 @@ import { CirclesPanel } from "./components/CirclesPanel";
 import { FollowBox } from "./components/FollowBox";
 import { FollowingList } from "./components/FollowingList";
 import { useFollowing } from "./components/useFollowing";
+import { ReaderView, type ReaderState } from "./components/ReaderView";
+import { itemIdFromPath, itemPath } from "./lib/reader";
 import { SignUpPrompt } from "./Following";
 
 /** The phone layout's media query (river.css: below 56rem). */
@@ -82,7 +85,9 @@ function filtersToUrl(filters: FilterState): void {
   if (filters.networks.length > 0) params.set("network", filters.networks.join(","));
   if (filters.q) params.set("q", filters.q);
   const search = params.toString();
-  window.history.replaceState(null, "", search ? `/?${search}` : "/");
+  // The reader view keeps its /item/{id} path; the query string still carries the filters.
+  const path = itemIdFromPath(window.location.pathname) ? window.location.pathname : "/";
+  window.history.replaceState(window.history.state, "", search ? `${path}?${search}` : path);
 }
 
 function useNow(): number {
@@ -160,11 +165,87 @@ export function River() {
   const [searchOpen, setSearchOpen] = useState(() => filtersFromUrl().q !== "");
   const [sampleTrigger, setSampleTrigger] = useState<HTMLElement | null>(null);
   const [followTrigger, setFollowTrigger] = useState<HTMLElement | null>(null);
+  // The reader view (ui-revisions-1 item 1): the item in the address bar, and where the feed was.
+  const [readerId, setReaderId] = useState<string | null>(() => itemIdFromPath(window.location.pathname));
+  const [fetchedItem, setFetchedItem] = useState<{ id: string; state: ReaderState } | null>(null);
+  const feedScroll = useRef<{ y: number; id: string } | null>(null);
   const browserReads = useBrowserReadState();
   const serverReads = useServerReadState(load.status === "ok" ? load.items : []);
   const viewer = load.status === "ok" ? load.viewer : undefined;
   const reads = viewer ? serverReads : browserReads;
   const now = useNow();
+
+  // The browser's Back and Forward move between the feed and the reader.
+  useEffect(() => {
+    const onPop = () => setReaderId(itemIdFromPath(window.location.pathname));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const loadedItem = readerId && load.status === "ok" ? load.items.find((i) => i.id === readerId) : undefined;
+  const readerState: ReaderState | null = !readerId
+    ? null
+    : loadedItem
+      ? { status: "ok", item: loadedItem }
+      : fetchedItem?.id === readerId
+        ? fetchedItem.state
+        : { status: "loading" };
+  const needsFetch = Boolean(readerId) && !loadedItem && load.status !== "loading";
+
+  // An item that isn't in the loaded feed (a shared or reloaded /item/{id}) comes from the API.
+  useEffect(() => {
+    if (!readerId || !needsFetch) return;
+    const controller = new AbortController();
+    loadItem(readerId, controller.signal)
+      .then((result) => setFetchedItem({ id: readerId, state: result }))
+      .catch(() => {
+        // Aborted: another item replaced this one.
+      });
+    return () => controller.abort();
+  }, [readerId, needsFetch]);
+
+  // Opening an item marks it read, once the feed says whose read state it is (visitor or member).
+  const readerItem = readerState?.status === "ok" ? readerState.item : undefined;
+  const markedId = useRef<string | null>(null);
+  const viewerKnown = load.status === "ok";
+  useEffect(() => {
+    if (!readerItem || !viewerKnown || markedId.current === readerItem.id) return;
+    markedId.current = readerItem.id;
+    if (!reads.isRead(readerItem.id)) reads.markRead([readerItem.id]);
+  }, [readerItem, viewerKnown, reads]);
+
+  // Back on the feed: the same scroll position, and focus on the card that was opened.
+  useLayoutEffect(() => {
+    if (readerId) {
+      window.scrollTo(0, 0);
+      return;
+    }
+    const from = feedScroll.current;
+    if (!from) return;
+    feedScroll.current = null;
+    window.scrollTo(0, from.y);
+    document
+      .querySelector<HTMLElement>(`[data-item-id="${from.id}"] :is(.card-title-link, .card-permalink)`)
+      ?.focus({ preventScroll: true });
+  }, [readerId]);
+
+  const openItem = (id: string) => {
+    feedScroll.current = { y: window.scrollY, id };
+    markedId.current = null;
+    setTab("feed");
+    window.history.pushState({ riverReader: true }, "", itemPath(id, window.location.search));
+    setReaderId(id);
+  };
+
+  const closeReader = () => {
+    // Opened from the feed: step back, so Forward reopens it. Opened directly: go to the feed.
+    if ((window.history.state as { riverReader?: boolean } | null)?.riverReader) {
+      window.history.back();
+      return;
+    }
+    window.history.pushState(null, "", `/${window.location.search}`);
+    setReaderId(null);
+  };
   // The phone's Following and Circles tabs (members): changes there reload the feed too.
   const reloadFeed = useCallback(() => setRetry((n) => n + 1), []);
   const following = useFollowing(Boolean(viewer) && (tab === "following" || tab === "circles"), reloadFeed);
@@ -234,9 +315,11 @@ export function River() {
   const circles = load.status === "ok" ? load.circles : [];
   // Civic mode shows only civic sources, so only the role = civic circle (ui-revisions-1 item 5).
   const shownCircles = mode === "civic" ? civicCircles(circles) : circles;
+  const readerTitle = readerItem ? readerItem.title || readerItem.space.name : null;
   useEffect(() => {
-    if (load.status !== "unknown_host") document.title = `${modeTitle} · Mosaic River`;
-  }, [modeTitle, load.status]);
+    if (load.status === "unknown_host") return;
+    document.title = `${readerTitle ? `${readerTitle} · ` : ""}${modeTitle} · Mosaic River`;
+  }, [modeTitle, load.status, readerTitle]);
 
   const changeMode = (next: string) => {
     setTab("feed");
@@ -249,6 +332,12 @@ export function River() {
   };
 
   const setFilter = (patch: Partial<FilterState>) => {
+    // A filter chosen while reading goes back to the feed, filtered.
+    if (readerId) {
+      feedScroll.current = null;
+      window.history.replaceState(null, "", `/${window.location.search}`);
+      setReaderId(null);
+    }
     setFilters((current) => ({ ...current, ...patch }));
     setMoreError(null);
     setLoad((current) => (current.status === "ok" ? current : { status: "loading" }));
@@ -330,86 +419,100 @@ export function River() {
           <SearchField id="search-phone" value={filters.q} onSearch={filterProps.onSearch} />
         </div>
       )}
-      <div className={tab === "feed" ? "phone-only" : "phone-only hidden"}>
+      <div className={tab === "feed" && !readerId ? "phone-only" : "phone-only hidden"}>
         <FilterChips {...filterProps} />
       </div>
 
-      <div className={panel.length > 0 ? "layout layout-panel" : "layout"}>
+      <div className={panel.length > 0 && !readerId ? "layout layout-panel" : "layout"}>
         <div className="desktop-only">
           <FilterSidebar {...filterProps} />
         </div>
 
         <main className={tab === "feed" ? "feed" : "feed hidden-phone"} id="feed" tabIndex={-1}>
-          <div className="feed-head">
-            <h1 className="feed-title">{modeTitle}</h1>
-            <p className="feed-summary">
-              {load.status === "ok" && items.length > 0 ? `${unread.length} unread · newest first` : "Newest first"}
-            </p>
-            {load.status === "ok" && items.length > 0 && (
-              <button
-                type="button"
-                className="button button-quiet"
-                disabled={unread.length === 0}
-                onClick={() =>
-                  viewer
-                    ? serverReads.markView(items.map((i) => i.id), filters)
-                    : browserReads.markRead(items.map((i) => i.id))
-                }
-              >
-                Mark all read
-              </button>
-            )}
-          </div>
+          {readerState ? (
+            <ReaderView
+              state={readerState}
+              read={readerItem ? reads.isRead(readerItem.id) : false}
+              onBack={closeReader}
+              onMarkRead={(id) => reads.markRead([id])}
+              onMarkUnread={(id) => reads.markUnread([id])}
+              onSampleInfo={(trigger) => setSampleTrigger(trigger)}
+            />
+          ) : (
+            <>
+              <div className="feed-head">
+                <h1 className="feed-title">{modeTitle}</h1>
+                <p className="feed-summary">
+                  {load.status === "ok" && items.length > 0 ? `${unread.length} unread · newest first` : "Newest first"}
+                </p>
+                {load.status === "ok" && items.length > 0 && (
+                  <button
+                    type="button"
+                    className="button button-quiet"
+                    disabled={unread.length === 0}
+                    onClick={() =>
+                      viewer
+                        ? serverReads.markView(items.map((i) => i.id), filters)
+                        : browserReads.markRead(items.map((i) => i.id))
+                    }
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
 
-          <ActiveFilters circles={shownCircles} value={filters} onChange={setFilter} />
+              <ActiveFilters circles={shownCircles} value={filters} onChange={setFilter} />
 
-          {load.status === "loading" && (
-            <p className="feed-status" role="status">
-              Loading your River…
-            </p>
-          )}
-          {load.status === "error" && (
-            <div className="feed-status" role="alert">
-              <p>{load.message}</p>
-              <button type="button" className="button button-primary" onClick={() => setRetry((n) => n + 1)}>
-                Try again
-              </button>
-            </div>
-          )}
-          {load.status === "ok" && load.emptyMessage && (
-            <p className="feed-status feed-empty" role="status">
-              {load.emptyMessage}
-            </p>
-          )}
+              {load.status === "loading" && (
+                <p className="feed-status" role="status">
+                  Loading your River…
+                </p>
+              )}
+              {load.status === "error" && (
+                <div className="feed-status" role="alert">
+                  <p>{load.message}</p>
+                  <button type="button" className="button button-primary" onClick={() => setRetry((n) => n + 1)}>
+                    Try again
+                  </button>
+                </div>
+              )}
+              {load.status === "ok" && load.emptyMessage && (
+                <p className="feed-status feed-empty" role="status">
+                  {load.emptyMessage}
+                </p>
+              )}
 
-          {items.length > 0 && (
-            <ol className="feed-list" aria-label="Items, newest first">
-              {items.map((item) => (
-                <li key={item.id}>
-                  <FeedCard
-                    item={item}
-                    read={reads.isRead(item.id)}
-                    now={now}
-                    onMarkRead={(id) => reads.markRead([id])}
-                    onMarkUnread={(id) => reads.markUnread([id])}
-                    onSampleInfo={(trigger) => setSampleTrigger(trigger)}
-                  />
-                </li>
-              ))}
-            </ol>
-          )}
+              {items.length > 0 && (
+                <ol className="feed-list" aria-label="Items, newest first">
+                  {items.map((item) => (
+                    <li key={item.id}>
+                      <FeedCard
+                        item={item}
+                        read={reads.isRead(item.id)}
+                        now={now}
+                        onMarkRead={(id) => reads.markRead([id])}
+                        onMarkUnread={(id) => reads.markUnread([id])}
+                        onSampleInfo={(trigger) => setSampleTrigger(trigger)}
+                        onOpen={openItem}
+                      />
+                    </li>
+                  ))}
+                </ol>
+              )}
 
-          {load.status === "ok" && load.nextCursor && (
-            <div className="feed-more">
-              <button type="button" className="button button-secondary" onClick={loadMore} disabled={moreLoading}>
-                {moreLoading ? "Loading more…" : "Load more"}
-              </button>
-              {moreError && <p role="alert">{moreError}</p>}
-            </div>
+              {load.status === "ok" && load.nextCursor && (
+                <div className="feed-more">
+                  <button type="button" className="button button-secondary" onClick={loadMore} disabled={moreLoading}>
+                    {moreLoading ? "Loading more…" : "Load more"}
+                  </button>
+                  {moreError && <p role="alert">{moreError}</p>}
+                </div>
+              )}
+            </>
           )}
         </main>
 
-        {panel.length > 0 && (
+        {panel.length > 0 && !readerId && (
           <div className={tab === "feed" ? "plugin-column" : "plugin-column hidden-phone"}>
             <PluginPanel plugins={panel} label={`${modeTitle} panel`} />
           </div>

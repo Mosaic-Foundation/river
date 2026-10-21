@@ -239,3 +239,19 @@ export async function signOut(): Promise<boolean> {
     return false;
   }
 }
+
+export type ItemResult = { status: "ok"; item: FeedItem } | { status: "not_found" } | { status: "error" };
+
+/** One stored item for the reader view (ui-revisions-1 item 1); the API fetches nothing new. */
+export async function loadItem(id: string, signal?: AbortSignal): Promise<ItemResult> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/items/${encodeURIComponent(id)}`, { signal, headers: { Accept: "application/json" } });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    return { status: "error" };
+  }
+  if (res.status === 404 || res.status === 400) return { status: "not_found" };
+  const body = (await res.json().catch(() => undefined)) as { item?: FeedItem } | undefined;
+  return res.ok && body?.item ? { status: "ok", item: body.item } : { status: "error" };
+}
