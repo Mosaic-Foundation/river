@@ -10,7 +10,6 @@ import {
   addAuthenticator,
   authorizeUrl,
   callbackParams,
-  catchCallback,
   codeOf,
   credentials,
   fetchLog,
@@ -20,19 +19,22 @@ import {
   opaque,
   removeAuthenticator,
   resetLimits,
+  riverAccount,
   setClock,
   signIn,
   signUp,
+  startFromRiver,
   testEmail,
   testRecoveryKey,
+  throughCallback,
   verifyWithLibrary,
   withAdmin,
 } from "./identityHelpers";
 
-// M7, the identity host (spec 4.6, F2, F3; checks 9, 12, 28, 35, 36, 37). Chromium's virtual
-// WebAuthn authenticator stands in for a phone or laptop. The River's side of sign-in (the
-// callback, sessions, accounts) arrives in M8, so the callback is answered in the browser and the
-// tests read the note from its URL.
+// M7, the identity host (spec 4.6, F2, F3; checks 9, 12, 28, 35, 36, 37), and since M8 the River's
+// part of 36 and 37. Chromium's virtual WebAuthn authenticator stands in for a phone or laptop.
+// Every flow starts at the River's /api/auth/signin and ends at its real callback, which signs the
+// browser in; the tests also read the note from the callback URL.
 
 const HOUR = 60 * 60_000;
 
@@ -45,12 +47,11 @@ test.afterEach(async ({ request }) => {
   await setClock(request, 0);
 });
 
-/** Signs up and follows the Continue link; returns the note and the DID. */
+/** Signs up from the River and follows the Continue link back to it; returns the note and the DID. */
 async function signUpAndContinue(page: Page, email: string) {
-  await catchCallback(page);
   const { redirect, state, nonce } = await signUp(page, email);
-  await page.goto(redirect);
-  const { note, state: returnedState } = callbackParams(page.url());
+  const url = await throughCallback(page, () => page.goto(redirect));
+  const { note, state: returnedState } = callbackParams(url);
   expect(returnedState).toBe(state);
   expect(note.payload.nonce).toBe(nonce);
   return { note, did: note.payload.sub };
@@ -304,6 +305,8 @@ test("check 36: an emailed link adds a new passkey to the same person and DID", 
   let auth = await addAuthenticator(page);
   const email = testEmail("check36");
   const { did } = await signUpAndContinue(page, email);
+  const account = await riverAccount(page.context());
+  expect(account).toBeDefined();
   await verifyEmail(page, request, email);
   const [original] = await credentials(auth);
 
@@ -311,11 +314,12 @@ test("check 36: an emailed link adds a new passkey to the same person and DID", 
   await removeAuthenticator(auth);
   auth = await addAuthenticator(page);
 
-  // "Lost your passkey?" from the authorize page, then the same answer for an unknown address.
-  await catchCallback(page);
-  const state = opaque();
-  const nonce = opaque();
-  await page.goto(authorizeUrl(state, nonce));
+  // Signed out of the River too, so the recovered sign-in has to make its own session.
+  await page.context().clearCookies();
+
+  // "Lost your passkey?" from the authorize page the River opened, then the same answer for an
+  // unknown address.
+  const { state, nonce } = await startFromRiver(page);
   await page.getByRole("link", { name: "Lost your passkey?" }).click();
   const unknown = testEmail("nobody");
   await page.getByLabel("Email address").fill(unknown);
@@ -330,13 +334,14 @@ test("check 36: an emailed link adds a new passkey to the same person and DID", 
   const link = linkIn(recover);
   expect(link).toMatch(/\/recover\/link\?token=[A-Za-z0-9_-]{43}$/);
 
-  // The link registers the new authenticator's passkey and finishes the sign-in it started.
+  // The link registers the new authenticator's passkey and finishes the sign-in it started, into
+  // the same River account (check 36, River part).
   await page.goto(link);
-  await page.getByRole("button", { name: "Create a new passkey" }).click();
-  await page.waitForURL(`${CALLBACK}?**`);
-  const { note, state: returned } = callbackParams(page.url());
+  const callback = await throughCallback(page, () => page.getByRole("button", { name: "Create a new passkey" }).click());
+  const { note, state: returned } = callbackParams(callback);
   expect(returned).toBe(state);
   expect(note.payload).toMatchObject({ sub: did, nonce });
+  expect(await riverAccount(page.context())).toBe(account);
   const [added] = await credentials(auth);
   expect(added.credentialId).not.toBe(original.credentialId);
   expect(added.userHandle).toBe(original.userHandle);
@@ -355,8 +360,10 @@ test("check 36: an emailed link adds a new passkey to the same person and DID", 
   expect(person).toEqual([{ did, passkeys: 2, recoveries: 1 }]);
   expect((await mailbox(request, email)).map((m) => m.kind)).toContain("recovery_notice");
 
-  // The new passkey signs in as the same DID.
+  // The new passkey signs in as the same DID, to the same account.
+  await page.context().clearCookies();
   expect(callbackParams((await signIn(page)).url).note.payload.sub).toBe(did);
+  expect(await riverAccount(page.context())).toBe(account);
 
   // A used link fails.
   expect((await page.goto(link))?.status()).toBe(410);
@@ -391,6 +398,8 @@ test("check 37: recover-dids re-keys a DID with the recovery key; same SCID, sam
   const recovery = testRecoveryKey();
   await addAuthenticator(page);
   const { did, note: firstNote } = await signUpAndContinue(page, testEmail("check37"));
+  const account = await riverAccount(page.context());
+  expect(account).toBeDefined();
 
   const before = await fetchLog(request, did);
   expect(before.log[0].parameters.updateKeys).toHaveLength(2);
@@ -422,11 +431,18 @@ test("check 37: recover-dids re-keys a DID with the recovery key; same SCID, sam
   expect(newKey).not.toBe(personKey);
   expect(resolved.meta.updateKeys).toEqual([newKey, recovery.multikey]);
 
-  // Same passkey, same person and DID; the note is now signed by the new custodial key.
+  // Same passkey, same person and DID; the note is now signed by the new custodial key, and the
+  // River (which resolves the current document) signs the person in to the same account.
+  await page.context().clearCookies();
   const { note } = callbackParams((await signIn(page)).url);
   expect(note.payload.sub).toBe(did);
   expect(noteVerifies(note, newKey ?? "")).toBe(true);
   expect(noteVerifies(note, personKey ?? "")).toBe(false);
+  expect(await riverAccount(page.context())).toBe(account);
+  const logins = await withAdmin(async (db) =>
+    (await db.query("SELECT account_id, did FROM river.login_methods WHERE scid = $1", [scid])).rows,
+  );
+  expect(logins).toEqual([{ account_id: account, did }]);
 });
 
 test("change email: a fresh passkey check, a link to the new address, a notice to the old", async ({ page, request }) => {
