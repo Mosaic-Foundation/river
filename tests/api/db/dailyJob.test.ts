@@ -88,8 +88,29 @@ describe("river.daily_job", () => {
         ).rows[0]!;
       const samplesBefore = await sampleCounts();
 
+      // identity.auth_requests (M7): every request that expired more than a day before `at` goes; a
+      // request still open at `at` stays.
+      const keptRequest = (
+        await db.query<{ id: string }>(
+          `INSERT INTO identity.auth_requests (id, purpose, client_id, redirect_uri, state, nonce, webauthn_challenge, created_at, expires_at)
+           VALUES ($1, 'authorize', 'c', 'r', 's', 'n', $2, $3, $3::timestamptz + interval '10 minutes') RETURNING id`,
+          [randomUUID(), "a".repeat(43), at],
+        )
+      ).rows[0]!.id;
+      await db.query(
+        `INSERT INTO identity.auth_requests (id, purpose, client_id, redirect_uri, state, nonce, webauthn_challenge, expires_at)
+         VALUES ($1, 'authorize', 'c', 'r', 's', 'n', $2, now() + interval '10 minutes')`,
+        [randomUUID(), "b".repeat(43)],
+      );
+      const stale = (
+        await db.query<{ n: number }>("SELECT count(*)::int AS n FROM identity.auth_requests WHERE expires_at < $1::timestamptz - interval '1 day'", [at])
+      ).rows[0]!.n;
+      expect(stale).toBeGreaterThanOrEqual(1);
+
       const summary = (await db.query<{ r: Record<string, number> }>("SELECT river.daily_job($1) AS r", [at])).rows[0]!.r;
-      expect(summary).toMatchObject({ ended_follows: 1, deleted_auth_attempts: 0, deleted_auth_requests: 0 });
+      expect(summary).toMatchObject({ ended_follows: 1, deleted_auth_attempts: 0, deleted_auth_requests: stale });
+      const requestsLeft = (await db.query<{ id: string }>("SELECT id FROM identity.auth_requests")).rows.map((r) => r.id);
+      expect(requestsLeft).toEqual([keptRequest]);
       expect(summary.deleted_follows).toBeGreaterThanOrEqual(1);
       expect(summary.restamped_samples).toBe(samplesBefore.seeded);
       expect(samplesBefore.seeded).toBeGreaterThanOrEqual(5);
