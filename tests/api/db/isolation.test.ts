@@ -8,6 +8,8 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ForeignIdError, forAccount, forInstance, type RiverDb } from "../../../src/db/context.js";
+import { signInAccount } from "../../../src/river/accounts.js";
+import type { Instance } from "../../../src/river/instances.js";
 import {
   IDENTITY_URL,
   OTHER_INSTANCE,
@@ -283,5 +285,118 @@ describe("check 27: member isolation as river_app", () => {
     const intoRiver = await refusal(() => identity.query("SELECT * FROM river.follows"));
     expect(intoRiver.code).toBe("42501");
     expect(intoRiver.message).toMatch(/permission denied for schema river/);
+  });
+});
+
+// M8: real sign-ups (the callback's own signInAccount(), seeds copied) and the two sign-in tables.
+describe("check 27 with real sign-ups, and the sign-in tables", () => {
+  let instance: Instance;
+  let c: { accountId: string; scid: string };
+  let d: { accountId: string; scid: string };
+  const scid = () => `Qm${randomUUID().replaceAll("-", "")}`;
+
+  beforeAll(async () => {
+    const row = await forInstance(
+      SEED_INSTANCE,
+      async (db) => (await db.query("SELECT * FROM river.instances WHERE id = $1", [SEED_INSTANCE])).rows[0],
+      river,
+    );
+    instance = {
+      id: row.id,
+      hostname: row.hostname,
+      name: row.name,
+      theme: row.theme,
+      modesEnabled: row.modes_enabled,
+      defaultMode: row.default_mode,
+      seedFollows: row.seed_follows,
+      defaultCircles: row.default_circles,
+      plugins: row.plugins,
+    };
+    for (const assign of [(v: typeof c) => (c = v), (v: typeof d) => (d = v)]) {
+      const id = scid();
+      const made = await signInAccount(instance, { did: `did:webvh:${id}:id.example:u:abcdefgh`, scid: id }, river);
+      expect(made.created).toBe(true);
+      assign({ accountId: made.accountId, scid: id });
+    }
+  });
+
+  it("each new member sees only their own copied follows, circles and login method", async () => {
+    const seenC = await visible(SEED_INSTANCE, c.accountId);
+    const seenD = await visible(SEED_INSTANCE, d.accountId);
+    expect(seenC.follows.length).toBeGreaterThan(0);
+    expect(seenC.circles.length).toBe(instance.defaultCircles.length);
+    for (const table of ["follows", "circles"] as const) {
+      expect(seenC[table].every((r) => r.account_id === c.accountId), table).toBe(true);
+      expect(seenD[table].every((r) => r.account_id === d.accountId), table).toBe(true);
+    }
+    const cCircles = new Set(seenC.circles.map((r) => r.id));
+    expect(seenC.circle_members.every((r) => cCircles.has(r.circle_id))).toBe(true);
+    expect(seenD.circle_members.some((r) => cCircles.has(r.circle_id))).toBe(false);
+
+    const logins = await forAccount(SEED_INSTANCE, c.accountId, (db) => db.query("SELECT * FROM river.login_methods"), river);
+    expect(logins.rows.map((r) => [r.account_id, r.scid])).toEqual([[c.accountId, c.scid]]);
+  });
+
+  it("signing in again finds the same account by SCID, on this instance only", async () => {
+    const again = await signInAccount(instance, { did: `did:webvh:${c.scid}:moved.example:u:abcdefgh`, scid: c.scid }, river);
+    expect(again).toEqual({ accountId: c.accountId, created: false });
+    // The stored DID follows a move (same SCID).
+    const logins = await forAccount(SEED_INSTANCE, c.accountId, (db) => db.query("SELECT did FROM river.login_methods"), river);
+    expect(logins.rows).toEqual([{ did: `did:webvh:${c.scid}:moved.example:u:abcdefgh` }]);
+    const lookup = (instanceId: string) =>
+      forInstance(instanceId, async (db) => (await db.query("SELECT river.account_for_login('did', $1) AS id", [c.scid])).rows[0].id, river);
+    expect(await lookup(SEED_INSTANCE)).toBe(c.accountId);
+    expect(await lookup(OTHER_INSTANCE)).toBeNull();
+  });
+
+  it("login methods are invisible to other members and to an instance context, and can't be moved", async () => {
+    const fromD = await forAccount(
+      SEED_INSTANCE,
+      d.accountId,
+      async (db) => ({
+        rows: (await db.query("SELECT * FROM river.login_methods WHERE scid = $1", [c.scid])).rows,
+        update: (await db.query("UPDATE river.login_methods SET did = 'did:x' WHERE scid = $1", [c.scid])).rowCount,
+      }),
+      river,
+    );
+    expect(fromD).toEqual({ rows: [], update: 0 });
+    const fromInstance = await forInstance(SEED_INSTANCE, (db) => db.query("SELECT * FROM river.login_methods"), river);
+    expect(fromInstance.rows).toEqual([]);
+    const move = await refusal(() =>
+      forAccount(SEED_INSTANCE, c.accountId, (db) => db.query("UPDATE river.login_methods SET account_id = $1", [d.accountId]), river),
+    );
+    expect(move.code).toBe("42501");
+    // A second account can't take the same SCID on this instance.
+    const dup = await refusal(() =>
+      forAccount(SEED_INSTANCE, d.accountId, (db) => db.insert("login_methods", { kind: "did", did: "did:webvh:x", scid: c.scid }), river),
+    );
+    expect(dup.code).toBe("23505");
+  });
+
+  it("auth_attempts: river_app inserts for its own instance, can't read them, and consumes one once", async () => {
+    const state = randomUUID().replaceAll("-", "") + "state";
+    const nonce = randomUUID().replaceAll("-", "") + "nonce";
+    await forInstance(SEED_INSTANCE, (db) => db.query("INSERT INTO river.auth_attempts (state, nonce) VALUES ($1, $2)", [state, nonce]), river);
+
+    const read = await refusal(() => forInstance(SEED_INSTANCE, (db) => db.query("SELECT * FROM river.auth_attempts"), river));
+    expect(read.code).toBe("42501");
+    const change = await refusal(() =>
+      forInstance(SEED_INSTANCE, (db) => db.query("UPDATE river.auth_attempts SET used_at = NULL"), river),
+    );
+    expect(change.code).toBe("42501");
+    const foreign = await refusal(() =>
+      forInstance(
+        SEED_INSTANCE,
+        (db) => db.query("INSERT INTO river.auth_attempts (state, nonce, instance_id) VALUES ($1, $2, $3)", [`${state}x`, nonce, OTHER_INSTANCE]),
+        river,
+      ),
+    );
+    expect(foreign.message).toMatch(/row-level security/);
+
+    const consume = (instanceId: string) =>
+      forInstance(instanceId, async (db) => (await db.query("SELECT river.consume_auth_attempt($1) AS nonce", [state])).rows[0].nonce, river);
+    expect(await consume(OTHER_INSTANCE)).toBeNull();
+    expect(await consume(SEED_INSTANCE)).toBe(nonce);
+    expect(await consume(SEED_INSTANCE)).toBeNull();
   });
 });
