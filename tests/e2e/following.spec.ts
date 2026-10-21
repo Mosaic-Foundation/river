@@ -315,9 +315,10 @@ test("circles (F8): create, recolor, rename, add a space, filter by it, delete; 
   const sidebar = page.getByRole("complementary", { name: "Filters" });
   await sidebar.getByRole("button", { name: "Readers" }).click();
   await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
-  for (const name of await cards(page).locator(".card-source").allTextContents()) {
-    expect(name).toContain("Demosville");
-  }
+  // The previous view's cards stay until the filtered feed arrives, so wait for it.
+  await expect
+    .poll(async () => [...new Set(await cards(page).locator(".card-source").allTextContents())])
+    .toEqual(["Demosville Civic Hub"]);
 
   // Delete it (the browser's confirm is accepted).
   await page.goto("/following");
