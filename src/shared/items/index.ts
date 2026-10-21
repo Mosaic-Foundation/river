@@ -58,6 +58,8 @@ export interface CivicDetails {
   placeCode?: string;
   /** ISO 8601. */
   deadline?: string;
+  /** What the card says happened ("A process opened"), from the hub allowlist row. */
+  label?: string;
 }
 
 /** One item, before it is stored. Field names follow items columns in camelCase. */
