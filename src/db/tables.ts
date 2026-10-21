@@ -17,6 +17,10 @@ export const RIVER_TABLES = {
   circle_members: "instance",
   read_state: "account",
   preferences: "account",
+  // Sign-in (M8, migration 20261021180000_sign_in.sql). river_app may only insert auth_attempts;
+  // the callback reads one back through river.consume_auth_attempt().
+  login_methods: "account",
+  auth_attempts: "instance",
 } as const;
 
 export type RiverTable = keyof typeof RIVER_TABLES;

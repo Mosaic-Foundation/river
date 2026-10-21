@@ -147,12 +147,14 @@ describe("river schema", () => {
     }
   });
 
-  it("river_app may execute only the settings readers and the stream-end helper", async () => {
+  it("river_app may execute only the settings readers, the stream-end helper and the two sign-in lookups", async () => {
     const { rows } = await river.query(
       `SELECT p.proname AS name, has_function_privilege(p.oid, 'EXECUTE') AS can
          FROM pg_proc p WHERE p.pronamespace = 'river'::regnamespace ORDER BY p.proname`,
     );
     expect(rows).toEqual([
+      { name: "account_for_login", can: true },
+      { name: "consume_auth_attempt", can: true },
       { name: "current_account_id", can: true },
       { name: "current_instance_id", can: true },
       { name: "daily_job", can: false },

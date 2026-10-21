@@ -32,3 +32,15 @@ describe("River CSP", () => {
     }
   });
 });
+
+describe("sign-in headers on Vercel (M8)", () => {
+  it("/api/auth/* is sent with Referrer-Policy: no-referrer, after the every-path rule so it wins", () => {
+    const vercel = JSON.parse(readFileSync(new URL("../../../vercel.json", import.meta.url), "utf8")) as {
+      headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }>;
+    };
+    const all = vercel.headers.findIndex((r) => r.source === "/(.*)");
+    const auth = vercel.headers.findIndex((r) => r.source === "/api/auth/(.*)");
+    expect(auth).toBeGreaterThan(all);
+    expect(vercel.headers[auth].headers).toEqual([{ key: "Referrer-Policy", value: "no-referrer" }]);
+  });
+});

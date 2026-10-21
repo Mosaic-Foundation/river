@@ -103,6 +103,8 @@ export interface FeedItem {
   boostOf: unknown;
   civic: unknown;
   isFinalResult: boolean;
+  /** Members only: whether the member marked it read (server read state, spec F4). */
+  read?: boolean;
   /** For events: when and where, when the source says (raw or raw.object: startTime, location.name). */
   event?: { startTime?: string; location?: string };
   /** Exactly one of Live (a real source) or Sample (seeded demo entry). */
@@ -139,6 +141,7 @@ interface ItemRow {
   space_icon_url: string | null;
   space_category: string | null;
   space_adapter: string;
+  read: boolean | null;
 }
 
 /** `%`, `_` and `\` are literal in a search for the source name. */
@@ -146,14 +149,46 @@ function likePattern(q: string): string {
   return `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 }
 
+/** The scope, kind, search and cursor conditions, shared by the feed and "Mark all read". */
+function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values: unknown[] } {
+  const q = filter.q?.trim() ? filter.q.trim().slice(0, 200) : null;
+  return {
+    sql: `NOT i.hidden
+        AND (i.space_id = ANY($1::uuid[])
+             OR (i.space_id, i.stream_key) IN (
+                  SELECT * FROM unnest($2::uuid[], $3::text[])))
+        AND ($4::text IS NULL OR i.kind = $4)
+        AND ($5::text IS NULL
+             OR i.search @@ plainto_tsquery('simple', $5)
+             OR s.name ILIKE $6)
+        AND ($7::timestamptz IS NULL OR (i.published_at, i.id) < ($7::timestamptz, $8::uuid))`,
+    values: [
+      scope.spaceIds,
+      scope.streams.map((st) => st.spaceId),
+      scope.streams.map((st) => st.key),
+      filter.kind ?? null,
+      q,
+      q ? likePattern(q) : null,
+      filter.cursor?.at ?? null,
+      filter.cursor?.id ?? null,
+    ],
+  };
+}
+
 export async function queryFeed(
   db: Db,
   scope: FeedScope,
-  filter: FeedFilter,
+  filter: FeedFilter & {
+    /** A member's feed: each item says whether the member read it (river.read_state, own rows only). */
+    withRead?: boolean;
+  },
 ): Promise<{ items: FeedItem[]; nextCursor: string | null }> {
   const limit = Math.min(Math.max(filter.limit ?? PAGE_SIZE, 1), 100);
   if (scope.spaceIds.length === 0 && scope.streams.length === 0) return { items: [], nextCursor: null };
-  const q = filter.q?.trim() ? filter.q.trim().slice(0, 200) : null;
+  const where = feedWhere(scope, filter);
+  const read = filter.withRead
+    ? "EXISTS (SELECT 1 FROM river.read_state r WHERE r.item_id = i.id) AS read"
+    : "NULL::boolean AS read";
 
   const { rows } = await db.query<ItemRow>(
     `SELECT i.id, i.kind, i.published_at, i.published_at::text AS cursor_at, i.title,
@@ -162,32 +197,15 @@ export async function queryFeed(
             CASE WHEN i.kind = 'event' THEN coalesce(i.raw ->> 'startTime', i.raw -> 'object' ->> 'startTime') END AS event_start,
             CASE WHEN i.kind = 'event' THEN coalesce(i.raw -> 'location' ->> 'name', i.raw -> 'object' -> 'location' ->> 'name') END AS event_location,
             s.id AS space_id, s.name AS space_name, s.icon_url AS space_icon_url,
-            s.category AS space_category, s.adapter AS space_adapter
+            s.category AS space_category, s.adapter AS space_adapter,
+            ${read}
        FROM river.items i
        JOIN river.spaces s ON s.id = i.space_id
        LEFT JOIN river.streams st ON st.space_id = i.space_id AND st.key = i.stream_key
-      WHERE NOT i.hidden
-        AND (i.space_id = ANY($1::uuid[])
-             OR (i.space_id, i.stream_key) IN (
-                  SELECT * FROM unnest($2::uuid[], $3::text[])))
-        AND ($4::text IS NULL OR i.kind = $4)
-        AND ($5::text IS NULL
-             OR i.search @@ plainto_tsquery('simple', $5)
-             OR s.name ILIKE $6)
-        AND ($7::timestamptz IS NULL OR (i.published_at, i.id) < ($7::timestamptz, $8::uuid))
+      WHERE ${where.sql}
       ORDER BY i.published_at DESC, i.id DESC
       LIMIT $9`,
-    [
-      scope.spaceIds,
-      scope.streams.map((s) => s.spaceId),
-      scope.streams.map((s) => s.key),
-      filter.kind ?? null,
-      q,
-      q ? likePattern(q) : null,
-      filter.cursor?.at ?? null,
-      filter.cursor?.id ?? null,
-      limit + 1,
-    ],
+    [...where.values, limit + 1],
   );
 
   const page = rows.slice(0, limit);
@@ -196,6 +214,31 @@ export async function queryFeed(
     items: page.map(toFeedItem),
     nextCursor: rows.length > limit && last ? encodeCursor({ at: last.cursor_at, id: last.id }) : null,
   };
+}
+
+/** Most items "Mark all read" marks in one go (newest first). */
+export const MARK_ALL_LIMIT = 5000;
+
+/**
+ * Marks every item of a view read for the member in this forAccount() transaction (spec F4 "Mark
+ * all read for the current view"): the same scope and filters as the feed, newest first, up to
+ * MARK_ALL_LIMIT. Returns how many were newly marked.
+ */
+export async function markViewRead(db: Db, scope: FeedScope, filter: FeedFilter): Promise<number> {
+  if (scope.spaceIds.length === 0 && scope.streams.length === 0) return 0;
+  const where = feedWhere(scope, { ...filter, cursor: undefined });
+  const { rowCount } = await db.query(
+    `INSERT INTO river.read_state (item_id)
+     SELECT i.id
+       FROM river.items i
+       JOIN river.spaces s ON s.id = i.space_id
+      WHERE ${where.sql}
+      ORDER BY i.published_at DESC, i.id DESC
+      LIMIT $9
+     ON CONFLICT (account_id, item_id) DO NOTHING`,
+    [...where.values, MARK_ALL_LIMIT],
+  );
+  return rowCount ?? 0;
 }
 
 function toFeedItem(row: ItemRow): FeedItem {
@@ -221,6 +264,7 @@ function toFeedItem(row: ItemRow): FeedItem {
     boostOf: row.boost_of,
     civic: row.civic,
     isFinalResult: row.is_final_result,
+    ...(row.read === null ? {} : { read: row.read }),
     ...(event ? { event } : {}),
     source: row.space_adapter === "sample" ? "sample" : "live",
     space: {

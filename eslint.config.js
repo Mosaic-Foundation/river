@@ -4,6 +4,8 @@
 //      forIdentity() from src/db/context.ts (CLAUDE.md constraint 2, ADR-004).
 //   3. undici, node:http(s) and global fetch only under src/shared/fetch/ (constraint 3, ADR-001).
 //      The identity host's browser script (src/identity/client/) runs in the browser and may fetch.
+//   4. River code never imports src/identity/ and identity code never imports src/river/
+//      (constraint 7, ADR-002): they meet only through the sign-in redirect and the signed note.
 // The UI has its own config in ui/eslint.config.js. docs/ holds reference copies of code from
 // other repos (read, never imported), so it is not linted.
 import tsParser from "@typescript-eslint/parser";
@@ -22,6 +24,11 @@ const NET = {
   })),
   patterns: [{ group: ["undici/*"], message: NET_MESSAGE }],
 };
+
+const SIDES_MESSAGE =
+  "The River and the identity host meet only through the sign-in redirect and the signed note (constraint 7, ADR-002).";
+const NOT_IDENTITY = { group: ["**/identity/**", "**/identity/*.js", "**/identity/index.js"], message: SIDES_MESSAGE };
+const NOT_RIVER = { group: ["**/river/**", "**/river/*.js", "**/river/index.js"], message: SIDES_MESSAGE };
 
 export default [
   {
@@ -56,11 +63,29 @@ export default [
   // matches the same file replaces the rule's whole option list instead of adding to it.
   {
     files: ["src/**/*.ts", "api/**/*.ts", "identity/**/*.ts"],
-    ignores: ["src/db/**", "src/shared/fetch/**", "src/shared/http/**"],
+    ignores: ["src/db/**", "src/shared/fetch/**", "src/shared/http/**", "src/river/**", "src/identity/**"],
     rules: {
       "no-restricted-imports": [
         "error",
         { paths: [...PG.paths, ...NET.paths], patterns: [...PG.patterns, ...NET.patterns] },
+      ],
+    },
+  },
+  {
+    files: ["src/river/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { paths: [...PG.paths, ...NET.paths], patterns: [...PG.patterns, ...NET.patterns, NOT_IDENTITY] },
+      ],
+    },
+  },
+  {
+    files: ["src/identity/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        { paths: [...PG.paths, ...NET.paths], patterns: [...PG.patterns, ...NET.patterns, NOT_RIVER] },
       ],
     },
   },

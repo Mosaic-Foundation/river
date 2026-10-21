@@ -51,6 +51,26 @@ describe("lint boundaries", () => {
     expect(await ruleIds("src/shared/fetch/x.ts", 'import { Agent } from "undici";\nexport default Agent;\n')).toEqual([]);
   });
 
+  it("keeps the River and the identity host apart (constraint 7)", async () => {
+    for (const mod of ["../identity/note.js", "../../identity/did/index.js", "../identity/index.js"]) {
+      expect(await ruleIds("src/river/auth/x.ts", `import x from "${mod}";\nexport default x;\n`), mod).toContain(
+        "no-restricted-imports",
+      );
+    }
+    for (const mod of ["../river/accounts.js", "../../river/feed/index.js"]) {
+      expect(await ruleIds("src/identity/flows/x.ts", `import x from "${mod}";\nexport default x;\n`), mod).toContain(
+        "no-restricted-imports",
+      );
+    }
+    // Both may use shared code, and the River still may not import pg or undici.
+    expect(await ruleIds("src/river/auth/x.ts", 'import x from "../../shared/fetch/index.js";\nexport default x;\n')).toEqual([]);
+    expect(await ruleIds("src/identity/x.ts", 'import x from "../shared/fetch/index.js";\nexport default x;\n')).toEqual([]);
+    expect(await ruleIds("src/river/x.ts", 'import pg from "pg";\nexport default pg;\n')).toContain("no-restricted-imports");
+    expect(await ruleIds("src/identity/x.ts", 'import { Agent } from "undici";\nexport default Agent;\n')).toContain(
+      "no-restricted-imports",
+    );
+  });
+
   it("lets the identity host's browser script call fetch", async () => {
     expect(await ruleIds("src/identity/client/x.ts", 'export const r = fetch("/api");\n')).toEqual([]);
   });

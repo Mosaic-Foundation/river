@@ -85,7 +85,9 @@ jobs:
           done
 
       # Local values only, written fresh for each run. Both apps connect as their own role on the
-      # local stack (supabase/seed.sql sets the local-only passwords).
+      # local stack (supabase/seed.sql sets the local-only passwords). The River trusts the identity
+      # host's DIDs (localhost:3001) and the API tests' own DID logs (localhost:3005), and reads
+      # their logs over loopback http only because TEST_DID_LOOPBACK=1 (refused on Vercel).
       # Secrets are generated per run and masked. The UI is served on 4173 below.
       - name: Write .env and .env.identity
         run: |
@@ -108,11 +110,12 @@ jobs:
           SESSION_SECRET=$river_session
           RIVER_PUBLIC_ORIGIN=http://localhost:4173
           IDENTITY_ORIGIN=http://localhost:3001
-          TRUSTED_DID_HOSTS=localhost
+          TRUSTED_DID_HOSTS=localhost:3001,localhost:3005
           INSTANCE_HOST_ALIASES=localhost,127.0.0.1
           FETCH_FIXTURES_DIR=tests/fixtures/http
           TEST_ROUTES=1
           TEST_CLOCK_NOW=2026-10-21T00:00:00.000Z
+          TEST_DID_LOOPBACK=1
           EOF
           cat > .env.identity <<EOF
           APP=identity

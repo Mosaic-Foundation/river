@@ -1,9 +1,10 @@
-// Helpers for the identity host's end-to-end tests (M7): Chromium's virtual WebAuthn authenticator
-// over CDP, the capture mailbox and clock behind TEST_ROUTES, the River client the identity host
-// knows, and read-only database checks as the local stack's postgres role.
+// Helpers for the sign-in end-to-end tests (M7, M8): Chromium's virtual WebAuthn authenticator over
+// CDP, the capture mailbox and clock behind TEST_ROUTES, the River's real sign-in (its
+// /api/auth/signin starts every flow and its /api/auth/callback finishes it), and read-only
+// database checks as the local stack's postgres role.
 import { createPrivateKey, createPublicKey, randomBytes, verify } from "node:crypto";
 import { readFileSync } from "node:fs";
-import type { APIRequestContext, CDPSession, Page } from "@playwright/test";
+import type { APIRequestContext, BrowserContext, CDPSession, Page } from "@playwright/test";
 import { MultibaseEncoding, multibaseDecode, multibaseEncode, resolveDIDFromLog, type DIDLog } from "didwebvh-ts";
 import pg from "pg";
 import { identityURL } from "../../playwright.config";
@@ -11,6 +12,9 @@ import { identityURL } from "../../playwright.config";
 /** The River origin the identity host lists in RIVER_CLIENT_ORIGINS (5173 locally, 4173 in CI). */
 export const CLIENT = new URL(process.env.E2E_BASE_URL || "http://localhost:5173").origin;
 export const CALLBACK = `${CLIENT}/api/auth/callback`;
+/** Where the River's Sign up and Sign in buttons go. */
+export const SIGN_IN = `${CLIENT}/api/auth/signin`;
+export const SESSION_COOKIE = "__Host-river-session";
 
 export const ADMIN_URL =
   process.env.TEST_ADMIN_DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
@@ -68,11 +72,33 @@ export async function credentials(auth: Authenticator): Promise<VirtualCredentia
   return credentials;
 }
 
-/** Answers the River's callback in the browser (the River's side of sign-in arrives in M8). */
-export async function catchCallback(page: Page): Promise<void> {
-  await page.route(`${CALLBACK}?**`, (route) =>
-    route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>River callback</title><p>callback</p>" }),
-  );
+/**
+ * Runs `action`, which ends with the identity host sending the browser to the River's callback;
+ * the real callback answers and redirects to the River's page. Returns the callback URL, which
+ * carries the state and the note.
+ */
+export async function throughCallback(page: Page, action: () => Promise<unknown>): Promise<string> {
+  const callback = page.waitForRequest((req) => req.url().startsWith(`${CALLBACK}?`) && req.isNavigationRequest());
+  await action();
+  const url = (await callback).url();
+  await page.waitForURL(`${CLIENT}/`);
+  return url;
+}
+
+/** Starts a sign-in the way the River's buttons do; returns the River's state and nonce. */
+export async function startFromRiver(page: Page): Promise<{ state: string; nonce: string }> {
+  await page.goto(SIGN_IN);
+  await page.waitForURL(`${identityURL}/authorize?**`);
+  const url = new URL(page.url());
+  return { state: url.searchParams.get("state") ?? "", nonce: url.searchParams.get("nonce") ?? "" };
+}
+
+/** The River account the browser's session cookie names (the token's payload is signed, not secret). */
+export async function riverAccount(context: BrowserContext): Promise<string | undefined> {
+  const cookie = (await context.cookies(CLIENT)).find((c) => c.name === SESSION_COOKIE);
+  if (!cookie) return undefined;
+  const payload = cookie.value.slice(0, cookie.value.lastIndexOf("."));
+  return (JSON.parse(Buffer.from(payload, "base64url").toString("utf8")) as { account: string }).account;
 }
 
 export interface Note {
@@ -102,11 +128,12 @@ export function callbackParams(url: string): { state: string; note: Note; raw: s
   return { state: parsed.searchParams.get("state") ?? "", note: parseNote(raw), raw };
 }
 
-/** Signs up on a fresh authorize page; returns the redirect the reminder's Continue link holds. */
+/**
+ * Signs up from the River (a fresh authorize page); returns the redirect the reminder's Continue
+ * link holds, with the River's state and nonce.
+ */
 export async function signUp(page: Page, email: string, name?: string): Promise<{ redirect: string; state: string; nonce: string }> {
-  const state = opaque();
-  const nonce = opaque();
-  await page.goto(authorizeUrl(state, nonce));
+  const { state, nonce } = await startFromRiver(page);
   await page.getByLabel("Email address").fill(email);
   if (name) await page.getByLabel(/Your name/).fill(name);
   await page.getByRole("button", { name: "Create a passkey" }).click();
@@ -115,22 +142,21 @@ export async function signUp(page: Page, email: string, name?: string): Promise<
   return { redirect: (await link.getAttribute("href")) ?? "", state, nonce };
 }
 
-/** Signs in on a fresh authorize page with whatever passkey the authenticator holds. */
+/**
+ * Signs in from the River with whatever passkey the authenticator holds, through the real
+ * callback; returns the callback URL (state and note) once the River's page has loaded.
+ */
 export async function signIn(page: Page): Promise<{ url: string; state: string; nonce: string }> {
-  const state = opaque();
-  const nonce = opaque();
-  await catchCallback(page);
-  await page.goto(authorizeUrl(state, nonce));
-  await page.getByRole("button", { name: "Sign in with your passkey" }).click();
-  const outcome = await Promise.race([
-    page.waitForURL(`${CALLBACK}?**`).then(() => "callback" as const),
-    page.getByRole("link", { name: "Continue to Mosaic River" }).waitFor({ state: "visible" }).then(() => "reminder" as const),
-  ]);
-  if (outcome === "reminder") {
-    await page.getByRole("link", { name: "Continue to Mosaic River" }).click();
-    await page.waitForURL(`${CALLBACK}?**`);
-  }
-  return { url: page.url(), state, nonce };
+  const { state, nonce } = await startFromRiver(page);
+  const url = await throughCallback(page, async () => {
+    await page.getByRole("button", { name: "Sign in with your passkey" }).click();
+    const outcome = await Promise.race([
+      page.waitForURL(`${CLIENT}/**`).then(() => "river" as const),
+      page.getByRole("link", { name: "Continue to Mosaic River" }).waitFor({ state: "visible" }).then(() => "reminder" as const),
+    ]);
+    if (outcome === "reminder") await page.getByRole("link", { name: "Continue to Mosaic River" }).click();
+  });
+  return { url, state, nonce };
 }
 
 export interface MailMessage {

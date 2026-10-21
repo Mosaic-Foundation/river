@@ -1,8 +1,16 @@
-// River API routes (spec 2, 4.5). Mounted by createApp("river") only; River code never imports
-// src/identity/ (CLAUDE.md constraint 7). Paths here are what the browser sees after /api/
+// River API routes (spec 2, 4.5, 4.6). Mounted by createApp("river") only; River code never
+// imports src/identity/ (CLAUDE.md constraint 7). Paths here are what the browser sees after /api/
 // (the dev proxy and api/index.ts both strip the prefix).
+//
+// Every state-changing request (anything but GET/HEAD/OPTIONS) must carry Origin =
+// RIVER_PUBLIC_ORIGIN (Appendix B). Visitors make none: their read state stays in the browser
+// (check 23); members' read state is written here.
 import { Router, type NextFunction, type Request, type Response } from "express";
-import { FeedInputError, visitorFeed, type FeedParams } from "./feed/index.js";
+import { forAccount } from "../db/context.js";
+import type { Viewer } from "./accounts.js";
+import { authRoutes } from "./auth/routes.js";
+import { checkOrigin, readSession, requireMember } from "./auth/session.js";
+import { FeedInputError, memberFeed, memberMarkAllRead, visitorFeed, type FeedParams } from "./feed/index.js";
 import { requireInstance, type Instance } from "./instances.js";
 
 /** A query parameter as one string; repeated or nested values are refused, not guessed at. */
@@ -13,17 +21,48 @@ function param(req: Request, name: string): string | undefined {
   return value;
 }
 
+/** A string field of a JSON body, for the view parameters "Mark all read" takes. */
+function bodyParam(body: unknown, name: keyof FeedParams): string | undefined {
+  const value = (body as Record<string, unknown> | undefined)?.[name];
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") throw new FeedInputError(name as FeedInputError["field"], `${name} must be a string`);
+  return value;
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export const READ_BATCH_LIMIT = 500;
+
+/** A list of item ids from a JSON body, or undefined when it isn't one. */
+function itemIds(value: unknown): string[] | undefined {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > READ_BATCH_LIMIT) return undefined;
+  const ids = value.map((v) => (typeof v === "string" ? v.toLowerCase() : ""));
+  return ids.every((id) => UUID.test(id)) ? [...new Set(ids)] : undefined;
+}
+
+function feedError(err: unknown, res: Response, next: NextFunction): void {
+  if (err instanceof FeedInputError) {
+    res.status(400).json({ error: `bad_${err.field}`, message: err.message });
+    return;
+  }
+  next(err);
+}
+
 export function riverRoutes(): Router {
   const router = Router();
+
+  router.use(checkOrigin());
 
   // Says which app answered, for checking a deployment. Needs no database.
   router.get("/", (_req, res) => {
     res.json({ app: "river", name: "Mosaic River" });
   });
 
-  // The feed (spec 4.5). Visitors only until sign-in (M8); a visitor's request writes nothing
-  // but the refresh's source data (check 23).
-  router.get("/feed", requireInstance(), async (req, res, next) => {
+  router.use(authRoutes());
+
+  // The feed (spec 4.5): a visitor's (seed follows; writes nothing but the refresh's source data,
+  // check 23) or a signed-in member's (their own follows, circles and read state).
+  router.get("/feed", requireInstance(), readSession(), async (req, res, next) => {
     try {
       const params: FeedParams = {
         mode: param(req, "mode"),
@@ -32,14 +71,58 @@ export function riverRoutes(): Router {
         q: param(req, "q"),
         cursor: param(req, "cursor"),
       };
-      const feed = await visitorFeed(res.locals.instance as Instance, params);
+      const instance = res.locals.instance as Instance;
+      const viewer = res.locals.viewer as Viewer | undefined;
+      const feed = viewer ? await memberFeed(instance, viewer, params) : await visitorFeed(instance, params);
       res.set("Cache-Control", "no-store").json(feed);
     } catch (err) {
-      if (err instanceof FeedInputError) {
-        res.status(400).json({ error: `bad_${err.field}`, message: err.message });
+      feedError(err, res, next);
+    }
+  });
+
+  // A member's read state (spec F4, check 23): { read: [itemId…], unread: [itemId…] }. Marking an
+  // item that doesn't exist is ignored. Visitors get 401 (their read state stays in the browser).
+  router.post("/read-state", requireInstance(), readSession(), requireMember(), async (req, res, next) => {
+    try {
+      const read = itemIds(req.body?.read);
+      const unread = itemIds(req.body?.unread);
+      if (!read || !unread) {
+        res.status(400).json({ error: "bad_items", message: `Send at most ${READ_BATCH_LIMIT} item ids.` });
         return;
       }
+      const instance = res.locals.instance as Instance;
+      const viewer = res.locals.viewer as Viewer;
+      await forAccount(instance.id, viewer.accountId, async (db) => {
+        if (read.length > 0) {
+          await db.query(
+            `INSERT INTO river.read_state (item_id)
+             SELECT i.id FROM river.items i WHERE i.id = ANY($1::uuid[])
+             ON CONFLICT (account_id, item_id) DO NOTHING`,
+            [read],
+          );
+        }
+        if (unread.length > 0) {
+          await db.query("DELETE FROM river.read_state WHERE item_id = ANY($1::uuid[])", [unread]);
+        }
+      });
+      res.status(204).set("Cache-Control", "no-store").end();
+    } catch (err) {
       next(err);
+    }
+  });
+
+  // "Mark all read" for the member's current view: { mode?, circle?, type?, q? }.
+  router.post("/read-state/all", requireInstance(), readSession(), requireMember(), async (req, res, next) => {
+    try {
+      const marked = await memberMarkAllRead(res.locals.instance as Instance, res.locals.viewer as Viewer, {
+        mode: bodyParam(req.body, "mode"),
+        circle: bodyParam(req.body, "circle"),
+        type: bodyParam(req.body, "type"),
+        q: bodyParam(req.body, "q"),
+      });
+      res.set("Cache-Control", "no-store").json({ marked });
+    } catch (err) {
+      feedError(err, res, next);
     }
   });
 

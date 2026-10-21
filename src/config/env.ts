@@ -29,7 +29,12 @@ export const EMAIL_TRANSPORTS = ["log", "capture", "resend"] as const;
 export type EmailTransport = (typeof EMAIL_TRANSPORTS)[number];
 
 /** Variables that switch on test-only behavior. They must never reach a Vercel deployment. */
-export const TEST_ONLY_VARS = ["FETCH_FIXTURES_DIR", "TEST_ROUTES", "TEST_CLOCK_NOW"] as const;
+export const TEST_ONLY_VARS = [
+  "FETCH_FIXTURES_DIR",
+  "TEST_ROUTES",
+  "TEST_CLOCK_NOW",
+  "TEST_DID_LOOPBACK",
+] as const;
 
 /** Reads a test-only variable, refusing when running on Vercel (which always sets VERCEL). */
 function testOnlyVar(name: (typeof TEST_ONLY_VARS)[number]): string | undefined {
@@ -99,6 +104,14 @@ export const env = {
       throw new Error(`TEST_CLOCK_NOW must be an ISO 8601 date, got "${value}"`);
     }
     return date;
+  },
+  /**
+   * `1` lets the River read DID logs from a TRUSTED_DID_HOSTS host on loopback over http (the
+   * identity dev server at localhost:3001), through src/shared/fetch/loopback.ts. Local runs and
+   * CI only; production reads every DID log over https through the fetch guard (DECISIONS, M8).
+   */
+  get testDidLoopback(): boolean {
+    return testOnlyVar("TEST_DID_LOOPBACK") === "1";
   },
 
   // --- River (spec Appendix D) ---
@@ -185,4 +198,5 @@ export function checkEnv(): void {
   void env.fetchFixturesDir;
   void env.testRoutes;
   void env.testClockNow;
+  void env.testDidLoopback;
 }
