@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-label="Sample image: autumn trees and raked leaves">
+  <rect width="800" height="500" fill="#f3e3cf"/>
+  <rect y="360" width="800" height="140" fill="#c9c3b6"/>
+  <rect x="150" y="200" width="24" height="160" fill="#6b4a2e"/><circle cx="162" cy="170" r="90" fill="#d9822b"/>
+  <rect x="560" y="210" width="24" height="150" fill="#6b4a2e"/><circle cx="572" cy="180" r="80" fill="#b5462e"/>
+  <ellipse cx="380" cy="380" rx="110" ry="40" fill="#d99a2b"/>
+  <rect x="500" y="250" width="8" height="140" fill="#7a5230" transform="rotate(20 504 320)"/>
+  <text x="24" y="40" font-family="sans-serif" font-size="22" fill="#4a3a20">Sample image</text>
+</svg>

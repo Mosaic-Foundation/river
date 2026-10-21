@@ -119,13 +119,70 @@ describe("river schema", () => {
       "@internetarchive@mastodon.archive.org",
       "@wikipedia@wikis.world",
       "@swf@socialwebfoundation.org",
+      // The sample spaces (M5, spec 4.4), followed by their URNs.
+      "urn:mosaic:sample:riverside-rovers",
+      "urn:mosaic:sample:okafor-family",
+      "urn:mosaic:sample:millbrook-ledger",
+      "urn:mosaic:sample:elm-street-neighbors",
+      "urn:mosaic:sample:safe-streets-millbrook",
+      "urn:mosaic:sample:small-town-signals",
+      "urn:mosaic:sample:trailhead-tv",
     ]);
     expect(circles.map((c) => c.name)).toEqual(["Civic", "News and ideas", "Family", "Soccer", "Neighborhood"]);
+    // Appendix D: Family, Soccer and Neighborhood hold the matching samples; News and ideas the
+    // six fediverse seeds plus the sample publication and podcast.
+    const members = Object.fromEntries(circles.map((c) => [c.name, c.members]));
+    expect(members.Family).toEqual(["urn:mosaic:sample:okafor-family"]);
+    expect(members.Soccer).toEqual(["urn:mosaic:sample:riverside-rovers"]);
+    expect(members.Neighborhood).toEqual(["urn:mosaic:sample:elm-street-neighbors"]);
+    expect(members["News and ideas"]).toHaveLength(8);
+    expect(members["News and ideas"]).toEqual(
+      expect.arrayContaining(["urn:mosaic:sample:millbrook-ledger", "urn:mosaic:sample:small-town-signals"]),
+    );
     expect(circles.filter((c) => c.role === "civic").map((c) => c.name)).toEqual(["Civic"]);
     // The two lists agree: a follow's circles are exactly the circles that list it.
     for (const follow of follows) {
       const listing = circles.filter((c) => c.members.includes(follow.url)).map((c) => c.name);
       expect(listing, follow.url).toEqual(follow.circles);
+    }
+  });
+
+  it("river_app may execute only the settings readers and the stream-end helper", async () => {
+    const { rows } = await river.query(
+      `SELECT p.proname AS name, has_function_privilege(p.oid, 'EXECUTE') AS can
+         FROM pg_proc p WHERE p.pronamespace = 'river'::regnamespace ORDER BY p.proname`,
+    );
+    expect(rows).toEqual([
+      { name: "current_account_id", can: true },
+      { name: "current_instance_id", can: true },
+      { name: "daily_job", can: false },
+      { name: "mark_stream_follows_ended", can: true },
+      { name: "restamp_samples", can: false },
+    ]);
+  });
+
+  // The isolation tests add their own adapter = 'sample' rows with https URLs; these are the seeded ones.
+  it("the seven seeded sample spaces have recent items without a URL", async () => {
+    const { rows } = await forInstance(
+      SEED_INSTANCE,
+      (db) =>
+        db.query(
+          `SELECT s.canonical_url, s.category, count(i.id)::int AS items,
+                  count(i.url)::int AS with_url, max(i.published_at) > now() - interval '1 day' AS recent
+             FROM river.spaces s LEFT JOIN river.items i ON i.space_id = s.id
+            WHERE s.adapter = 'sample' AND s.canonical_url LIKE 'urn:mosaic:sample:%'
+            GROUP BY 1, 2 ORDER BY 1`,
+        ),
+      river,
+    );
+    expect(rows.map((r) => r.category).sort()).toEqual(
+      ["club", "family", "neighborhood", "organization", "podcast", "publication", "video"],
+    );
+    for (const row of rows) {
+      expect(row.canonical_url).toMatch(/^urn:mosaic:sample:[a-z-]+$/);
+      expect(row.items).toBeGreaterThan(0);
+      expect(row.with_url).toBe(0);
+      expect(row.recent, row.canonical_url).toBe(true);
     }
   });
 

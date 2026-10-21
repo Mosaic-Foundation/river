@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-label="Sample image: a lake with a dock">
+  <rect width="800" height="500" fill="#cfe8f3"/>
+  <rect y="230" width="800" height="270" fill="#3d7ea6"/>
+  <g fill="#2e5d3a">
+    <path d="M60 230 L100 120 L140 230 Z"/><path d="M130 230 L175 100 L220 230 Z"/>
+    <path d="M560 230 L600 130 L640 230 Z"/><path d="M630 230 L680 90 L730 230 Z"/>
+  </g>
+  <rect x="300" y="330" width="260" height="22" fill="#9c6b3f"/>
+  <rect x="320" y="352" width="10" height="60" fill="#7a5230"/><rect x="530" y="352" width="10" height="60" fill="#7a5230"/>
+  <text x="24" y="40" font-family="sans-serif" font-size="22" fill="#1f3a4a">Sample image</text>
+</svg>

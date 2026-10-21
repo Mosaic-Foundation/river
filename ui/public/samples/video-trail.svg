@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450" role="img" aria-label="Sample image: a trail winding up a hill">
+  <rect width="800" height="450" fill="#d6ecf7"/>
+  <path d="M0 300 Q200 160 420 230 T800 200 L800 450 L0 450 Z" fill="#6d9b52"/>
+  <path d="M120 450 Q260 380 360 330 T560 230" stroke="#c9a46b" stroke-width="26" fill="none" stroke-linecap="round"/>
+  <circle cx="400" cy="225" r="60" fill="#000000" fill-opacity="0.35"/>
+  <path d="M382 195 L382 255 L432 225 Z" fill="#ffffff"/>
+  <text x="24" y="40" font-family="sans-serif" font-size="22" fill="#1f3a4a">Sample image</text>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-label="Sample image: a soccer team on a field">
+  <rect width="800" height="500" fill="#bfe3f5"/>
+  <rect y="300" width="800" height="200" fill="#4f9a55"/>
+  <rect x="300" y="190" width="200" height="110" fill="none" stroke="#ffffff" stroke-width="8"/>
+  <g fill="#c2603a">
+    <circle cx="170" cy="300" r="22"/><rect x="150" y="322" width="40" height="70" rx="10"/>
+    <circle cx="270" cy="300" r="22"/><rect x="250" y="322" width="40" height="70" rx="10"/>
+    <circle cx="370" cy="300" r="22"/><rect x="350" y="322" width="40" height="70" rx="10"/>
+    <circle cx="470" cy="300" r="22"/><rect x="450" y="322" width="40" height="70" rx="10"/>
+    <circle cx="570" cy="300" r="22"/><rect x="550" y="322" width="40" height="70" rx="10"/>
+    <circle cx="670" cy="300" r="22"/><rect x="650" y="322" width="40" height="70" rx="10"/>
+  </g>
+  <circle cx="400" cy="430" r="18" fill="#ffffff" stroke="#333333" stroke-width="3"/>
+  <text x="24" y="40" font-family="sans-serif" font-size="22" fill="#1f3a4a">Sample image</text>
+</svg>
