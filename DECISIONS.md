@@ -238,6 +238,19 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-21 — Grouping related hub cards in the UI (UI revisions 1, item 7)
+- Decision: the UI folds loaded hub items (adapter `civic_hub`) that share a space and stream key
+  (the hub process) into one card: the newest leads with its status label, the rest sit under
+  "N earlier updates". Grouping runs on the loaded pages, so Load more folds new items into
+  groups already shown. A group is unread while any item in it is; Mark read and Mark unread
+  cover the whole group, and opening the card marks the group read. The unread count counts
+  cards. The API is unchanged.
+- Why: a process's activities (opened, results summarized, outcome recorded) are one story; the
+  stream key is the hub's own process id, so meetings and processes group without guessing.
+- Alternatives: grouping in the API (paging would cut groups across pages); grouping by title
+  (two processes can share one, as Floyd's do).
+- Thread / PR: UI revisions 1, PR 5
+
 ## 2026-10-21 — Coming up in Everything reads everything followed (UI revisions 1, item 6)
 - Decision: modes gain `pluginReach`. Everything places Coming up on `river.panel` with reach
   "followed": the mode's whole scope, without circle, types, networks or search. Civic keeps

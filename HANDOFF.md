@@ -20,6 +20,27 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 1, item 7: related hub cards grouped — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → PR 5 of the UI revisions series (self-merge)
+- Migrations: none.
+
+**What it does.** Hub activities about the same process or meeting (same space and stream key)
+show as one card: the latest leads with its status, the others fold under "N earlier updates"
+(a disclosure listing each with its label and time; each opens in the reader). Mark read/unread
+and opening the card cover the whole group. Grouping is in `ui/src/lib/groups.ts`, on the loaded
+items; the API is unchanged. This completes `docs/spec/ui-revisions-1.md`.
+
+**Keys.** None.
+
+**Tests.** Unit `ui/groups` (folding, order, no grouping across spaces, without a stream or
+outside hubs); e2e `revisions.spec.ts` item 7 (one card per process, lead's status, earlier
+updates listed and opened from the keyboard, group Mark read/unread); `river.spec.ts` counts
+folded items for Mark all read.
+
+### Follow-ups
+- None from the revisions list.
+
 ## UI revisions 1, item 6: Coming up in Everything — 2026-10-21
 
 - Branch / PR: claude/eloquent-newton-v3ftlr → PR 4 of the UI revisions series (self-merge)
