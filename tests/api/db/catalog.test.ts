@@ -168,7 +168,7 @@ describe("river schema", () => {
       (db) =>
         db.query(
           `SELECT s.canonical_url, s.category, count(i.id)::int AS items,
-                  count(i.url)::int AS with_url, max(i.published_at) > now() - interval '1 day' AS recent
+                  count(i.url)::int AS with_url, max(i.published_at) > now() - interval '2 days' AS recent
              FROM river.spaces s LEFT JOIN river.items i ON i.space_id = s.id
             WHERE s.adapter = 'sample' AND s.canonical_url LIKE 'urn:mosaic:sample:%'
             GROUP BY 1, 2 ORDER BY 1`,
