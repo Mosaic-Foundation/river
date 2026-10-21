@@ -126,12 +126,24 @@ export const env = {
   get vercelEnv(): string | undefined {
     return envVar("VERCEL_ENV");
   },
+  /** True on any Vercel deployment (Vercel sets VERCEL itself). */
+  get onVercel(): boolean {
+    return envVar("VERCEL") !== undefined;
+  },
 
   // --- Identity host (spec Appendix D) ---
 
   /** 32 random bytes, base64. Wraps each person's data key. Identity host only; never logged. */
   get identityMasterKey(): string {
     return requireEnv("IDENTITY_MASTER_KEY");
+  },
+  /**
+   * The public half of Mosaic's offline recovery key, in multikey format (`z6Mk…`, Ed25519). Every
+   * new DID lists it as its second update key (spec 4.6, check 37). The private half never touches
+   * a server or an environment variable: `npm run recover-dids` reads it from a file or a prompt.
+   */
+  get identityRecoveryPublicKey(): string {
+    return requireEnv("IDENTITY_RECOVERY_PUBLIC_KEY");
   },
   /** WebAuthn relying party ID: id.mosaic.social, or localhost locally. */
   get rpId(): string {
