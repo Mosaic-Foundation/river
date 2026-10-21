@@ -55,6 +55,11 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, UI revisions 1 (items 5, 8): e2e `revisions.spec.ts`: Civic mode lists only All
+  and the civic circle (desktop and phone) and falls back to All; the visitor's Sample River line
+  sits above the header with a Sign in link and no sideways scroll. `modes.spec.ts`: a member sees
+  no sample line.
+
 - 2026-10-21, sanitize-html CJS fix: unit `sanitizeCjsLoad` loads sanitize-html in a child Node
   with `--no-experimental-require-module` (what Vercel's function loader does) and sanitizes one
   string. Fails with ERR_REQUIRE_ESM if htmlparser2 12 comes back. Unit 453.
