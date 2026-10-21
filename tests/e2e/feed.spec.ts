@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // M5: the feed API answers through the UI's /api proxy (the hostname the proxy sends must map to
 // the seed instance), and the UI serves the sample placeholders the sample items point at.

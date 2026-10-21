@@ -1,7 +1,10 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // M0: the Mosaic theme is the default, the Civic theme applies with data-theme="civic", and
-// every font comes from the River's own origin (no requests to Google or any other host).
+// every font comes from the River's own origin (no requests to Google or any other host). Since
+// M6 the page shows live items, whose images load straight from their source (spec 4.8); the
+// fixture blocks those, and this test checks that nothing else leaves the origin.
 async function token(page: Page, name: string): Promise<string> {
   return page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
 }
@@ -35,11 +38,14 @@ test("Mosaic is the default theme, Civic swaps the tokens, fonts are self-hosted
   const offOrigin: string[] = [];
   page.on("request", (req) => {
     if (req.resourceType() === "font") fontRequests.push(req.url());
-    if (!req.url().startsWith(origin) && !req.url().startsWith("data:")) offOrigin.push(req.url());
+    if (!req.url().startsWith(origin) && !req.url().startsWith("data:") && req.resourceType() !== "image") {
+      offOrigin.push(req.url());
+    }
   });
 
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByTestId("feed-card").first()).toBeVisible({ timeout: 30_000 });
   expect(await page.locator("html").getAttribute("data-theme")).toBe("mosaic");
   expect(await token(page, "--color-primary")).toBe("#14335f");
   expect(await computedShadow(page, "--shadow-card")).toBe("rgba(20, 51, 95, 0.08) 0px 6px 24px 0px");

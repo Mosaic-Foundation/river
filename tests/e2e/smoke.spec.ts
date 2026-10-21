@@ -1,7 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
-test("the app loads and reaches the API", async ({ page }) => {
+// The River UI loads at / and shows the feed from the API (M6 replaced M0's status page).
+test("the app loads and shows the feed", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await expect(page.getByTestId("api-status")).toHaveText("API: ok");
+  await expect(page.getByRole("heading", { level: 1, name: "Everything" })).toBeVisible();
+  await expect(page.getByTestId("feed-card").first()).toBeVisible({ timeout: 30_000 });
 });

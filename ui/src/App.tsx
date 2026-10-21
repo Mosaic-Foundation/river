@@ -1,20 +1,11 @@
-import { useEffect, useState } from "react";
+// The River UI. One page in M6, the feed at /; anything else is the 404 page. The Following
+// page (M9) and sign-in (M8) add routes here.
+import { NotFound } from "./components/NotFound";
+import { River } from "./River";
 
-// Placeholder screen until M6 builds the River's shell from the mockups.
 export default function App() {
-  const [status, setStatus] = useState("checking");
-
-  useEffect(() => {
-    fetch("/api/health")
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
-      .then((body: { ok?: boolean }) => setStatus(body.ok ? "ok" : "error"))
-      .catch(() => setStatus("unreachable"));
-  }, []);
-
-  return (
-    <main>
-      <h1>Mosaic River</h1>
-      <p data-testid="api-status">API: {status}</p>
-    </main>
-  );
+  if (window.location.pathname !== "/") {
+    return <NotFound message="This page doesn't exist." homeLink />;
+  }
+  return <River />;
 }
