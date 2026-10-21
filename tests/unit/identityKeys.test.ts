@@ -1,6 +1,6 @@
 // Envelope encryption of each person's key (spec 3.2, Appendix B; check 28's unit half) and the
 // Ed25519 helpers.
-import { createPrivateKey, randomBytes } from "node:crypto";
+import { createPrivateKey, createPublicKey, randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   fromMultikey,
@@ -55,11 +55,14 @@ describe("envelope encryption", () => {
 
   it("check 28: the ciphertext is no parseable private key and holds no PKCS#8 header", () => {
     const { box, pkcs8, pair } = sealed();
-    // The control: the real seed (the last 32 bytes of Ed25519 PKCS#8) does parse with x.
-    const seed = pkcs8.subarray(-32).toString("base64url");
-    expect(() => createPrivateKey({ key: { kty: "OKP", crv: "Ed25519", d: seed, x: publicJwk(pair.publicKey).x }, format: "jwk" })).not.toThrow();
     const header = pkcs8.subarray(0, 16);
     const x = publicJwk(pair.publicKey).x;
+    // The public key a 32-byte window would give if it were the seed. Derived rather than checked
+    // through a JWK import, which only some Node versions refuse when d doesn't match x.
+    const publicXOf = (seed: Buffer) =>
+      createPublicKey(createPrivateKey({ key: Buffer.concat([header, seed]), format: "der", type: "pkcs8" })).export({ format: "jwk" }).x;
+    // The control: the real seed (the last 32 bytes of Ed25519 PKCS#8) gives x.
+    expect(publicXOf(pkcs8.subarray(-32))).toBe(x);
     for (const blob of [box.privateKeyCiphertext, box.wrappedDek]) {
       expect(blob.includes(header)).toBe(false);
       expect(blob.includes(pkcs8.subarray(16))).toBe(false);
@@ -67,10 +70,9 @@ describe("envelope encryption", () => {
         expect(() => createPrivateKey({ key: blob, format: "der", type })).toThrow();
       }
       expect(() => createPrivateKey(blob.toString("utf8"))).toThrow();
-      // No 32-byte window is the seed: node:crypto accepts a JWK only when d derives x.
+      // No 32-byte window is the seed.
       for (let i = 0; i + 32 <= blob.length; i++) {
-        const d = blob.subarray(i, i + 32).toString("base64url");
-        expect(() => createPrivateKey({ key: { kty: "OKP", crv: "Ed25519", d, x }, format: "jwk" })).toThrow();
+        expect(publicXOf(blob.subarray(i, i + 32))).not.toBe(x);
       }
     }
   });
