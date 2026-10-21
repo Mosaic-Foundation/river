@@ -20,6 +20,57 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M9 Following: follow box, Following page, stream rules, Ended, Quiet, circles — 2026-10-21
+
+- Branch / PR: claude/m9-following → PR. Built on M5–M8 (unmerged); merge after them, once its own
+  diff is only M9. No needs-adam trigger of its own: no migration, no grant or policy change, no
+  auth/session change (it only uses `readSession()`/`requireMember()`/`checkOrigin()`), no new
+  outbound host (resolve goes through the existing adapters and fetch guard), no `.github/`,
+  `vercel.json` or CLAUDE.md change.
+- Migrations: none (M1's grants cover follows, circles and circle_members writes).
+
+**What it does.** Members get the follow box (F6): one field for a URL or `@name@server`,
+resolved hub-first then fediverse (fallback on "not a Space"), previewed with name, icon or
+initials, kind and address; a single hub process offers "Just this stream (ends on its own when
+the process ends)" or "The whole space"; circles are picked and the follow is stored in
+`forAccount()`, then refreshed through `refreshSpaces()`. Errors are exactly F6's four sentences.
+The Following page (`/following`; the phone's Following tab) has Spaces grouped by kind with
+collapsible hub streams (Mute, Follow just this, Unmute, Stop following; "until the process
+ends"), Quiet (90 days, never samples, banner with "Unfollow all quiet spaces") and Ended (Remove;
+cleared by the daily job). The feed applies the rules: a muted stream stays hidden inside a
+followed space, a followed stream shows alone, ended follows keep showing what they stored.
+Circles (F8; desktop beside the page, the phone's Circles tab): create, rename, recolor, delete,
+add/remove followed spaces; the civic circle keeps its role and can't be deleted. Visitors get a
+sign-up prompt.
+
+**Keys.** None. Routes: `POST /api/follow/preview`, `POST /api/follows`, `GET /api/following`,
+`DELETE /api/following/spaces/:id`, `PUT /api/following/streams/:id`, `DELETE
+/api/following/rules/:id`, `POST /api/following/quiet/unfollow`, `POST /api/circles`,
+`PATCH|DELETE /api/circles/:id`, `PUT|DELETE /api/circles/:id/spaces/:spaceId`. UI route
+`/following`. Layout tokens `--layout-following`, `--layout-circles`, `--layout-row-text`,
+`--layout-stream-title`. No new dependency.
+
+**Tests.** `npm run check`: Test Files 27 passed (27), Tests 401 passed (401), UI built.
+`npm run test:api` (both dev servers, fresh `db reset`): Test Files 11 passed (11), Tests 122
+passed (122). `npm run test:e2e`: 42 passed, against the dev servers and again against `vite
+preview` on 4173. Checks 13, 14, 15, 17, 18, 19 in `tests/e2e/following.spec.ts`, with database
+proofs in `tests/api/db/following.test.ts` and HTTP proofs in `tests/api/following.test.ts`;
+check 27 extended there to the new writes.
+
+### Follow-ups
+- M10: Civic mode reads the `role = civic` circle by role, not name (renaming keeps the role).
+  The Following page has no mode picker; it could take the Civic theme in Civic mode.
+- M11: `GET /api/me/export` can reuse `followingPage()` (follows with stream keys, circles); a
+  stream rule's `url` is the space's canonical URL plus `stream_key`.
+- Check 20's "quiet error note on Following": the Following page shows `last_error` under a space
+  whose last refresh failed; no test times a fetch out end to end yet (M5 proves the budget).
+- A hub space lists at most 25 known streams; a stream not among them can still be followed by
+  pasting its URL. A search over a hub's streams would help busy hubs.
+- Fediverse avatars on the Following page load straight from their hosts (CSP img-src https:);
+  e2e blocks them, so the page shows initials there.
+- Spec question logged: a stream-only follow's final result leaves the member's River when the
+  Ended follow is cleared after 90 days.
+
 ## M8 Sign-in: the note, auth_attempts, sessions, accounts, login methods, seed copy, member read state — 2026-10-21
 
 - Branch / PR: claude/m8-sign-in → PR (needs-adam: authentication and sessions, a migration

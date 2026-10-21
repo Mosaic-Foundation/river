@@ -52,6 +52,33 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, M9: unit `followResolve` (the follow box's resolve through recorded fixtures: check
+  13 preview, 14 stream key validated with probeStream, 15 preview with avatar and kind, the hub →
+  fediverse fallback on a DERIVED 404 civic.json, check 16 refusals with zero requests, not a
+  Space, unreachable, a DERIVED 401 actor on a non-Mastodon server = server-only; kind and address
+  labels); `feedScope` gains the member rules (a mute hides only inside a followed space; a
+  circle that drops the space drops its mutes). Database `following` (river_app; own member and
+  own hub spaces reading the recorded Floyd and Longmont feeds): check 18 end to end (stream
+  follow → refresh → End, Aggregation, Result; the Result is the only final result; the follow
+  moves to Ended and leaves Spaces; ended items still show; daily job +120 days rolled back keeps
+  only the Result and clears the follow); following an already-ended stream goes straight to
+  Ended; check 17 (mute hides exactly that stream's items, unmute restores them); check 14's feed
+  half (only the Longmont meeting stream, then the whole space, then unfollow); a cross-space
+  stream rule refused by the FK; check 19 (quiet: old and never-dated hub/fediverse spaces; not a
+  recent one, not a never-fetched one, never a sample; unfollow all quiet; circles emptied); circle
+  create/rename/recolor/delete, names unique, civic role kept and undeletable, only followed spaces
+  in circles; check 27 for the new writes (another member's rule, circle and circle ids are
+  unreachable). API `following` (dev server, a DID log on :3005 like `signin`): visitors 401 and
+  foreign/missing Origin 403 on every route; check 13 and 15 over HTTP (unfollow the seed, preview,
+  follow, items come back; w3c with boost cards, narrowed by a new circle); F6 sentences for both
+  preview and follow; circles over HTTP. e2e `following`: checks 13, 14 + 17, 18 (with the retention
+  run), 19 (spaces made as postgres for the member), circles (create, recolor, rename, members,
+  River filter, Civic undeletable and renamable, delete), and 15 on a phone (the visitor's sign-up
+  prompt, header Follow → Following tab, preview avatar URL, boosts shown, hidden replies never
+  in the feed, Circles tab), with axe on the Following page, preview, Ended tab and phone tabs
+  (check 31). Ran against the dev servers and against `vite preview` on 4173. Unit 401, API 122
+  (fresh `db reset`), e2e 42.
+
 - 2026-10-21, M8: unit `riverSignIn` (check 11 with test keys and didwebvh-ts logs: every
   refusal by its reason, wrong aud, expired exp, iat ahead, nonce, alg none/ES256/eddsa, iss ≠ sub,
   kid of another DID or not `{did}#…`, a kid the document doesn't list, a different key even with
