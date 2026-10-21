@@ -1,5 +1,8 @@
 // One feed card (spec F1, F4, 4.8). Text is rendered as text; the item's contentHtml, already
 // sanitized on the server by src/shared/sanitize/, is the only HTML (CLAUDE.md constraint 8).
+// A click anywhere on the card opens the item in the reader view (ui-revisions-1 item 1), except on
+// the card's own links and buttons; from the keyboard, the title (or, without one, the time) is
+// a link to /item/{id}. The footer names the source host only.
 import type { FeedItem } from "../lib/api";
 import {
   deadlineLabel,
@@ -11,7 +14,8 @@ import {
   relativeTime,
 } from "../lib/format";
 import { CardMedia } from "./CardMedia";
-import { BoostIcon, ExternalIcon } from "./Icons";
+import { CARD_INTERACTIVE, isNewTabClick, itemPath } from "../lib/reader";
+import { BoostIcon } from "./Icons";
 import { SourceIcon } from "./SourceIcon";
 
 export interface FeedCardProps {
@@ -21,6 +25,17 @@ export interface FeedCardProps {
   onMarkRead: (id: string) => void;
   onMarkUnread: (id: string) => void;
   onSampleInfo: (trigger: HTMLButtonElement) => void;
+  /** Opens the item in the reader view. */
+  onOpen: (id: string) => void;
+}
+
+/** The card's link to the reader view: a plain click stays in the page, a modified one opens a tab. */
+function openHandler(id: string, onOpen: (id: string) => void) {
+  return (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (isNewTabClick(e)) return;
+    e.preventDefault();
+    onOpen(id);
+  };
 }
 
 /** Spec F4: links open in a new tab with rel="noopener noreferrer" (the sanitizer sets rel). */
@@ -31,7 +46,7 @@ function openLinksInNewTab(el: HTMLDivElement | null): void {
   });
 }
 
-export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo }: FeedCardProps) {
+export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, onOpen }: FeedCardProps) {
   const titleId = `item-${item.id}-title`;
   const host = item.source === "live" ? linkHost(item.url) : undefined;
   const actor = item.author?.name || item.space.name;
@@ -40,6 +55,8 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
   const deadline = deadlineLabel(item.civic?.deadline);
   const civicLabel = item.kind === "civic" || item.civic ? item.civic?.label : undefined;
   const text = item.contentHtml ? undefined : item.summary;
+  const href = itemPath(item.id, window.location.search);
+  const open = openHandler(item.id, onOpen);
 
   return (
     <article
@@ -51,6 +68,12 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
       data-source={item.source}
       data-kind={item.kind}
       data-adapter={item.space.adapter}
+      onClick={(e) => {
+        // The card's own links and buttons keep their behavior; selecting text doesn't open it.
+        if ((e.target as Element).closest(CARD_INTERACTIVE)) return;
+        if (window.getSelection()?.toString()) return;
+        onOpen(item.id);
+      }}
     >
       <header className="card-header">
         <SourceIcon name={item.space.name} iconUrl={item.space.iconUrl} />
@@ -59,9 +82,22 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
           <span className="card-meta">
             <span className="card-kind">{kindLabel(item.kind)}</span>
             <span aria-hidden="true"> · </span>
-            <time dateTime={item.publishedAt} title={fullDateTime(item.publishedAt)}>
-              {relativeTime(item.publishedAt, now)}
-            </time>
+            {item.title ? (
+              <time dateTime={item.publishedAt} title={fullDateTime(item.publishedAt)}>
+                {relativeTime(item.publishedAt, now)}
+              </time>
+            ) : (
+              <a
+                className="card-permalink"
+                href={href}
+                onClick={open}
+                aria-label={`Read ${kindLabel(item.kind).toLowerCase()} from ${item.space.name}, ${relativeTime(item.publishedAt, now)}`}
+              >
+                <time dateTime={item.publishedAt} title={fullDateTime(item.publishedAt)}>
+                  {relativeTime(item.publishedAt, now)}
+                </time>
+              </a>
+            )}
           </span>
         </div>
         <div className="card-flags">
@@ -94,7 +130,9 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
 
       {item.title && (
         <h2 className="card-title" id={titleId}>
-          {item.title}
+          <a className="card-title-link" href={href} onClick={open}>
+            {item.title}
+          </a>
         </h2>
       )}
 
@@ -144,19 +182,10 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
       )}
 
       <footer className="card-footer">
-        {host && item.url && (
-          <a
-            className="card-open"
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => onMarkRead(item.id)}
-            onAuxClick={() => onMarkRead(item.id)}
-          >
-            Open on {host}
-            <ExternalIcon />
-            <span className="visually-hidden"> (opens in a new tab)</span>
-          </a>
+        {host && (
+          <span className="card-host" data-testid="card-host">
+            {host}
+          </span>
         )}
         <button
           type="button"

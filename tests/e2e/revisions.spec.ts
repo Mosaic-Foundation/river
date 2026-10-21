@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
 
@@ -205,5 +206,125 @@ test.describe("item 4: networks, and collapsible sections", () => {
       await expect(toggle).toHaveAttribute("aria-expanded", "true");
       await expect(section.getByRole("list")).toBeVisible();
     }
+  });
+});
+
+test.describe("item 1: the reader view", () => {
+  test("a click on a card opens /item/{id} with the content, author and source beside the sidebar", async ({ page }) => {
+    await openFeed(page);
+    const card = cards(page).and(page.locator('[data-source="live"][data-adapter="fediverse"]')).first();
+    const id = (await card.getAttribute("data-item-id"))!;
+    const source = (await card.locator(".card-source").textContent())!;
+    await card.locator(".card-text").first().click({ position: { x: 2, y: 2 } });
+
+    await expect(page).toHaveURL(new RegExp(`/item/${id}$`));
+    const reader = page.getByTestId("reader");
+    await expect(reader).toBeVisible();
+    await expect(reader).toHaveAttribute("data-item-id", id);
+    await expect(reader.getByTestId("reader-source")).toHaveText(source);
+    await expect(reader.getByRole("heading", { level: 1 })).toBeFocused();
+    await expect(reader.locator(".reader-content").first()).not.toBeEmpty();
+    await expect(sidebar(page)).toBeVisible();
+    await expect(cards(page)).toHaveCount(0);
+
+    // The same item from the API, straight from the address bar (a reload or a shared link).
+    await page.reload();
+    await expect(page.getByTestId("reader")).toHaveAttribute("data-item-id", id, { timeout: 30_000 });
+    await expect(page.getByTestId("reader-source")).toHaveText(source);
+    await page.getByRole("button", { name: "Back to River" }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(cards(page).first()).toBeVisible();
+  });
+
+  test("Back to River and the browser's Back return to the same scroll position", async ({ page }) => {
+    await openFeed(page);
+    const card = cards(page).nth(8);
+    await card.scrollIntoViewIfNeeded();
+    await page.mouse.wheel(0, 300);
+    const y = await page.evaluate(() => window.scrollY);
+    expect(y).toBeGreaterThan(200);
+    const id = (await card.getAttribute("data-item-id"))!;
+
+    await card.locator(".card-source").click();
+    await expect(page.getByTestId("reader")).toBeVisible();
+    await page.getByRole("button", { name: "Back to River" }).click();
+    await expect(page.getByTestId("reader")).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(y);
+    await expect(page).not.toHaveURL(/\/item\//);
+
+    await page.locator(`[data-item-id="${id}"] .card-source`).click();
+    await expect(page).toHaveURL(new RegExp(`/item/${id}`));
+    await page.goBack();
+    await expect(page.getByTestId("reader")).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(y);
+    // Forward reopens it.
+    await page.goForward();
+    await expect(page.getByTestId("reader")).toHaveAttribute("data-item-id", id);
+  });
+
+  test("Mark read, links and the Sample label inside a card keep their own behavior", async ({ page }) => {
+    await openFeed(page);
+    const first = cards(page).first();
+    await first.getByRole("button", { name: /^Mark (read|unread)$/ }).click();
+    await expect(page.getByTestId("reader")).toHaveCount(0);
+    const sample = cards(page).and(page.locator('[data-source="sample"]')).first();
+    await sample.getByRole("button", { name: "Sample", exact: true }).click();
+    await expect(page.getByRole("dialog", { name: "Sample entry" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("reader")).toHaveCount(0);
+
+    // A link inside a card's text opens where it points (a new tab), not the reader.
+    const withLink = cards(page).filter({ has: page.locator(".card-html a[href]") }).first();
+    const link = withLink.locator(".card-html a[href]").first();
+    await expect(link).toHaveAttribute("target", "_blank");
+    const popup = page.context().waitForEvent("page");
+    await link.click();
+    await (await popup).close();
+    await expect(page.getByTestId("reader")).toHaveCount(0);
+  });
+
+  test("from the keyboard: the card's title or time link opens the reader; the reader's controls are labelled", async ({ page }) => {
+    await openFeed(page);
+    const titled = cards(page).filter({ has: page.locator(".card-title-link") }).first();
+    const id = (await titled.getAttribute("data-item-id"))!;
+    await titled.locator(".card-title-link").focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("reader")).toHaveAttribute("data-item-id", id);
+    await page.getByRole("button", { name: "Back to River" }).press("Enter");
+    // Focus comes back to the card that was opened.
+    await expect(page.locator(`[data-item-id="${id}"] .card-title-link`)).toBeFocused();
+
+    const untitled = cards(page).filter({ has: page.locator(".card-permalink") }).first();
+    await expect(untitled.locator(".card-permalink")).toHaveAccessibleName(/^Read .+ from .+/);
+    await untitled.locator(".card-permalink").press("Enter");
+    await expect(page.getByTestId("reader")).toBeVisible();
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id)).toEqual([]);
+  });
+
+  test("opening an item marks it read; an unknown item says so", async ({ page }) => {
+    await openFeed(page);
+    const unread = cards(page).filter({ has: page.getByTestId("unread-dot") }).first();
+    const id = (await unread.getAttribute("data-item-id"))!;
+    await unread.locator(".card-source").click();
+    await expect(page.getByTestId("reader").getByRole("button", { name: "Mark unread" })).toBeVisible();
+    await page.getByRole("button", { name: "Back to River" }).click();
+    await expect(page.locator(`[data-item-id="${id}"]`).getByTestId("unread-dot")).toHaveCount(0);
+
+    await page.goto("/item/00000000-0000-4000-8000-00000000abcd");
+    await expect(page.getByTestId("reader")).toContainText("This item isn't in your River.", { timeout: 30_000 });
+    await page.getByRole("button", { name: "Back to River" }).click();
+    await expect(cards(page).first()).toBeVisible();
+  });
+
+  test("on a phone the reader fits 390 px", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
+    await cards(page).first().locator(".card-source").click();
+    await expect(page.getByTestId("reader")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Back to River" })).toBeInViewport();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
   });
 });
