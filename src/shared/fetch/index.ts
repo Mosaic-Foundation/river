@@ -15,6 +15,7 @@ export {
   type GuardedRequest,
   type Resolver,
 } from "./guard.js";
+export { isLoopbackHttpUrl, loopbackFetch } from "./loopback.js";
 export {
   fixtureFromResponse,
   fixturePath,

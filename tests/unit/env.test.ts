@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { checkEnv, env } from "../../src/config/env.js";
 
 const NAMES = [
-  "APP", "PORT", "VERCEL", "VERCEL_ENV", "FETCH_FIXTURES_DIR", "TEST_ROUTES", "TEST_CLOCK_NOW", "EMAIL_TRANSPORT",
+  "APP", "PORT", "VERCEL", "VERCEL_ENV", "FETCH_FIXTURES_DIR", "TEST_ROUTES", "TEST_CLOCK_NOW", "TEST_DID_LOOPBACK", "EMAIL_TRANSPORT",
   "TRUSTED_DID_HOSTS", "INSTANCE_HOST_ALIASES",
 ];
 const saved = Object.fromEntries(NAMES.map((name) => [name, process.env[name]]));
@@ -83,6 +83,7 @@ describe("env", () => {
     FETCH_FIXTURES_DIR: "tests/fixtures/http",
     TEST_ROUTES: "1",
     TEST_CLOCK_NOW: "2026-10-21T00:00:00.000Z",
+    TEST_DID_LOOPBACK: "1",
   };
   it.each(Object.keys(TEST_VALUES))("refuses %s when VERCEL is set", (name) => {
     set({ VERCEL: "1", [name]: TEST_VALUES[name] });
@@ -94,6 +95,7 @@ describe("env", () => {
     expect(env.fetchFixturesDir).toBeUndefined();
     expect(env.testRoutes).toBe(false);
     expect(env.testClockNow).toBeUndefined();
+    expect(env.testDidLoopback).toBe(false);
     expect(() => checkEnv()).not.toThrow();
   });
 });
