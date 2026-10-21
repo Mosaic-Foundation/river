@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { createPrivateKey } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import type { Page } from "@playwright/test";
@@ -426,4 +427,72 @@ test("check 37: recover-dids re-keys a DID with the recovery key; same SCID, sam
   expect(note.payload.sub).toBe(did);
   expect(noteVerifies(note, newKey ?? "")).toBe(true);
   expect(noteVerifies(note, personKey ?? "")).toBe(false);
+});
+
+test("change email: a fresh passkey check, a link to the new address, a notice to the old", async ({ page, request }) => {
+  await addAuthenticator(page);
+  const old = testEmail("change-old");
+  const { did } = await signUpAndContinue(page, old);
+  await verifyEmail(page, request, old);
+
+  const next = testEmail("change-new");
+  await page.goto(`${identityURL}/account/email`);
+  await page.getByLabel("New email address").fill(next);
+  await page.getByRole("button", { name: "Confirm with your passkey" }).click();
+  await expect(page.getByRole("status")).toContainText("We sent a link to c***@e***.test");
+  expect((await mailbox(request, old)).map((m) => m.kind)).toContain("email_change_notice");
+
+  // Still the old address until the new one is confirmed; then the new one, verified.
+  const email = async () =>
+    withAdmin(async (db) => (await db.query("SELECT email, email_verified_at FROM identity.people WHERE did = $1", [did])).rows[0]);
+  expect((await email()).email).toBe(old);
+  await verifyEmail(page, request, next);
+  const changed = await email();
+  expect(changed.email).toBe(next);
+  expect(changed.email_verified_at).not.toBeNull();
+
+  // Asking for the address it already has sends nothing.
+  await page.goto(`${identityURL}/account/email`);
+  await page.getByLabel("New email address").fill(next);
+  await page.getByRole("button", { name: "Confirm with your passkey" }).click();
+  await expect(page.getByRole("status")).toHaveText("That is already your address, and it is confirmed.");
+  expect((await mailbox(request, next)).filter((m) => m.kind === "verify_email")).toHaveLength(1);
+});
+
+test("identity pages: the script runs under the CSP with no violation; axe finds nothing serious; Tab reaches every control", async ({ page }) => {
+  const violations: string[] = [];
+  page.on("console", (msg) => {
+    if (/Content Security Policy/i.test(msg.text())) violations.push(msg.text());
+  });
+  const pages = [
+    { url: authorizeUrl(), script: true },
+    { url: `${identityURL}/account/email`, script: true },
+    { url: `${identityURL}/recover`, script: false },
+    { url: `${identityURL}/`, script: false },
+  ];
+  for (const { url, script } of pages) {
+    await page.goto(url);
+    if (script) await expect(page.locator("html")).toHaveAttribute("data-passkey", "ready");
+    const results = await new AxeBuilder({ page }).analyze();
+    const serious = results.violations
+      .filter((v) => v.impact === "critical" || v.impact === "serious")
+      .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
+    expect(serious, url).toEqual([]);
+
+    // Tab through the page: every visible link, input and button in <main> takes focus.
+    const controls = await page.locator("main a:visible, main input:visible, main button:visible").count();
+    expect(controls, url).toBeGreaterThan(0);
+    const reached = new Set<string>();
+    for (let i = 0; i < controls + 4; i++) {
+      await page.keyboard.press("Tab");
+      const focused = await page.evaluate(() => {
+        const el = document.activeElement;
+        if (!el || !el.closest("main")) return null;
+        return `${el.tagName}|${el.id}|${el.getAttribute("href") ?? ""}|${el.textContent?.trim() ?? ""}`;
+      });
+      if (focused) reached.add(focused);
+    }
+    expect(reached.size, url).toBe(controls);
+  }
+  expect(violations).toEqual([]);
 });
