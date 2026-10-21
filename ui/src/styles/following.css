@@ -1,0 +1,522 @@
+/*
+ * The Following page, the follow box and circles (M9, spec F6-F8; docs/design/mockups/following.png).
+ * Theme tokens only (themes/*.css) plus the layout tokens in theme.css. The same parts appear on
+ * /following (desktop and phone) and in the River's phone Following and Circles tabs.
+ */
+
+/* ---------- Page ---------- */
+
+.following-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-lg);
+  max-width: var(--layout-page);
+  margin: 0 auto;
+  padding: var(--space-md);
+}
+
+.following-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
+  padding: 0;
+}
+
+.following-main:focus {
+  outline: none;
+}
+
+.following-title {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+}
+
+.following-intro {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.tab-placeholder .panel + .panel {
+  margin-top: var(--space-lg);
+}
+
+@media (min-width: 56rem) {
+  .following-layout {
+    grid-template-columns: minmax(0, var(--layout-following)) var(--layout-circles);
+    justify-content: center;
+    padding: var(--space-xl);
+  }
+
+  .following-aside {
+    align-self: start;
+    position: sticky;
+    top: calc(var(--size-control) + var(--space-lg) * 1.5);
+  }
+}
+
+/* ---------- Panels ---------- */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+}
+
+.panel-text,
+.panel p {
+  margin: 0;
+}
+
+.panel-text {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.panel-note {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.panel-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.panel-aside-title {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-heading);
+}
+
+.panel fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.panel legend {
+  padding: 0;
+  margin-bottom: var(--space-sm);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+}
+
+.text-input {
+  width: 100%;
+  min-height: var(--size-control);
+  padding: 0 var(--space-md);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.text-input:focus {
+  border-color: var(--color-focus);
+}
+
+.button-small {
+  min-height: calc(var(--size-control) * 0.85);
+  padding: 0 var(--space-md);
+}
+
+.button-dashed {
+  min-height: var(--size-control);
+  border: var(--border-width) dashed var(--color-border);
+  background: transparent;
+  color: var(--color-link);
+}
+
+/* ---------- Follow box ---------- */
+
+.follow-form {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.follow-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.follow-error {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-danger);
+  font-weight: var(--font-weight-semibold);
+}
+
+.follow-done {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.follow-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-surface-alt);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.follow-preview-head {
+  display: flex;
+  gap: var(--space-md);
+  align-items: center;
+  min-width: 0;
+}
+
+.follow-preview-name {
+  margin: 0;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-heading);
+}
+
+.follow-preview-meta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.follow-scope {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.radio,
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: var(--size-control);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.follow-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.circle-picker .chip-list {
+  flex-wrap: wrap;
+}
+
+/* ---------- Spaces, Quiet, Ended ---------- */
+
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.segment {
+  min-height: var(--size-control);
+  padding: 0 var(--space-md);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.segment[aria-pressed="true"] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.quiet-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-accent-soft);
+  border: var(--border-width) solid var(--color-accent);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.quiet-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.group-title {
+  margin: var(--space-sm) 0 0;
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.space-list,
+.stream-list,
+.circle-list,
+.space-row-circles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.space-row {
+  padding: var(--space-sm) 0;
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.space-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+}
+
+.space-row-text {
+  flex: 1 1 var(--layout-row-text);
+  min-width: 0;
+}
+
+.space-row-name {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-heading);
+  overflow-wrap: anywhere;
+}
+
+.space-row-meta,
+.space-row-error {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.space-row-error {
+  font-style: italic;
+}
+
+.space-row-circles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.space-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-left: auto;
+}
+
+.stream-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0 0 calc(var(--size-avatar) + var(--space-md));
+}
+
+.stream-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface-alt);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.stream-title {
+  flex: 1 1 var(--layout-stream-title);
+  min-width: 0;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.stream-rule {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.stream-until {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.stream-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.badge {
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+.badge-following {
+  background: var(--color-info-soft);
+  color: var(--color-primary);
+}
+
+.badge-muted {
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+@media (max-width: 55.99rem) {
+  .stream-list {
+    margin-left: 0;
+  }
+
+  .follow-form {
+    flex-direction: column;
+  }
+}
+
+/* ---------- Circles ---------- */
+
+.circle-row {
+  padding: var(--space-xs) 0;
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.circle-row-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.circle-row-main .button {
+  padding: 0 var(--space-xs);
+}
+
+.circle-name {
+  flex: 1 1 0;
+  min-width: 0;
+  font-weight: var(--font-weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.circle-count {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.circle-editor,
+.circle-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+}
+
+.circle-form label:not(.color-option) {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+}
+
+.circle-form-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.color-picker legend {
+  width: 100%;
+}
+
+.color-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-control);
+  height: var(--size-control);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.color-option input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.color-option:has(input:checked) {
+  outline: calc(var(--border-width) * 2) solid var(--color-primary);
+}
+
+.color-option:has(input:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.circle-swatch-large {
+  width: calc(var(--size-swatch) * 2.5);
+  height: calc(var(--size-swatch) * 2.5);
+}
+
+.circle-members {
+  display: flex;
+  flex-direction: column;
+}
+
+.signup-prompt .account-actions {
+  margin: 0;
+}
