@@ -47,6 +47,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
       aria-labelledby={item.title ? titleId : undefined}
       aria-label={item.title ? undefined : `${kindLabel(item.kind)} from ${item.space.name}`}
       data-testid="feed-card"
+      data-item-id={item.id}
       data-source={item.source}
       data-kind={item.kind}
     >

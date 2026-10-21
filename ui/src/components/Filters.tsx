@@ -62,7 +62,7 @@ export function SearchField({ id, value, onSearch }: { id: string; value: string
 }
 
 export function FilterSidebar({ circles, value, onCircle, onType, onSearch }: FiltersProps) {
-  const allCircles: Array<Pick<FeedCircle, "name" | "color">> = [{ name: "All", color: null }, ...circles];
+  const allCircles: Array<Pick<FeedCircle, "id" | "name" | "color">> = [{ id: "All", name: "All", color: null }, ...circles];
   return (
     <aside className="sidebar" aria-label="Filters">
       <SearchField id="search-desktop" value={value.q} onSearch={onSearch} />
@@ -73,12 +73,12 @@ export function FilterSidebar({ circles, value, onCircle, onType, onSearch }: Fi
         </h2>
         <ul className="filter-list">
           {allCircles.map((c) => (
-            <li key={c.name}>
+            <li key={c.id}>
               <button
                 type="button"
                 className="filter-option"
-                aria-pressed={value.circle === c.name}
-                onClick={() => onCircle(c.name)}
+                aria-pressed={value.circle === c.id}
+                onClick={() => onCircle(c.id)}
               >
                 <span className="circle-swatch" style={swatch(c.color)} aria-hidden="true" />
                 {c.name}
@@ -112,7 +112,7 @@ export function FilterSidebar({ circles, value, onCircle, onType, onSearch }: Fi
 }
 
 export function FilterChips({ circles, value, onCircle, onType }: Omit<FiltersProps, "onSearch">) {
-  const allCircles: Array<Pick<FeedCircle, "name" | "color">> = [{ name: "All", color: null }, ...circles];
+  const allCircles: Array<Pick<FeedCircle, "id" | "name" | "color">> = [{ id: "All", name: "All", color: null }, ...circles];
   return (
     <div className="chip-row" role="group" aria-label="Filters">
       <label className="visually-hidden" htmlFor="type-chip">
@@ -132,12 +132,12 @@ export function FilterChips({ circles, value, onCircle, onType }: Omit<FiltersPr
       </select>
       <ul className="chip-list" aria-label="Circles">
         {allCircles.map((c) => (
-          <li key={c.name}>
+          <li key={c.id}>
             <button
               type="button"
               className="chip"
-              aria-pressed={value.circle === c.name}
-              onClick={() => onCircle(c.name)}
+              aria-pressed={value.circle === c.id}
+              onClick={() => onCircle(c.id)}
             >
               {c.color && <span className="circle-swatch" style={swatch(c.color)} aria-hidden="true" />}
               {c.name}

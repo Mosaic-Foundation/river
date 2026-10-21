@@ -1,6 +1,11 @@
-// The River UI's one API call: GET /api/feed (spec 4.5; shape in DECISIONS.md "The feed API's
-// shape (M5)"). Same origin only (CSP connect-src 'self'). Visitors make no other request and
-// no server write (check 23): read state lives in the browser (readState.ts).
+// The River UI's API calls (spec 4.5, 4.6; shapes in DECISIONS.md "The feed API's shape (M5)" and
+// "Sign-in and member read state (M8)"). Same origin only (CSP connect-src 'self'). Visitors make
+// only GET /api/feed and no server write (check 23): their read state lives in the browser
+// (readState.ts). Members' read state is written here; their session is an HttpOnly cookie the
+// page never sees.
+
+/** Where Sign up and Sign in go: the River starts the identity host's sign-in (spec 4.6 step 1). */
+export const SIGN_IN_URL = "/api/auth/signin";
 
 export type ItemKind = "post" | "article" | "podcast" | "video" | "photo" | "event" | "civic";
 
@@ -53,6 +58,8 @@ export interface FeedItem {
   boostOf: BoostRef | null;
   civic: CivicDetails | null;
   isFinalResult: boolean;
+  /** Members only: the server's read state for this item. */
+  read?: boolean;
   event?: { startTime?: string; location?: string };
   source: "live" | "sample";
   space: {
@@ -80,6 +87,18 @@ export interface FeedResponse {
   empty: boolean;
   emptyMessage: string | null;
   refresh: { claimed: string[]; pending: string[] };
+  /** The signed-in member, or null for a visitor. */
+  viewer: Viewer | null;
+}
+
+export interface Viewer {
+  did: string | null;
+  displayName: string | null;
+}
+
+/** What the You tab and the header call a member: their name, else their DID. */
+export function viewerLabel(viewer: Viewer): string {
+  return viewer.displayName?.trim() || viewer.did || "Signed in";
 }
 
 export interface FeedQuery {
@@ -93,6 +112,8 @@ export type FeedResult =
   | { status: "ok"; feed: FeedResponse }
   /** The API knows no River at this hostname (check 26): the UI shows its 404 page. */
   | { status: "unknown_host"; message: string }
+  /** The circle isn't one of the reader's (e.g. a visitor's circle name after signing in). */
+  | { status: "bad_circle" }
   | { status: "error"; message: string };
 
 /** The query string for /api/feed; empty values and "All" are left out. */
@@ -123,8 +144,50 @@ export async function loadFeed(query: FeedQuery, signal?: AbortSignal): Promise<
       message: typeof error.message === "string" ? error.message : "There is no River at this address.",
     };
   }
+  if (res.status === 400 && error.error === "bad_circle") return { status: "bad_circle" };
   if (!res.ok || !body) {
     return { status: "error", message: "The River couldn't load right now. Try again in a moment." };
   }
   return { status: "ok", feed: body as FeedResponse };
+}
+
+async function post(path: string, body?: unknown): Promise<Response> {
+  return fetch(path, {
+    method: "POST",
+    headers: body === undefined ? { Accept: "application/json" } : { Accept: "application/json", "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    // An item opened in a new tab still gets marked read if this page goes away.
+    keepalive: true,
+  });
+}
+
+/** A member's Mark read / Mark unread (and opening a link). Resolves false when it didn't save. */
+export async function saveReadState(change: { read?: string[]; unread?: string[] }): Promise<boolean> {
+  try {
+    return (await post("/api/read-state", change)).ok;
+  } catch {
+    return false;
+  }
+}
+
+/** A member's "Mark all read" for the current view (its circle, type and search). */
+export async function saveAllRead(query: Omit<FeedQuery, "cursor">): Promise<boolean> {
+  const body: Record<string, string> = {};
+  if (query.circle && query.circle !== "All") body.circle = query.circle;
+  if (query.type && query.type !== "all") body.type = query.type;
+  if (query.q?.trim()) body.q = query.q.trim();
+  try {
+    return (await post("/api/read-state/all", body)).ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Ends the River session (spec F10). */
+export async function signOut(): Promise<boolean> {
+  try {
+    return (await post("/api/auth/signout")).ok;
+  } catch {
+    return false;
+  }
 }

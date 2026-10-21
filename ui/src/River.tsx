@@ -1,10 +1,20 @@
-// The feed page at / (spec F1, F4, F5; §7 M6: Everything mode, desktop and phone). Visitors only
-// until sign-in (M8): read state stays in this browser and the page makes no server write.
+// The feed page at / (spec F1, F4, F5, F10; §7 M6, M8: Everything mode, desktop and phone). A
+// visitor's read state stays in this browser and the page makes no server write (check 23); a
+// signed-in member's is saved to their account through the API and comes back with the feed.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { loadFeed, type FeedCircle, type FeedItem } from "./lib/api";
+import {
+  loadFeed,
+  saveAllRead,
+  saveReadState,
+  signOut,
+  SIGN_IN_URL,
+  type FeedCircle,
+  type FeedItem,
+  type Viewer,
+} from "./lib/api";
 import { CONTENT_TYPES, SAMPLE_EXPLAINER } from "./lib/format";
 import { browserStore, loadRead, markRead, markUnread, saveRead } from "./lib/readState";
-import { Header, TabBar } from "./components/Chrome";
+import { Header, TabBar, YouPanel } from "./components/Chrome";
 import { TAB_PLACEHOLDERS, type Tab } from "./lib/tabs";
 import { FeedCard } from "./components/FeedCard";
 import { FilterChips, FilterSidebar, SearchField, type FilterState } from "./components/Filters";
@@ -23,6 +33,7 @@ type Load =
       theme: string;
       nextCursor: string | null;
       emptyMessage: string | null;
+      viewer: Viewer | null;
     };
 
 const MODE_TITLES: Record<string, string> = { everything: "Everything", civic: "Civic" };
@@ -56,7 +67,8 @@ function useNow(): number {
   return now;
 }
 
-function useReadState() {
+/** A visitor's read state: this browser only, no server write (check 23). */
+function useBrowserReadState() {
   const [read, setRead] = useState<string[]>(() => loadRead(browserStore()));
   const update = useCallback((next: (current: string[]) => string[]) => {
     setRead((current) => {
@@ -73,6 +85,44 @@ function useReadState() {
   };
 }
 
+/**
+ * A member's read state: what the feed said, plus this page's changes, each saved through the API
+ * at once. A change the server refuses is undone, so what shows is what a reload would show.
+ */
+function useServerReadState(items: FeedItem[]) {
+  const [changes, setChanges] = useState<Map<string, boolean>>(() => new Map());
+  const set = useCallback((ids: string[], value: boolean | undefined) => {
+    setChanges((current) => {
+      const next = new Map(current);
+      for (const id of ids) {
+        if (value === undefined) next.delete(id);
+        else next.set(id, value);
+      }
+      return next;
+    });
+  }, []);
+  const fromFeed = useMemo(() => new Map(items.map((i) => [i.id, i.read === true])), [items]);
+  const change = (ids: string[], read: boolean) => {
+    if (ids.length === 0) return;
+    set(ids, read);
+    void saveReadState(read ? { read: ids } : { unread: ids }).then((ok) => {
+      if (!ok) set(ids, undefined);
+    });
+  };
+  return {
+    isRead: (id: string) => changes.get(id) ?? fromFeed.get(id) ?? false,
+    markRead: (ids: string[]) => change(ids, true),
+    markUnread: (ids: string[]) => change(ids, false),
+    /** Marks the whole view read on the server, and the loaded items here. */
+    markView: (ids: string[], query: FilterState) => {
+      set(ids, true);
+      void saveAllRead(query).then((ok) => {
+        if (!ok) set(ids, undefined);
+      });
+    },
+  };
+}
+
 export function River() {
   const [filters, setFilters] = useState<FilterState>(filtersFromUrl);
   const [load, setLoad] = useState<Load>({ status: "loading" });
@@ -83,7 +133,10 @@ export function River() {
   const [searchOpen, setSearchOpen] = useState(() => filtersFromUrl().q !== "");
   const [sampleTrigger, setSampleTrigger] = useState<HTMLElement | null>(null);
   const [followTrigger, setFollowTrigger] = useState<HTMLElement | null>(null);
-  const reads = useReadState();
+  const browserReads = useBrowserReadState();
+  const serverReads = useServerReadState(load.status === "ok" ? load.items : []);
+  const viewer = load.status === "ok" ? load.viewer : undefined;
+  const reads = viewer ? serverReads : browserReads;
   const now = useNow();
 
   useEffect(() => {
@@ -91,6 +144,11 @@ export function River() {
     const controller = new AbortController();
     loadFeed({ circle: filters.circle, type: filters.type, q: filters.q }, controller.signal)
       .then((result) => {
+        if (result.status === "bad_circle") {
+          // A circle from another view (a visitor's circle name after sign-in): show All.
+          setFilters((current) => ({ ...current, circle: "All" }));
+          return;
+        }
         if (result.status !== "ok") {
           setLoad(result);
           return;
@@ -104,6 +162,7 @@ export function River() {
           theme: feed.mode === "civic" ? "civic" : "mosaic",
           nextCursor: feed.nextCursor,
           emptyMessage: feed.empty ? feed.emptyMessage : null,
+          viewer: feed.viewer ?? null,
         });
       })
       .catch(() => {
@@ -151,6 +210,10 @@ export function River() {
     });
   };
 
+  const endSession = () => {
+    void signOut().then(() => window.location.assign("/"));
+  };
+
   if (load.status === "unknown_host") return <NotFound message={load.message} homeLink={false} />;
 
   const circles = load.status === "ok" ? load.circles : [];
@@ -173,6 +236,8 @@ export function River() {
         searchOpen={searchOpen}
         onToggleSearch={() => setSearchOpen((open) => !open)}
         onFollow={(trigger) => setFollowTrigger(trigger)}
+        viewer={viewer}
+        onSignOut={endSession}
       />
       {searchOpen && (
         <div className="phone-search phone-only" id="phone-search">
@@ -201,7 +266,11 @@ export function River() {
                 type="button"
                 className="button button-quiet"
                 disabled={unread.length === 0}
-                onClick={() => reads.markRead(items.map((i) => i.id))}
+                onClick={() =>
+                  viewer
+                    ? serverReads.markView(items.map((i) => i.id), filters)
+                    : browserReads.markRead(items.map((i) => i.id))
+                }
               >
                 Mark all read
               </button>
@@ -254,10 +323,16 @@ export function River() {
           )}
         </main>
 
-        {tab !== "feed" && (
+        {tab === "you" && (
+          <section className="tab-placeholder phone-only" aria-labelledby="tab-title">
+            <h1 id="tab-title">You</h1>
+            <YouPanel viewer={viewer} onSignOut={endSession} />
+          </section>
+        )}
+        {tab !== "feed" && tab !== "you" && (
           <section className="tab-placeholder phone-only" aria-labelledby="tab-title">
             <h1 id="tab-title">{TAB_PLACEHOLDERS[tab].title}</h1>
-            <p>{TAB_PLACEHOLDERS[tab].text}</p>
+            <p>{viewer ? TAB_PLACEHOLDERS[tab].member : TAB_PLACEHOLDERS[tab].text}</p>
           </section>
         )}
       </div>
@@ -278,10 +353,24 @@ export function River() {
         onClose={() => setFollowTrigger(null)}
         testId="follow-dialog"
       >
-        <p>
-          Following Civic Hubs and fediverse accounts comes with an account, and sign-up is coming soon. Until
-          then you're reading this River's default follows.
-        </p>
+        {viewer ? (
+          <p>
+            Following more Civic Hubs and fediverse accounts is coming next. Your River started with this River's
+            default follows and circles, which are now yours.
+          </p>
+        ) : (
+          <>
+            <p>
+              Following Civic Hubs and fediverse accounts comes with an account. Until then you're reading this
+              River's default follows.
+            </p>
+            <p>
+              <a className="button button-primary" href={SIGN_IN_URL}>
+                Sign up
+              </a>
+            </p>
+          </>
+        )}
       </InfoDialog>
     </div>
   );

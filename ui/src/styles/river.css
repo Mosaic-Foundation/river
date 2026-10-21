@@ -723,6 +723,39 @@ main.feed:focus {
   margin-top: 0;
 }
 
+/* ---------- Account (sign-in, You) ---------- */
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.account-name {
+  max-width: var(--layout-account-name);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.account-id {
+  overflow-wrap: anywhere;
+  font-weight: var(--font-weight-bold);
+}
+
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+a.button {
+  text-decoration: none;
+}
+
 /* ---------- 404 ---------- */
 
 .notfound {
@@ -742,6 +775,7 @@ main.feed:focus {
 
 @media (max-width: 55.99rem) {
   .desktop-only,
+  .desktop-inline,
   .hidden-phone {
     display: none;
   }
