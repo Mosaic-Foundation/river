@@ -20,6 +20,11 @@ export interface ModeDefinition {
   scope: "all" | "civic";
   /** Plugin ids per surface, in display order. */
   surfaces: Partial<Record<Surface, readonly string[]>>;
+  /**
+   * What the mode's plugins read: the current view (filters applied) or everything the mode
+   * follows, whatever the circle, types, networks or search (ui-revisions-1 item 6).
+   */
+  pluginReach: "view" | "followed";
 }
 
 export const MODE_DEFINITIONS: Readonly<Record<Mode, ModeDefinition>> = {
@@ -28,7 +33,9 @@ export const MODE_DEFINITIONS: Readonly<Record<Mode, ModeDefinition>> = {
     title: "Everything",
     theme: "mosaic",
     scope: "all",
-    surfaces: {},
+    // A right-hand "Coming up" column across all followed sources (ui-revisions-1 item 6).
+    surfaces: { "river.panel": ["coming-up"] },
+    pluginReach: "followed",
   },
   civic: {
     id: "civic",
@@ -36,6 +43,7 @@ export const MODE_DEFINITIONS: Readonly<Record<Mode, ModeDefinition>> = {
     theme: "civic",
     scope: "civic",
     surfaces: { "river.panel": ["coming-up", "your-representatives", "elections-and-ballot"] },
+    pluginReach: "view",
   },
 };
 

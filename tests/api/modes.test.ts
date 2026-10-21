@@ -54,13 +54,25 @@ async function feed(query = "", host?: string): Promise<Feed> {
 }
 
 describe("modes on river.mosaic.social (check 7, API part)", () => {
-  it("offers Everything and Civic; Everything wears Mosaic and has no panel", async () => {
+  it("offers Everything and Civic; Everything wears Mosaic and has Coming up across all follows", async () => {
     const everything = await feed();
     expect(everything.modes).toEqual([
       { id: "everything", title: "Everything" },
       { id: "civic", title: "Civic" },
     ]);
-    expect(everything).toMatchObject({ mode: "everything", theme: "mosaic", surfaces: {} });
+    expect(everything).toMatchObject({ mode: "everything", theme: "mosaic" });
+    const panel = everything.surfaces?.["river.panel"] ?? [];
+    expect(panel.map((p) => p.id)).toEqual(["coming-up"]);
+    const comingUp = panel[0]!.output;
+    expect(comingUp.type).toBe("dates");
+    if (comingUp.type !== "dates") return;
+    expect(comingUp.intro).toBe("Dates from everything you follow.");
+    const dates = comingUp.entries.map((e) => e.date);
+    expect(dates.length).toBeGreaterThan(0);
+    expect(dates).toEqual([...dates].sort());
+    // Filters narrow the feed, not Coming up (ui-revisions-1 item 6).
+    const filtered = await feed("?type=photos&circle=Family&q=garden");
+    expect(filtered.surfaces?.["river.panel"]).toEqual(panel);
   });
 
   it("Civic: civic items, the Civic theme, and the panel with Coming up and two placeholders", async () => {

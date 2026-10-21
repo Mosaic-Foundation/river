@@ -1,4 +1,5 @@
-// Coming up (spec 4.7): up to five upcoming dates from the current view's items, from hub
+// Coming up (spec 4.7, ui-revisions-1 item 6): up to five upcoming dates from the items the mode
+// gives it (Civic: the current view; Everything: everything followed, whatever the filters), from hub
 // processes' civic.deadline (voting_closes_at) and events' start times, in date order. Hidden
 // when there are none. "Upcoming" means at or after the River's clock. One entry per process and
 // date: a hub announces the same deadline on several activities (Create, civic:Start), so the
@@ -58,6 +59,8 @@ export const comingUpPlugin: ViewPlugin = {
   },
   render(api) {
     const entries = comingUp(api);
-    return entries.length === 0 ? null : { type: "dates", intro: "Dates from the items in this view.", entries };
+    if (entries.length === 0) return null;
+    const intro = api.reach === "followed" ? "Dates from everything you follow." : "Dates from the items in this view.";
+    return { type: "dates", intro, entries };
   },
 };

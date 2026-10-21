@@ -48,8 +48,13 @@ export interface PluginItem {
 
 /** Everything a view plugin receives (capability read:items). */
 export interface ViewApi {
-  /** The current view's items (mode, circle, content type and search applied), newest first. */
+  /**
+   * The items the mode gives its plugins, newest first: the current view (mode, circle, content
+   * types, networks and search applied), or everything the mode follows (see `reach`).
+   */
   readonly items: readonly PluginItem[];
+  /** "view": the current view's items; "followed": the mode's whole scope, whatever the filters. */
+  readonly reach: "view" | "followed";
   /** The River's clock (TEST_CLOCK_NOW in tests), as ISO 8601. */
   readonly now: string;
 }

@@ -38,7 +38,7 @@ function item(patch: Partial<PluginItem> = {}): PluginItem {
 }
 
 function api(items: PluginItem[]): ViewApi {
-  return { items, now: NOW };
+  return { items, now: NOW, reach: "view" };
 }
 
 const manifest = {
@@ -152,7 +152,8 @@ describe("runSurface: what a plugin may read", () => {
     expect(Object.isFrozen(seen.reader!.items)).toBe(true);
     expect(Object.isFrozen(seen.reader!.items[0]!.space)).toBe(true);
     expect(seen.blind!.items).toEqual([]);
-    expect(Object.keys(seen.reader!).sort()).toEqual(["items", "now"]); // and nothing else
+    expect(Object.keys(seen.reader!).sort()).toEqual(["items", "now", "reach"]); // and nothing else
+    expect(seen.reader!.reach).toBe("view");
     expect(seen.reader!.now).toBe(NOW);
   });
 
@@ -179,6 +180,20 @@ describe("runSurface: what a plugin may read", () => {
 });
 
 describe("Coming up (spec 4.7)", () => {
+  it("says where its dates come from: the view, or everything followed (ui-revisions-1 item 6)", () => {
+    const soon = item({ id: "e", kind: "event", eventStart: "2026-10-25T18:00:00.000Z" });
+    const inView = comingUpPlugin.render(api([soon]));
+    const followed = comingUpPlugin.render({ ...api([soon]), reach: "followed" });
+    expect(inView).toMatchObject({ type: "dates", intro: "Dates from the items in this view." });
+    expect(followed).toMatchObject({ type: "dates", intro: "Dates from everything you follow." });
+  });
+
+  it("Everything places Coming up on everything followed; Civic on the view", () => {
+    expect(MODE_DEFINITIONS.everything.surfaces["river.panel"]).toEqual(["coming-up"]);
+    expect(MODE_DEFINITIONS.everything.pluginReach).toBe("followed");
+    expect(MODE_DEFINITIONS.civic.pluginReach).toBe("view");
+  });
+
   it("lists upcoming deadlines and event starts in date order, at most five", () => {
     const items = [
       item({ title: "Parks vote", deadline: "2026-11-08T05:00:47.238Z" }),
