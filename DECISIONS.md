@@ -16,6 +16,19 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-21 — mastodon.social refuses the actor, not the outbox
+- Question: spec 4.3 gives the 401/403 fallback only for the outbox read, but mastodon.social
+  (two seed accounts) answers unsigned actor reads with 401 while serving outboxes with 200.
+- Reading used: resolve falls back to `/api/v1/accounts/lookup` for the profile when NodeInfo says
+  Mastodon; the ActivityPub outbox is still read normally.
+- Proposed change: spec 4.3 says "When the actor or outbox read returns 401/403 …".
+- Thread / PR: M4 (claude/m4-fediverse-adapter)
+
+### 2026-10-21 — Self-replies in a thread
+- Question: "Replies are hidden" doesn't say whether an account's replies to its own posts count.
+- Reading used: hidden too (the conservative reading).
+- Thread / PR: M4
+
 ### 2026-10-20 — Where the hostname lookup runs
 - Question: CLAUDE.md says every query runs inside forInstance(), forAccount() or forIdentity(),
   but resolving the request's hostname to an instance (ADR-004, check 26) happens before any
@@ -49,6 +62,45 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n)
 
 ## Log
+
+## 2026-10-21 — Fediverse resolve, identity and manifest (M4)
+- Decision: WebFinger rel=self (activity+json or the ld+json profile type), then the actor with
+  `Accept: application/activity+json` (its `id` must be on the host that served it), then NodeInfo
+  (well-known, newest 2.x). When a Mastodon server refuses the actor with 401/403, resolve uses
+  `/api/v1/accounts/lookup` (Group if `group`, Service if `bot`, else Person) and the outbox
+  `{account.uri}/outbox`; any other server answering 401/403 is `server_only`. `canonicalUrl` and
+  `actorId` are the actor id, `homeUrl` its `url`, `feedUrl` the outbox, `network` NodeInfo's
+  lowercased software name. The manifest holds `actor` (with `fetchedAt`, `expiresAt` 24 h on),
+  `software`, `via` (`activitypub` or `mastodon_api`) and `mastodonAccountId`; `fetchNew`
+  refreshes an expired actor, best effort.
+- Why: spec 4.3; the actor id is the stable IRI; mastodon.social refuses unsigned actor reads.
+- Alternatives: mark mastodon.social spaces blocked (loses two seeds); the handle as canonical URL.
+- Thread / PR: M4
+
+## 2026-10-21 — Fediverse source ids, hidden items and kinds (M4)
+- Decision: `source_id` is the activity IRI; REST statuses use `{status.uri}/activity`, and a
+  reblog its own `uri`, matching the outbox (tested on real data, so switching paths never
+  duplicates). Stored hidden: non-public (Public missing from `to`, so unlisted too), all replies
+  including self-replies, Updates, unknown types, Announces without an object id, Group-relayed
+  replies; entries without an id are dropped. `Link` attachments (previews) don't count toward
+  photo or media; Question → post; Image → photo; titles from `name` for article, video,
+  podcast, event and photo only; a Note's content warning is the summary; Video/Audio without
+  attachments take file and duration from `url` Links (PeerTube).
+- Why: spec 3.1, 4.3; keeping hidden items lets stop-at-known match every activity.
+- Alternatives: object ids (an Update at the top would stop stop-at-known early); drop non-public.
+- Thread / PR: M4
+
+## 2026-10-21 — Fediverse boosts, input and errors (M4)
+- Decision: `boostOf` = `{objectId, host, url?, author?}` from the Announce; an embedded Create
+  (FEP-1b12 Groups, e.g. WordPress) supplies the inner object's sanitized content, title and media.
+  `dereferenceBoost(boost, { guard, budget })` with `createBoostBudget(20)` per refresh; the object
+  must come from its id's host. The follow box accepts `@name@server`, `acct:name@server` and https
+  profile URLs in known fediverse path shapes, never bare `name@server` (indistinguishable from an
+  email address; constraint 7). Guard and HTTP failures throw `AdapterError` (`refused` or
+  `unreachable`; a 429 is unreachable with "The server asked us to wait before reading it again",
+  never retried); server-only is returned as `fetchStatus: "blocked"`, a lasting state.
+- Why: spec 4.3 (boosts fetched only when opened, at most 20 per refresh), F6.
+- Thread / PR: M4
 
 ## 2026-10-21 — The fetch guard's shape (M2)
 - Decision: `src/shared/fetch/` exports `createFetchGuard(options)` and a process-wide
