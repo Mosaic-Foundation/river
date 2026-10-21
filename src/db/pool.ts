@@ -1,6 +1,6 @@
 // The one node-postgres pool. Only files under src/db/ may import `pg` (enforced by
-// eslint.config.js); everything else goes through forInstance(), forAccount() or forIdentity()
-// in ./context.ts.
+// eslint.config.js); everything else goes through forInstance(), forAccount(), forHost() or
+// forIdentity() in ./context.ts.
 //
 // Both apps connect through Supabase's transaction pooler (port 6543) as river_app or
 // identity_app (ADR-004). Transaction mode cannot hold prepared statements, so no query ever

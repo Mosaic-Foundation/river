@@ -3,6 +3,7 @@ import type { QueryResult } from "pg";
 import {
   ForeignIdError,
   forAccount,
+  forHost,
   forIdentity,
   forInstance,
   stampRow,
@@ -81,6 +82,17 @@ describe("db context", () => {
     const { source, calls } = fakeSource();
     await forInstance(INST.toUpperCase(), async () => 1, source);
     expect(calls[1].values).toEqual(["app.instance_id", INST]);
+  });
+
+  it("forHost opens a transaction with no settings", async () => {
+    const { source, calls, released } = fakeSource();
+    await forHost((db) => db.query("SELECT id FROM river.instances WHERE hostname = $1", ["x"]), source);
+    expect(calls.map((c) => c.text)).toEqual([
+      "BEGIN",
+      "SELECT id FROM river.instances WHERE hostname = $1",
+      "COMMIT",
+    ]);
+    expect(released).toEqual([undefined]);
   });
 
   it("forIdentity opens a transaction with no settings yet", async () => {
