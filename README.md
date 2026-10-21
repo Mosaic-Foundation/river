@@ -51,7 +51,7 @@ to do by hand.
 | Credential | Held by | Threads see it? |
 | --- | --- | --- |
 | GitHub | Claude's GitHub proxy, limited to repos attached to the session | No |
-| Supabase scoped token + DB password | Secrets of the `supabase-dev` GitHub environment, deployable only from `main`; used by `deploy-migrations` | No |
+| Supabase scoped token, DB password, session pooler URI (`SUPABASE_DB_URL`) | Secrets of the `supabase-dev` GitHub environment, deployable only from `main`; used by `deploy-migrations` | No |
 | Supabase URL + service-role key | Vercel environment variables (server-side) | No |
 | Vercel | Vercel's Git integration deploys on push; no token needed | No |
 
@@ -59,6 +59,12 @@ Threads build and test against a local Supabase stack in their own sandbox.
 
 ## Notes
 
+- A scoped Supabase access token needs **API Keys: read** and **API Key Secrets: read** for
+  `supabase link` to succeed.
+- GitHub's hosted runners have no IPv6, and Supabase's direct database host is IPv6-only, so
+  `supabase db push` fails there with "IPv6 is not supported on your current network". Put the
+  project's session pooler URI (port 5432) in the `supabase-dev` secret `SUPABASE_DB_URL`;
+  `deploy-migrations` passes it as `db push --db-url`.
 - Rulesets on private repos need a paid GitHub plan. The script defaults to a public repo.
 - Permission rules in `.claude/settings.json` only reach cloud threads when the Claude Code
   project has exactly one repository. Keep each project to one repo.
