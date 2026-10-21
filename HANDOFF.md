@@ -20,6 +20,24 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 1, items 5 and 8: Civic circles and the Sample River line — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → PR 1 of the UI revisions series (self-merge)
+- Migrations: none.
+
+**What it does.** Adds `docs/spec/ui-revisions-1.md` (Adam's eight UI revisions with acceptance
+checks). Civic mode now lists only the `role = civic` circle (plus All) in the sidebar and the
+phone chip row; switching to Civic from another circle falls back to All. Visitors see one line
+above the header: "Sample River · Sign in to make it your own".
+
+**Keys.** None.
+
+**Tests.** e2e `revisions.spec.ts` (items 5 and 8); `modes.spec.ts` checks a member sees no
+sample line. `npm run check` green.
+
+### Follow-ups
+- Items 1, 2, 3, 4, 6, 7 follow in their own PRs.
+
 ## Production fix: sanitize-html loads under Vercel's CommonJS loader — 2026-10-21
 
 - Branch / PR: claude/sanitize-html-esm-commonjs-cu2n3p → PR (self-merge; no needs-adam file)

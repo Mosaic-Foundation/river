@@ -856,3 +856,19 @@ a.button {
     padding: var(--space-lg) var(--space-lg) var(--space-xs);
   }
 }
+
+/* ---------- Sample River line (ui-revisions-1 item 8) ---------- */
+
+.sample-banner {
+  margin: 0;
+  padding: var(--space-xs) var(--space-md);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.sample-banner a {
+  color: var(--color-link);
+  font-weight: 700;
+}

@@ -193,7 +193,8 @@ test("check 23: a member's Mark read, Mark unread, opened links and Mark all rea
 test("sign out (F10) clears the River session; the page is a visitor's again", async ({ page, context }) => {
   await signUpFromRiver(page, "signout");
   await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator(".topbar").getByRole("link", { name: "Sign in" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("sample-banner")).toBeVisible();
   expect((await context.cookies(CLIENT)).find((c) => c.name === SESSION_COOKIE)).toBeUndefined();
   expect((await feed(page)).viewer).toBeNull();
 });
@@ -204,7 +205,7 @@ test("phone: the You tab offers Sign up and Sign in, then shows the member and S
   await openFeed(page);
   const tabs = page.getByRole("navigation", { name: "River sections" });
   await tabs.getByRole("button", { name: "You" }).click();
-  await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+  await expect(page.locator(".tab-placeholder").getByRole("link", { name: "Sign in" })).toBeVisible();
   await page.getByRole("link", { name: "Sign up" }).click();
   await page.waitForURL(`${identityURL}/authorize?**`);
   await page.getByLabel("Email address").fill(testEmail("phone"));

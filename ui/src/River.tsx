@@ -55,6 +55,11 @@ type Load =
       viewer: Viewer | null;
     };
 
+/** The circles Civic mode lists: the one whose role is civic (found by role, never by name). */
+function civicCircles(circles: FeedCircle[]): FeedCircle[] {
+  return circles.filter((c) => c.role === "civic");
+}
+
 const MODE_TITLES: Record<string, string> = { everything: "Everything", civic: "Civic" };
 
 /** Filters from the address bar, so a reload or a shared link keeps them. */
@@ -222,13 +227,21 @@ export function River() {
   const modeTitle = modes.find((m) => m.id === mode)?.title ?? MODE_TITLES[mode] ?? "River";
   // Links to the Following page keep a mode other than Everything (its theme follows).
   const linkMode = mode === "everything" ? "" : mode;
+  const circles = load.status === "ok" ? load.circles : [];
+  // Civic mode shows only civic sources, so only the role = civic circle (ui-revisions-1 item 5).
+  const shownCircles = mode === "civic" ? civicCircles(circles) : circles;
   useEffect(() => {
     if (load.status !== "unknown_host") document.title = `${modeTitle} · Mosaic River`;
   }, [modeTitle, load.status]);
 
   const changeMode = (next: string) => {
     setTab("feed");
-    setFilter({ mode: load.status === "ok" && next === load.defaultMode ? "" : next });
+    const patch: Partial<FilterState> = { mode: load.status === "ok" && next === load.defaultMode ? "" : next };
+    // Civic mode lists only the civic circle (ui-revisions-1 item 5): another circle falls back to All.
+    if (next === "civic" && filters.circle !== "All" && !civicCircles(circles).some((c) => c.id === filters.circle)) {
+      patch.circle = "All";
+    }
+    setFilter(patch);
   };
 
   const setFilter = (patch: Partial<FilterState>) => {
@@ -265,12 +278,11 @@ export function River() {
 
   if (load.status === "unknown_host") return <NotFound message={load.message} homeLink={false} />;
 
-  const circles = load.status === "ok" ? load.circles : [];
   const panel = load.status === "ok" ? load.panel : [];
   const items = load.status === "ok" ? load.items : [];
   const unread = items.filter((i) => !reads.isRead(i.id));
   const filterProps = {
-    circles,
+    circles: shownCircles,
     value: filters,
     onCircle: (circle: string) => setFilter({ circle }),
     onType: (type: string) => setFilter({ type }),
@@ -282,6 +294,13 @@ export function River() {
       <a className="skip-link" href="#feed">
         Skip to the feed
       </a>
+      {viewer === null && (
+        // Visitors read the instance's sample River (ui-revisions-1 item 8).
+        <p className="sample-banner" data-testid="sample-banner">
+          Sample River<span aria-hidden="true"> · </span>
+          <a href={SIGN_IN_URL}>Sign in</a> to make it your own
+        </p>
+      )}
       <Header
         modes={modes}
         mode={chosenMode}
