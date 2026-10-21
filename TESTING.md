@@ -64,6 +64,11 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, M12 brought up to date with main (after #17-#24): e2e `media.spec.ts` now checks
+  the card's host (`card-host`) instead of the removed "Open on" link, and in the reader view
+  "Open original" (href, new tab, noopener) plus the episode's `<audio>` and the PeerTube
+  `<video>` (https src, `preload="none"`). Unit 530, API 145 (fresh `db reset`), e2e 68.
+
 - 2026-10-21, identity error log: unit `identityErrorLog` checks `errorLogLine()`: a coded error
   (SQLSTATE 23505 with an email in its detail, ECONNREFUSED) logs name and code only; an uncoded
   configuration error logs its message on one line, capped at 300 characters.

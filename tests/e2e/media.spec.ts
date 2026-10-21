@@ -5,7 +5,8 @@ import { expect, test } from "./fixtures";
 import { addAuthenticator, resetLimits, setClock, testEmail, throughCallback } from "./identityHelpers";
 
 // M12 "Real media": a member follows a podcast feed and a PeerTube channel from the follow box,
-// and their cards show the kind, the length and an "Open on {host}" link. Both sources are
+// and their cards show the kind, the length and the source host; the reader view (ui-revisions-1
+// item 1) has "Open original" and plays the episode's audio and the video's file in place. Both sources are
 // SYNTHETIC fixtures (tests/fixtures/http/synthetic-*, see TESTING.md) the API replays
 // (FETCH_FIXTURES_DIR, TEST_CLOCK_NOW); the browser reaches nothing but loopback, so thumbnails
 // from those hosts fail to load and the cards render without them (check 21's rule).
@@ -49,7 +50,7 @@ async function search(page: Page, words: string): Promise<void> {
   await box.press("Enter");
 }
 
-test("M12: a podcast feed and a PeerTube channel show their kind, length and Open link", async ({ page }) => {
+test("M12: a podcast feed and a PeerTube channel show their kind, length, host and Open original", async ({ page }) => {
   await signUp(page, "m12media");
   await page.goto("/following");
   await expect(page.getByRole("heading", { level: 1, name: "Following" })).toBeVisible();
@@ -68,7 +69,8 @@ test("M12: a podcast feed and a PeerTube channel show their kind, length and Ope
   await page.getByRole("link", { name: "Back to your River" }).click();
   await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
 
-  // The podcast episode: kind, length, Open on its host (new tab, noopener).
+  // The podcast episode: kind, length, its host; the reader opens it on its host (new tab,
+  // noopener) and plays the audio in place, loading nothing until played.
   await search(page, "Libraries");
   const episode = cards(page).filter({ hasText: "Episode 3: Libraries after dark" });
   await expect(episode).toHaveCount(1);
@@ -77,12 +79,21 @@ test("M12: a podcast feed and a PeerTube channel show their kind, length and Ope
   await expect(episode.getByRole("list", { name: "Details" })).toContainText("42 min");
   await expect(episode.locator(".card-source")).toHaveText("Synthetic Commons Radio");
   await expect(episode.locator(".label-live")).toBeVisible();
-  const openEpisode = episode.getByRole("link", { name: /Open on synthetic-podcast\.example/ });
+  await expect(episode.getByTestId("card-host")).toHaveText("synthetic-podcast.example");
+  await episode.locator(".card-source").click();
+  const reader = page.getByTestId("reader");
+  const openEpisode = reader.getByRole("link", { name: /^Open original/ });
   await expect(openEpisode).toHaveAttribute("href", "https://synthetic-podcast.example/episodes/3");
   await expect(openEpisode).toHaveAttribute("target", "_blank");
   await expect(openEpisode).toHaveAttribute("rel", /noopener/);
+  const audio = reader.getByTestId("reader-player");
+  await expect(audio).toHaveCount(1);
+  expect(await audio.evaluate((el) => el.tagName)).toBe("AUDIO");
+  await expect(audio).toHaveAttribute("src", /^https:\/\/synthetic-podcast\.example\//);
+  await expect(audio).toHaveAttribute("preload", "none");
+  await page.getByRole("button", { name: "Back to River" }).click();
 
-  // The PeerTube video: kind, length as m:ss, Open on its host.
+  // The PeerTube video: kind, length as m:ss, its host; Open original and a player in the reader.
   await search(page, "Ridge");
   const video = cards(page).filter({ hasText: "Ridge line at dawn" });
   await expect(video).toHaveCount(1);
@@ -91,11 +102,18 @@ test("M12: a podcast feed and a PeerTube channel show their kind, length and Ope
   await expect(video.getByRole("list", { name: "Details" })).toContainText("4:33");
   await expect(video.locator(".card-source")).toHaveText("Synthetic Trail Films");
   await expect(video).not.toContainText("boosted a post");
-  const openVideo = video.getByRole("link", { name: /Open on synthetic-tube\.example/ });
-  await expect(openVideo).toHaveAttribute("href", "https://synthetic-tube.example/w/cXqH7r2Lw9TzP4mV1nBk3s");
-  await expect(openVideo).toHaveAttribute("rel", /noopener/);
+  await expect(video.getByTestId("card-host")).toHaveText("synthetic-tube.example");
   // Its thumbnail can't load here (no outside hosts): the card renders without a broken image.
   await expect(video.locator("img")).toHaveCount(0);
+  await video.locator(".card-source").click();
+  const openVideo = reader.getByRole("link", { name: /^Open original/ });
+  await expect(openVideo).toHaveAttribute("href", "https://synthetic-tube.example/w/cXqH7r2Lw9TzP4mV1nBk3s");
+  await expect(openVideo).toHaveAttribute("rel", /noopener/);
+  const player = reader.getByTestId("reader-player");
+  await expect(player).toHaveCount(1);
+  expect(await player.evaluate((el) => el.tagName)).toBe("VIDEO");
+  await expect(player).toHaveAttribute("src", /^https:\/\/synthetic-tube\.example\//);
+  await expect(player).toHaveAttribute("preload", "none");
 
   const results = await new AxeBuilder({ page }).analyze();
   const serious = results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id);
