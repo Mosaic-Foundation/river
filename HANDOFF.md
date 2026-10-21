@@ -20,6 +20,26 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Identity host: configuration errors say what failed in the log — 2026-10-21
+
+- Branch / PR: claude/identity-error-message → PR (self-merge; not needs-adam)
+- Migrations: none.
+
+**What it does.** Production `GET /authorize` logged only "identity: GET /authorize failed: Error".
+The identity error handler now logs an error's message when the error has no code (the
+configuration errors from `env.ts`, `db/pool.ts` and `identity/config.ts`, which name a setting),
+on one line and capped at 300 characters. An error with a code (a database SQLSTATE, or a driver
+or system code such as ECONNREFUSED) still logs its name and code only, so database messages and
+details never reach the log. The line comes from `errorLogLine()` in `src/identity/routes.ts`.
+
+**Keys.** None.
+
+**Tests.** Unit `identityErrorLog` (a config error's message logged; a database error's message
+and detail withheld; coded system errors withheld; long messages capped; non-errors). `npm run
+check`: 465 passed; API `identity`: 14 passed.
+
+### Follow-ups
+- Read the next production log line for `GET /authorize`; it should now name the failing setting.
 ## Reader view plays https audio and video (CSP media-src) — 2026-10-21
 
 - Branch / PR: claude/eloquent-newton-v3ftlr → media PR (needs-adam: `vercel.json` CSP)

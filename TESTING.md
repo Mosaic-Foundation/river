@@ -55,6 +55,9 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, identity error log: unit `identityErrorLog` checks `errorLogLine()`: a coded error
+  (SQLSTATE 23505 with an email in its detail, ECONNREFUSED) logs name and code only; an uncoded
+  configuration error logs its message on one line, capped at 300 characters.
 - 2026-10-21, reader audio and video: unit `ui/csp` asserts `media-src 'self' https:`;
   `ui/format` covers safeMediaUrl (https only, no userinfo) and playableMedia; e2e
   `revisions.spec.ts` opens a recorded fediverse post with a video at `/item/{id}` and checks the
