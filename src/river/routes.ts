@@ -11,6 +11,7 @@ import type { Viewer } from "./accounts.js";
 import { authRoutes } from "./auth/routes.js";
 import { checkOrigin, readSession, requireMember } from "./auth/session.js";
 import { FeedInputError, memberFeed, memberMarkAllRead, visitorFeed, type FeedParams } from "./feed/index.js";
+import { followingRoutes } from "./following/routes.js";
 import { requireInstance, type Instance } from "./instances.js";
 
 /** A query parameter as one string; repeated or nested values are refused, not guessed at. */
@@ -59,6 +60,9 @@ export function riverRoutes(): Router {
   });
 
   router.use(authRoutes());
+
+  // The follow box, the Following page and circles (spec F6, F7, F8): members only.
+  router.use(followingRoutes());
 
   // The feed (spec 4.5): a visitor's (seed follows; writes nothing but the refresh's source data,
   // check 23) or a signed-in member's (their own follows, circles and read state).
