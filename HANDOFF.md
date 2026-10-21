@@ -20,6 +20,25 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Production fix: sanitize-html loads under Vercel's CommonJS loader — 2026-10-21
+
+- Branch / PR: claude/sanitize-html-esm-commonjs-cu2n3p → PR (self-merge; no needs-adam file)
+- Migrations: none.
+
+**What it does.** Production was down on both Vercel projects: every function crashed at load with
+ERR_REQUIRE_ESM because sanitize-html 2.18.1 pulls in htmlparser2 12 (ES-only) and Vercel's loader
+require()s it. Plain Node 24 can, so CI passed. `package.json` now overrides sanitize-html's
+htmlparser2 to ^10.1.0 (CommonJS build; output unchanged, `npm audit` clean). `identity/package.json`
+sets Node 24.x for the mosaic-id project.
+
+**Keys.** None.
+
+**Tests.** Unit `sanitizeCjsLoad` reproduces the Vercel loader with `--no-experimental-require-module`
+(fails without the override). `npm run check`: 32 files, 453 tests passed; UI build green.
+
+### Follow-ups
+- Drop the override once sanitize-html ships a build that loads under require() without it.
+
 ## M11 Finish: member export, @live tests, feed performance report, deploy checklist — 2026-10-21
 
 - Branch / PR: claude/m11-finish → PR. Built on M5–M10 (unmerged); merge after them, once its own
