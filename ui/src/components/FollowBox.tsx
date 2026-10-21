@@ -87,7 +87,7 @@ export function FollowBox({
         Follow something
       </h2>
       <p className="panel-text" id={hintId}>
-        Paste the web address of a space or a stream, or a handle like @name@server.
+        Paste the web address of a space, a stream, a feed or a podcast, or a handle like @name@server.
       </p>
       <form className="follow-form" onSubmit={lookUp}>
         <label className="visually-hidden" htmlFor={inputId}>

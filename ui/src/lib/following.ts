@@ -136,6 +136,7 @@ export const CIRCLE_COLORS: ReadonlyArray<{ value: string; label: string }> = [
 export const GROUPS: ReadonlyArray<{ adapter: string; title: string }> = [
   { adapter: "civic_hub", title: "Civic Hubs" },
   { adapter: "fediverse", title: "Fediverse" },
+  { adapter: "rss", title: "Feeds and podcasts" },
   { adapter: "sample", title: "Samples" },
 ];
 
