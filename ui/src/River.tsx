@@ -429,7 +429,7 @@ export function River() {
         </div>
 
         <main className={tab === "feed" ? "feed" : "feed hidden-phone"} id="feed" tabIndex={-1}>
-          {readerState ? (
+          {readerState && (
             <ReaderView
               state={readerState}
               read={readerItem ? reads.isRead(readerItem.id) : false}
@@ -438,82 +438,91 @@ export function River() {
               onMarkUnread={(id) => reads.markUnread([id])}
               onSampleInfo={(trigger) => setSampleTrigger(trigger)}
             />
-          ) : (
-            <>
-              <div className="feed-head">
-                <h1 className="feed-title">{modeTitle}</h1>
-                <p className="feed-summary">
-                  {load.status === "ok" && items.length > 0 ? `${unread.length} unread · newest first` : "Newest first"}
-                </p>
-                {load.status === "ok" && items.length > 0 && (
-                  <button
-                    type="button"
-                    className="button button-quiet"
-                    disabled={unread.length === 0}
-                    onClick={() =>
-                      viewer
-                        ? serverReads.markView(items.map((i) => i.id), filters)
-                        : browserReads.markRead(items.map((i) => i.id))
-                    }
-                  >
-                    Mark all read
-                  </button>
-                )}
-              </div>
-
-              <ActiveFilters circles={shownCircles} value={filters} onChange={setFilter} />
-
-              {load.status === "loading" && (
-                <p className="feed-status" role="status">
-                  Loading your River…
-                </p>
-              )}
-              {load.status === "error" && (
-                <div className="feed-status" role="alert">
-                  <p>{load.message}</p>
-                  <button type="button" className="button button-primary" onClick={() => setRetry((n) => n + 1)}>
-                    Try again
-                  </button>
-                </div>
-              )}
-              {load.status === "ok" && load.emptyMessage && (
-                <p className="feed-status feed-empty" role="status">
-                  {load.emptyMessage}
-                </p>
-              )}
-
-              {items.length > 0 && (
-                <ol className="feed-list" aria-label="Items, newest first">
-                  {items.map((item) => (
-                    <li key={item.id}>
-                      <FeedCard
-                        item={item}
-                        read={reads.isRead(item.id)}
-                        now={now}
-                        onMarkRead={(id) => reads.markRead([id])}
-                        onMarkUnread={(id) => reads.markUnread([id])}
-                        onSampleInfo={(trigger) => setSampleTrigger(trigger)}
-                        onOpen={openItem}
-                      />
-                    </li>
-                  ))}
-                </ol>
-              )}
-
-              {load.status === "ok" && load.nextCursor && (
-                <div className="feed-more">
-                  <button type="button" className="button button-secondary" onClick={loadMore} disabled={moreLoading}>
-                    {moreLoading ? "Loading more…" : "Load more"}
-                  </button>
-                  {moreError && <p role="alert">{moreError}</p>}
-                </div>
-              )}
-            </>
           )}
+          {/* The feed stays mounted while reading, so Back finds it exactly as it was. */}
+          <div className="feed-body" hidden={Boolean(readerState)}>
+            <div className="feed-head">
+              <h1 className="feed-title">{modeTitle}</h1>
+              <p className="feed-summary">
+                {load.status === "ok" && items.length > 0 ? `${unread.length} unread · newest first` : "Newest first"}
+              </p>
+              {load.status === "ok" && items.length > 0 && (
+                <button
+                  type="button"
+                  className="button button-quiet"
+                  disabled={unread.length === 0}
+                  onClick={() =>
+                    viewer
+                      ? serverReads.markView(items.map((i) => i.id), filters)
+                      : browserReads.markRead(items.map((i) => i.id))
+                  }
+                >
+                  Mark all read
+                </button>
+              )}
+            </div>
+
+            <ActiveFilters circles={shownCircles} value={filters} onChange={setFilter} />
+
+            {load.status === "loading" && (
+              <p className="feed-status" role="status">
+                Loading your River…
+              </p>
+            )}
+            {load.status === "error" && (
+              <div className="feed-status" role="alert">
+                <p>{load.message}</p>
+                <button type="button" className="button button-primary" onClick={() => setRetry((n) => n + 1)}>
+                  Try again
+                </button>
+              </div>
+            )}
+            {load.status === "ok" && load.emptyMessage && (
+              <p className="feed-status feed-empty" role="status">
+                {load.emptyMessage}
+              </p>
+            )}
+
+            {items.length > 0 && (
+              <ol className="feed-list" aria-label="Items, newest first">
+                {items.map((item) => (
+                  <li key={item.id}>
+                    <FeedCard
+                      item={item}
+                      read={reads.isRead(item.id)}
+                      now={now}
+                      onMarkRead={(id) => reads.markRead([id])}
+                      onMarkUnread={(id) => reads.markUnread([id])}
+                      onSampleInfo={(trigger) => setSampleTrigger(trigger)}
+                      onOpen={openItem}
+                    />
+                  </li>
+                ))}
+              </ol>
+            )}
+
+            {load.status === "ok" && load.nextCursor && (
+              <div className="feed-more">
+                <button type="button" className="button button-secondary" onClick={loadMore} disabled={moreLoading}>
+                  {moreLoading ? "Loading more…" : "Load more"}
+                </button>
+                {moreError && <p role="alert">{moreError}</p>}
+              </div>
+            )}
+          </div>
         </main>
 
         {panel.length > 0 && !readerId && (
-          <div className={tab === "feed" ? "plugin-column" : "plugin-column hidden-phone"}>
+          // Everything's Coming up sits below the feed on a phone; Civic's panel above it.
+          <div
+            className={[
+              "plugin-column",
+              mode === "everything" ? "plugin-column-after" : "",
+              tab === "feed" ? "" : "hidden-phone",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <PluginPanel plugins={panel} label={`${modeTitle} panel`} />
           </div>
         )}

@@ -16,6 +16,12 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-21 — 4.7 says Everything has no panel
+- Question: spec 4.7 and F9 give Everything "no panel"; ui-revisions-1 item 6 gives it Coming up.
+- Reading used: ui-revisions-1 wins (Adam, 2026-10-21); Civic's panel is unchanged.
+- Proposed change: 4.7 "everything (all follows, Coming up across all follows, Mosaic theme)".
+- Thread / PR: UI revisions 1, PR 4
+
 ### 2026-10-21 — The export's circles carry no members
 - Question: 3.3's `circles` entries hold only `name`, `color` and `role`; a space reaches a circle
   only through a follow's `circles`. A circle can hold a space the member doesn't follow (a seed
@@ -231,6 +237,18 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-21 — Coming up in Everything reads everything followed (UI revisions 1, item 6)
+- Decision: modes gain `pluginReach`. Everything places Coming up on `river.panel` with reach
+  "followed": the mode's whole scope, without circle, types, networks or search. Civic keeps
+  "view" (spec 4.7). Plugins get `reach` in their ViewApi, so Coming up's intro says "Dates from
+  everything you follow." It lists deadlines as well as event starts, as in Civic. On a phone the
+  column comes after the feed.
+- Why: item 6 says "upcoming events across all followed sources"; a filter shouldn't empty it.
+  A hub's vote closing is a dated event to a reader.
+- Alternatives: events only (would hide every hub deadline); running it on the view (filters
+  would empty it); a phone tab (a fifth bottom tab for one list).
+- Thread / PR: UI revisions 1, PR 4
 
 ## 2026-10-21 — The reader view's address and data (UI revisions 1, item 1)
 - Decision: `/item/{id}` keeps the feed's query string (mode, filters). An item already in the

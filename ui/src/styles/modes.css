@@ -173,6 +173,12 @@
     padding: var(--space-md) var(--space-md) 0;
   }
 
+  /* Everything's Coming up comes after the feed (ui-revisions-1 item 6). */
+  .plugin-column-after {
+    order: 1;
+    padding: 0 var(--space-md) var(--space-md);
+  }
+
   .plugin {
     padding: var(--space-sm) var(--space-md);
   }

@@ -82,22 +82,25 @@ function modeSummary(instance: Instance, mode: Mode): Pick<FeedResponse, "mode" 
 
 /**
  * Runs the plugins the mode places, on the current view's items (the same scope and filters as
- * the feed). Reads the items only when some surface has a plugin.
+ * the feed), or, for a mode whose plugins reach everything followed, on the mode's whole scope
+ * without circle or filters. Reads the items only when some surface has a plugin.
  */
 async function viewSurfaces(
   db: Db,
   instance: Instance,
   mode: Mode,
-  scope: FeedScope,
+  view: { scope: FeedScope; followed: () => FeedScope },
   filter: Pick<FeedFilter, "kinds" | "adapters" | "q">,
   now: Date,
 ): Promise<Partial<Record<Surface, SurfaceOutput[]>>> {
-  const placed = Object.entries(MODE_DEFINITIONS[mode].surfaces) as Array<[Surface, readonly string[]]>;
+  const definition = MODE_DEFINITIONS[mode];
+  const placed = Object.entries(definition.surfaces) as Array<[Surface, readonly string[]]>;
   if (!placed.some(([, ids]) => ids.length > 0)) return {};
-  const items = await queryViewItems(db, scope, filter);
+  const reach = definition.pluginReach;
+  const items = reach === "followed" ? await queryViewItems(db, view.followed(), {}) : await queryViewItems(db, view.scope, filter);
   const surfaces: Partial<Record<Surface, SurfaceOutput[]>> = {};
   for (const [surface, ids] of placed) {
-    surfaces[surface] = runSurface(builtInRegistry, surface, ids, { items, now, config: instance.plugins });
+    surfaces[surface] = runSurface(builtInRegistry, surface, ids, { items, now, config: instance.plugins, reach });
   }
   return surfaces;
 }
@@ -141,7 +144,14 @@ export async function visitorFeed(
       const empty = page.items.length === 0 && !cursor;
       const surfaces = cursor
         ? null
-        : await viewSurfaces(db, instance, mode, scope, filter, deps.now ?? riverNow());
+        : await viewSurfaces(
+            db,
+            instance,
+            mode,
+            { scope, followed: () => scopeFor(view, mode, undefined) },
+            filter,
+            deps.now ?? riverNow(),
+          );
       return {
         instance: instanceSummary(instance),
         ...modeSummary(instance, mode),
@@ -207,7 +217,14 @@ export async function memberFeed(
     const empty = page.items.length === 0 && !cursor;
     const surfaces = cursor
       ? null
-      : await viewSurfaces(db, instance, mode, scope, filter, deps.now ?? riverNow());
+      : await viewSurfaces(
+          db,
+          instance,
+          mode,
+          { scope, followed: () => scopeFor(view, mode, undefined) },
+          filter,
+          deps.now ?? riverNow(),
+        );
     return {
       instance: instanceSummary(instance),
       ...modeSummary(instance, mode),

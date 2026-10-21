@@ -20,6 +20,27 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 1, item 6: Coming up in Everything — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → PR 4 of the UI revisions series (self-merge)
+- Migrations: none.
+
+**What it does.** Everything mode gets a right-hand "Coming up" column: up to five upcoming
+deadlines and event starts across everything followed, soonest first, unaffected by circle,
+type, network or search. On a phone it sits below the feed. Modes gained `pluginReach`; plugins
+get `reach` in their API. Also from the reader view's review: the feed now stays mounted (hidden)
+while an item is open, so Back restores the exact scroll position even while images load, and
+tests now check the author and the kept query string.
+
+**Keys.** None.
+
+**Tests.** Unit `plugins` (intro per reach, Everything's placement); API `modes` (Everything's
+panel, unchanged by filters); e2e `revisions.spec.ts` item 6 (desktop column, date order, filter,
+phone order) and the reader's query string; `modes.spec.ts` updated for Everything's panel.
+
+### Follow-ups
+- None.
+
 ## UI revisions 1, item 1: the reader view — 2026-10-21
 
 - Branch / PR: claude/eloquent-newton-v3ftlr → PR 3 of the UI revisions series (self-merge)

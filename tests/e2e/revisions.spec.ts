@@ -224,8 +224,9 @@ test.describe("item 1: the reader view", () => {
     await expect(reader.getByTestId("reader-source")).toHaveText(source);
     await expect(reader.getByRole("heading", { level: 1 })).toBeFocused();
     await expect(reader.locator(".reader-content").first()).not.toBeEmpty();
+    await expect(reader.getByTestId("reader-author")).toContainText(/^By .+/);
     await expect(sidebar(page)).toBeVisible();
-    await expect(cards(page)).toHaveCount(0);
+    await expect(cards(page).first()).toBeHidden();
 
     // The same item from the API, straight from the address bar (a reload or a shared link).
     await page.reload();
@@ -240,8 +241,17 @@ test.describe("item 1: the reader view", () => {
     await openFeed(page);
     const card = cards(page).nth(8);
     await card.scrollIntoViewIfNeeded();
-    await page.mouse.wheel(0, 300);
-    const y = await page.evaluate(() => window.scrollY);
+    await page.evaluate(() => window.scrollBy({ top: 300, behavior: "instant" }));
+    // Wait until the position settles (late images can still move it), then remember it.
+    let y = -1;
+    await expect
+      .poll(async () => {
+        const now = await page.evaluate(() => window.scrollY);
+        const settled = now === y;
+        y = now;
+        return settled;
+      })
+      .toBe(true);
     expect(y).toBeGreaterThan(200);
     const id = (await card.getAttribute("data-item-id"))!;
 
@@ -324,6 +334,61 @@ test.describe("item 1: the reader view", () => {
     await cards(page).first().locator(".card-source").click();
     await expect(page.getByTestId("reader")).toBeVisible();
     await expect(page.getByRole("button", { name: "Back to River" })).toBeInViewport();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+  });
+});
+
+test.describe("item 1: the reader keeps the feed's filters", () => {
+  test("the query string survives the round trip", async ({ page }) => {
+    await openFeed(page, "/?mode=civic&type=civic");
+    const card = cards(page).first();
+    const id = (await card.getAttribute("data-item-id"))!;
+    await card.locator(".card-source").click();
+    await expect(page).toHaveURL(new RegExp(`/item/${id}\\?mode=civic&type=civic$`));
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "civic");
+    await page.getByRole("button", { name: "Back to River" }).click();
+    await expect(page).toHaveURL(/\/\?mode=civic&type=civic$/);
+  });
+});
+
+test.describe("item 6: Coming up in Everything", () => {
+  test("a right-hand column of upcoming dates, soonest first, whatever the filters", async ({ page }) => {
+    await openFeed(page);
+    const panel = page.getByRole("complementary", { name: "Everything panel" });
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole("heading", { level: 2 })).toHaveText(["Coming up"]);
+    await expect(panel).toContainText("Dates from everything you follow.");
+    const entries = panel.getByTestId("coming-up-entry");
+    await expect(entries.first()).toBeVisible();
+    const dates = await entries.locator("time").evaluateAll((els) => els.map((el) => el.getAttribute("datetime") ?? ""));
+    expect(dates.length).toBeGreaterThan(0);
+    expect(dates.length).toBeLessThanOrEqual(5);
+    expect(dates).toEqual([...dates].sort());
+    expect(dates.every((d) => d >= "2026-10-21")).toBe(true);
+
+    // To the right of the feed on a wide screen.
+    const panelBox = (await panel.boundingBox())!;
+    const feedBox = (await page.locator("main.feed").boundingBox())!;
+    expect(panelBox.x).toBeGreaterThan(feedBox.x + feedBox.width - 1);
+
+    // A filter narrows the feed, not Coming up.
+    await sidebar(page).getByRole("navigation", { name: "Content type" }).getByRole("button", { name: "Photos" }).click();
+    await expect(cards(page).first()).toHaveAttribute("data-kind", "photo");
+    await expect
+      .poll(() => entries.locator("time").evaluateAll((els) => els.map((el) => el.getAttribute("datetime") ?? "")))
+      .toEqual(dates);
+  });
+
+  test("on a phone it comes after the feed", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+    await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
+    const panel = page.getByTestId("plugin-panel");
+    await expect(panel).toBeAttached();
+    const panelBox = (await panel.boundingBox())!;
+    const feedBox = (await page.locator("main.feed").boundingBox())!;
+    expect(panelBox.y).toBeGreaterThanOrEqual(feedBox.y + feedBox.height - 1);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
   });
