@@ -2,7 +2,7 @@
 // network. When a Mastodon server refuses unsigned actor reads (mastodon.social does), the
 // profile comes from its REST lookup instead, the same fallback 4.3 gives for the outbox.
 import type { FetchGuard } from "../../../shared/fetch/index.js";
-import { AdapterError, ADAPTER_MESSAGES, type SpacePreview } from "../../../shared/items/index.js";
+import { AdapterError, ADAPTER_MESSAGES, type SpaceCategory, type SpacePreview } from "../../../shared/items/index.js";
 import {
   ACTIVITY_JSON,
   ACTOR_CATEGORY,
@@ -21,6 +21,7 @@ import {
 import { getJson, objectBody, SERVER_ONLY_MESSAGE, statusError } from "./http.js";
 import { formatHandle, parseInput } from "./input.js";
 import { ACTOR_TTL_MS, toManifestJson, type CachedActor, type FediverseManifest } from "./manifest.js";
+import { isPeerTube } from "./peertube.js";
 
 export interface Software {
   name: string;
@@ -234,9 +235,15 @@ export function previewFrom(result: ReadActorResult): SpacePreview {
     feedUrl: actor.outbox,
     actorId: actor.id,
     network: software?.name,
-    category: ACTOR_CATEGORY[actor.type] ?? "person",
+    category: categoryOf(actor.type, software?.name),
     manifest: toManifestJson(manifest),
   };
+}
+
+/** Spec 4.3's actor types, except that a PeerTube channel (a Group) is a `video` space (M12). */
+function categoryOf(actorType: string, software: string | undefined): SpaceCategory {
+  if (isPeerTube(software) && actorType === "Group") return "video";
+  return ACTOR_CATEGORY[actorType] ?? "person";
 }
 
 export async function resolve(input: string, guard: FetchGuard, now: Date): Promise<SpacePreview> {

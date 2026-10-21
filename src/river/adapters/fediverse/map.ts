@@ -9,6 +9,7 @@
 //   never fetched here (boosts.ts dereferences on open).
 // - HTML goes through sanitize(); titles, summaries and alt text through toPlainText().
 import { sanitize, toPlainText } from "../../../shared/sanitize/index.js";
+import { plainTextAsHtml } from "../text.js";
 import type { BoostRef, ItemAuthor, ItemKind, MediaRef, NormalizedItem } from "../../../shared/items/index.js";
 import {
   addressedToPublic,
@@ -80,19 +81,76 @@ function mediaOf(object: AsObject, kind: ItemKind): MediaRef[] {
       ...(durationSeconds(att.duration) !== undefined ? { duration: durationSeconds(att.duration) } : {}),
     });
   }
-  // A Video or Audio object (PeerTube, Funkwhale, Castopod) carries its file in `url`.
+  // A Video or Audio object (PeerTube, Funkwhale, Castopod) carries its file in `url`, its length
+  // in `duration` and its thumbnail in `icon`.
   if (media.length === 0 && (kind === "video" || kind === "podcast")) {
     const type = kind === "video" ? "video" : "audio";
-    const url = urlOf(object.url, `${type}/`);
-    const isFile = asList(object.url).some(
-      (u) => isObject(u) && str(u.mediaType)?.startsWith(`${type}/`),
-    );
-    if (url && isFile) {
-      const duration = durationSeconds(object.duration);
-      media.push({ type, url, ...(duration !== undefined ? { duration } : {}) });
+    const file = mediaFile(object, type);
+    const duration = durationSeconds(object.duration);
+    if (file) {
+      media.push({ type, url: file, ...(duration !== undefined ? { duration } : {}) });
+    } else if (duration !== undefined) {
+      // PeerTube with HLS only lists no plain file at the top: the length still belongs on the
+      // card, so the entry points at the watch page.
+      const page = urlOf(object.url, "text/html") ?? httpsUrl(object.id);
+      if (page) media.push({ type, url: page, duration });
     }
+    const thumbnail = thumbnailOf(object);
+    if (thumbnail) media.push(thumbnail);
   }
   return media;
+}
+
+function linkHref(link: AsObject): string | undefined {
+  return httpsUrl(link.href) ?? httpsUrl(link.url);
+}
+
+/**
+ * The file a Video or Audio object links to: a top-level `url` Link with a video/ or audio/ type,
+ * or, when there is none, one inside a Link's `tag` (PeerTube lists its HLS files under the
+ * playlist Link). Only https.
+ */
+function mediaFile(object: AsObject, type: "video" | "audio"): string | undefined {
+  const isFile = (link: AsObject) => str(link.mediaType)?.startsWith(`${type}/`) === true && linkHref(link) !== undefined;
+  const links = asList(object.url).filter(isObject);
+  const top = links.find(isFile);
+  if (top) return linkHref(top);
+  for (const link of links) {
+    const nested = asList(link.tag).filter(isObject).find(isFile);
+    if (nested) return linkHref(nested);
+  }
+  return undefined;
+}
+
+/**
+ * A Video's or Audio's thumbnail from `icon` (PeerTube lists several sizes; the widest is taken),
+ * else `image`. Its alt text is the icon's own `name` when it has one; otherwise the image is
+ * decorative (the card's title already says what it shows).
+ */
+function thumbnailOf(object: AsObject): MediaRef | undefined {
+  const candidates: Array<{ url: string; name?: string; width?: number; height?: number }> = [];
+  for (const entry of [...asList(object.icon), ...asList(object.image)]) {
+    if (typeof entry === "string") {
+      const url = httpsUrl(entry);
+      if (url) candidates.push({ url });
+      continue;
+    }
+    if (!isObject(entry)) continue;
+    const mime = str(entry.mediaType);
+    if (mime && !mime.startsWith("image/")) continue;
+    const url = urlOf(entry.url ?? entry.href);
+    if (url) candidates.push({ url, name: str(entry.name), width: num(entry.width), height: num(entry.height) });
+  }
+  if (candidates.length === 0) return undefined;
+  const best = candidates.reduce((a, b) => ((b.width ?? 0) > (a.width ?? 0) ? b : a));
+  const alt = toPlainText(best.name);
+  return {
+    type: "image",
+    url: best.url,
+    ...(alt ? { alt } : {}),
+    ...(best.width !== undefined ? { width: best.width } : {}),
+    ...(best.height !== undefined ? { height: best.height } : {}),
+  };
 }
 
 function kindOf(object: AsObject): ItemKind | undefined {
@@ -107,7 +165,10 @@ function kindOf(object: AsObject): ItemKind | undefined {
 
 function contentOf(object: AsObject): string | undefined {
   const content = str(object.content) ?? str(Object.values(isObject(object.contentMap) ? object.contentMap : {})[0]);
-  const clean = sanitize(content);
+  // PeerTube sends a video's description as Markdown (mediaType text/markdown): it is shown as
+  // text in paragraphs, never parsed as HTML.
+  const markdown = str(object.mediaType) === "text/markdown";
+  const clean = sanitize(markdown && content !== undefined ? plainTextAsHtml(content) : content);
   return clean === "" ? undefined : clean;
 }
 

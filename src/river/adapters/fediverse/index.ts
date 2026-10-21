@@ -26,3 +26,4 @@ export { ACTOR_TTL_MS, readManifest, type CachedActor, type FediverseManifest } 
 export { mapActivity, mapObject, mapStatus, type MapContext } from "./map.js";
 export { isMastodon, readNodeInfo, webfinger } from "./resolve.js";
 export { PUBLIC_IRIS, addressedToPublic } from "./activitypub.js";
+export { OWN_VIDEO_LIMIT, isPeerTube, readChannelVideos } from "./peertube.js";
