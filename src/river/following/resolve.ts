@@ -4,7 +4,8 @@
 // Order (DECISIONS.md, M3 follow-up): the adapters are tried in registry order, the Civic Hub
 // adapter first for URLs. When it says the address isn't a hub ("That address isn't a Space we can
 // follow") and the next adapter also takes the input (a fediverse profile URL such as
-// https://server/users/name), that one is tried. Any other failure is the answer.
+// https://server/users/name, or any https URL for the feed adapter, which comes last), that one is
+// tried. Any other failure is the answer.
 import { getFetchGuard, type FetchGuard } from "../../shared/fetch/index.js";
 import {
   AdapterError,
@@ -14,7 +15,7 @@ import {
   type SpacePreview,
 } from "../../shared/items/index.js";
 import { toPlainText } from "../../shared/sanitize/index.js";
-import { ADAPTER_REGISTRY } from "../adapters/index.js";
+import { ADAPTER_REGISTRY, adaptersFor, resolveWith } from "../adapters/index.js";
 import { riverNow } from "../clock.js";
 
 /** Longest input the box takes; anything longer isn't an address. */
@@ -30,19 +31,8 @@ export interface ResolveDeps {
 export async function resolveInput(input: string, deps: ResolveDeps = {}): Promise<SpacePreview> {
   const text = typeof input === "string" ? input.trim() : "";
   if (!text || text.length > MAX_INPUT) throw new AdapterError("not_a_space", ADAPTER_MESSAGES.not_a_space);
-  const candidates = (deps.adapters ?? ADAPTER_REGISTRY).filter((adapter) => adapter.accepts(text));
-  if (candidates.length === 0) throw new AdapterError("not_a_space", ADAPTER_MESSAGES.not_a_space);
-  const ctx = { guard: deps.guard ?? getFetchGuard(), now: deps.now ?? riverNow() };
-  for (const [index, adapter] of candidates.entries()) {
-    try {
-      return await adapter.resolve(text, ctx);
-    } catch (err) {
-      const last = index === candidates.length - 1;
-      if (err instanceof AdapterError && err.reason === "not_a_space" && !last) continue;
-      throw err instanceof AdapterError ? err : new AdapterError("unreachable", ADAPTER_MESSAGES.unreachable);
-    }
-  }
-  throw new AdapterError("not_a_space", ADAPTER_MESSAGES.not_a_space);
+  const candidates = adaptersFor(text, deps.adapters ?? ADAPTER_REGISTRY);
+  return resolveWith(candidates, text, { guard: deps.guard ?? getFetchGuard(), now: deps.now ?? riverNow() });
 }
 
 /** The follow box's sentence for a failure: exactly one of spec F6's four (or "not supported"). */
@@ -66,12 +56,17 @@ const NETWORK_NAMES: Record<string, string> = {
 };
 
 /** The kind label the preview and the Following page show (spec F6 "name, icon and kind"). */
-export function kindLabel(adapter: string, network: string | null | undefined): string {
+export function kindLabel(adapter: string, network: string | null | undefined, category?: string | null): string {
   if (adapter === "civic_hub") return "Civic Hub";
   if (adapter === "sample") return "Sample entries";
   if (adapter === "fediverse") {
     const key = (network ?? "").toLowerCase();
+    if (key === "peertube" && category === "video") return "PeerTube channel";
     return `${NETWORK_NAMES[key] ?? "Fediverse"} account`;
+  }
+  if (adapter === "rss") {
+    if (category === "podcast") return "Podcast feed";
+    return network === "atom" ? "Atom feed" : "RSS feed";
   }
   return "Space";
 }
@@ -126,7 +121,7 @@ export function previewView(preview: SpacePreview): PreviewView {
     adapter: preview.adapter,
     name: toPlainText(preview.name).slice(0, 200) || preview.canonicalUrl,
     iconUrl: httpsOnly(preview.iconUrl),
-    kind: kindLabel(preview.adapter, preview.network),
+    kind: kindLabel(preview.adapter, preview.network, preview.category),
     category: preview.category ?? null,
     address: addressOf({ adapter: preview.adapter, canonicalUrl: preview.canonicalUrl, manifest: preview.manifest }),
     canonicalUrl: preview.canonicalUrl,

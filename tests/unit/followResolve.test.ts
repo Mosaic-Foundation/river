@@ -123,6 +123,12 @@ describe("labels", () => {
     expect(kindLabel("fediverse", "wordpress")).toBe("WordPress account");
     expect(kindLabel("fediverse", null)).toBe("Fediverse account");
     expect(kindLabel("sample", null)).toBe("Sample entries");
+    // M12
+    expect(kindLabel("fediverse", "peertube", "video")).toBe("PeerTube channel");
+    expect(kindLabel("fediverse", "peertube", "person")).toBe("PeerTube account");
+    expect(kindLabel("rss", "rss", "podcast")).toBe("Podcast feed");
+    expect(kindLabel("rss", "rss", "publication")).toBe("RSS feed");
+    expect(kindLabel("rss", "atom", "publication")).toBe("Atom feed");
     expect(addressOf({ adapter: "fediverse", canonical_url: "https://w3c.social/users/w3c", manifest: { actor: { handle: "@w3c@w3c.social" } } })).toBe(
       "@w3c@w3c.social",
     );
