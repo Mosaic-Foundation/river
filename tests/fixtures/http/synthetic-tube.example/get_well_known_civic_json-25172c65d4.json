@@ -1,0 +1,9 @@
+{
+  "url": "https://synthetic-tube.example/.well-known/civic.json",
+  "status": 404,
+  "headers": {
+    "content-type": "text/html; charset=utf-8"
+  },
+  "body": "<!doctype html><title>Not found</title><h1>Not found</h1>",
+  "note": "SYNTHETIC: written by scripts/synthetic-media-fixtures.ts to the published format; not a recording."
+}

@@ -1,0 +1,12 @@
+{
+  "url": "https://synthetic-podcast.example/feed.xml",
+  "requestHeaders": {
+    "if-none-match": "\"syn-ep3-20261020\""
+  },
+  "status": 304,
+  "headers": {
+    "etag": "\"syn-ep3-20261020\""
+  },
+  "body": "",
+  "note": "SYNTHETIC: written by scripts/synthetic-media-fixtures.ts to the published format; not a recording."
+}

@@ -1,0 +1,9 @@
+{
+  "url": "https://synthetic-tube.example/.well-known/webfinger?resource=acct:trail_films@synthetic-tube.example",
+  "status": 200,
+  "headers": {
+    "content-type": "application/jrd+json; charset=utf-8"
+  },
+  "body": "{\"subject\":\"acct:trail_films@synthetic-tube.example\",\"aliases\":[\"https://synthetic-tube.example/video-channels/trail_films\"],\"links\":[{\"rel\":\"self\",\"type\":\"application/activity+json\",\"href\":\"https://synthetic-tube.example/video-channels/trail_films\"},{\"rel\":\"http://ostatus.org/schema/1.0/subscribe\",\"template\":\"https://synthetic-tube.example/remote-interaction?uri={uri}\"}]}",
+  "note": "SYNTHETIC: written by scripts/synthetic-media-fixtures.ts to the published format; not a recording."
+}

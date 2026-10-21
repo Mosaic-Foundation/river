@@ -1,0 +1,10 @@
+{
+  "url": "https://synthetic-tube.example/video-channels/trail_films/outbox",
+  "status": 200,
+  "headers": {
+    "content-type": "application/activity+json; charset=utf-8",
+    "vary": "Accept"
+  },
+  "body": "{\"@context\":[\"https://www.w3.org/ns/activitystreams\",\"https://w3id.org/security/v1\",{\"RsaSignature2017\":\"https://w3id.org/security#RsaSignature2017\",\"pt\":\"https://joinpeertube.org/ns#\",\"sc\":\"http://schema.org/\",\"playlists\":{\"@id\":\"pt:playlists\",\"@type\":\"@id\"},\"support\":{\"@type\":\"sc:Text\",\"@id\":\"pt:support\"},\"icons\":\"as:icon\"}],\"id\":\"https://synthetic-tube.example/video-channels/trail_films/outbox\",\"type\":\"OrderedCollection\",\"totalItems\":3,\"first\":\"https://synthetic-tube.example/video-channels/trail_films/outbox?page=1\"}",
+  "note": "SYNTHETIC: written by scripts/synthetic-media-fixtures.ts to the published format; not a recording."
+}

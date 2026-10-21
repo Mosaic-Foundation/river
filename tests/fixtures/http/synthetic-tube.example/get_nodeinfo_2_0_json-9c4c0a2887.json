@@ -1,0 +1,9 @@
+{
+  "url": "https://synthetic-tube.example/nodeinfo/2.0.json",
+  "status": 200,
+  "headers": {
+    "content-type": "application/json; charset=utf-8"
+  },
+  "body": "{\"version\":\"2.0\",\"software\":{\"name\":\"peertube\",\"version\":\"7.3.0\"},\"protocols\":[\"activitypub\"],\"services\":{\"inbound\":[],\"outbound\":[\"atom1.0\",\"rss2.0\"]},\"openRegistrations\":false,\"usage\":{\"users\":{\"total\":3,\"activeMonth\":2,\"activeHalfyear\":3},\"localPosts\":3,\"localComments\":0},\"metadata\":{\"nodeName\":\"Synthetic Tube\",\"nodeDescription\":\"A synthetic PeerTube instance for tests.\"}}",
+  "note": "SYNTHETIC: written by scripts/synthetic-media-fixtures.ts to the published format; not a recording."
+}
