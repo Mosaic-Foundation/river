@@ -413,10 +413,11 @@ test("check 37: recover-dids re-keys a DID with the recovery key; same SCID, sam
   const firstVersion = Date.parse(before.log[0].versionTime);
   await page.waitForTimeout(Math.max(0, firstVersion + 1100 - Date.now()));
 
-  // Adam's command, with the run's throwaway recovery key and the identity host's settings.
+  // Adam's command, with the run's throwaway recovery key and the identity host's settings (from
+  // .env.identity, or from the environment when a run passes them that way).
   const run = spawnSync(
     "npx",
-    ["tsx", "--env-file=.env.identity", "scripts/recover-dids.ts", "--key-file", recovery.file, "--code", codeOf(did)],
+    ["tsx", "--env-file-if-exists=.env.identity", "scripts/recover-dids.ts", "--key-file", recovery.file, "--code", codeOf(did)],
     { encoding: "utf8", timeout: 60_000 },
   );
   expect(run.status, `${run.stdout}\n${run.stderr}`).toBe(0);

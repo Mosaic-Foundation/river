@@ -16,6 +16,45 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-21 — The export's circles carry no members
+- Question: 3.3's `circles` entries hold only `name`, `color` and `role`; a space reaches a circle
+  only through a follow's `circles`. A circle can hold a space the member doesn't follow (a seed
+  circle member, or a whole-space unfollow that kept a stream rule elsewhere), and that membership
+  can't be written in the export.
+- Reading used: the spec's shape exactly; memberships of followed spaces travel on the follows,
+  others are left out.
+- Proposed change: give each circle `members: [url…]` (canonical URLs), and keep `circles` on
+  follows as a convenience, or drop it there in a version 2.
+- Thread / PR: M11
+
+### 2026-10-21 — Ended stream rules in the export
+- Question: 3.3 has no field for a stream rule whose process has ended (Ended on the Following
+  page, cleared after 90 days). Exported as a plain follow it would be re-imported as an open one.
+- Reading used: ended rules are left out of `follows`; they no longer change the feed.
+- Proposed change: an optional `ended_at` on follows if Ended should travel with the member.
+- Thread / PR: M11
+
+### 2026-10-21 — "20 follows" with 16 recorded sources (check 34)
+- Question: check 34 asks for `GET /api/feed` with 20 follows, but the recordings hold 9 real
+  sources and the seed adds 7 samples: 16 spaces. Recording more would contact real hosts.
+- Reading used: 20 follow rows: the 16 seed follows plus 4 "just this stream" follows of open hub
+  processes (counted through the export). The report says so.
+- Proposed change: "20 followed spaces or streams", or record extra hubs when Adam allows a
+  `record-fixtures` run.
+- Thread / PR: M11
+
+### 2026-10-21 — What "renders" means in a Vitest @live test (check 32)
+- Question: check 32 says each live hub "renders at least one item", but `@live` tests run through
+  Vitest (spec 6: `npm run test:live`), which has no browser, and a browser run against live hosts
+  would need a dev server without fixtures and its own database.
+- Reading used: each source is resolved and fetched through its adapter and the production fetch
+  guard; "renders" means at least one item a feed card can draw (shown, a kind label, a valid
+  relative time, text or media, an https "Open on {host}" link), checked with the UI's own
+  `ui/src/lib/format.ts` helpers.
+- Proposed change: say "yields at least one displayable item", or add a Playwright `@live` project
+  if a full browser run is wanted.
+- Thread / PR: M11
+
 ### 2026-10-21 — instances.theme next to the modes' themes
 - Question: 3.1 gives instances a `theme` (mosaic, civic), while 4.7 gives each mode its theme
   (Everything is Mosaic, Civic is Civic) and check 26 says the seed instance gets the Mosaic theme.
@@ -192,6 +231,60 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-21 — The export's shape and route (M11)
+- Decision: `GET /api/me/export` (members; visitors 401 `sign_in_required`) returns spec 3.3's
+  seven keys and nothing else, with `Content-Disposition: attachment;
+  filename="mosaic-river-export.json"` and `Cache-Control: no-store`. `did` is the DID the member
+  last signed in with (login_methods by `last_used_at`; null if none). `follows`: one entry per
+  active rule (whole-space follow, stream follow, stream mute), oldest first; `url` is the space's
+  canonical URL (hub origin, fediverse actor id, sample URN), `stream_key` the process URL, `circles`
+  the names of the member's circles holding the space, in circle order. Seeds still waiting for
+  their space (`seed_pending`) are exported as the follows they will become; that internal
+  preference itself is not exported, the rest of `preferences` is key → value. `exported_at` is the
+  real clock, not the adapters' test clock. Reads run in one forAccount() transaction
+  (`src/river/export/`), so RLS limits them to the member (check 27). The River holds no email
+  address or key, so the export has none.
+- Why: spec 3.3, check 29, constraint 7; the M9 follow-up (stream rule = space URL + stream key).
+- Alternatives: reusing `followingPage()` (shaped for the page, with UI fields and the known-streams
+  query the export doesn't need); including ended rules (spec question).
+- Thread / PR: M11
+
+## 2026-10-21 — @live tests go through the adapters, not the browser (M11)
+- Decision: `tests/live/seeds.live.test.ts` resolves and fetches Demosville, Floyd, Longmont and
+  `@w3c@w3c.social` with the River's adapters through `createFetchGuard()` (real DNS, every
+  address checked, no fixtures). No database, `.env` or server needed. `tests/unit/liveTests.test.ts`
+  proves the wiring: the default Vitest config includes only tests/unit and tests/api, Playwright
+  only tests/e2e, only `test:live` names the live config, no workflow runs it, and every live test
+  is named `@live` in a `*.live.test.ts` file.
+- Why: spec 6 (only through `npm run test:live`, never in CI), check 32; vitest.live.config.ts
+  from M0.
+- Alternatives: a Playwright `@live` project (needs a fixture-free server and database).
+- Thread / PR: M11
+
+## 2026-10-21 — The perf script is a script, not a gate (M11)
+- Decision: `scripts/perf-feed.ts` (`npx tsx scripts/perf-feed.ts`) signs a member in through the
+  real callback (the shared `tests/api/helpers/member.ts`), adds 4 stream follows to the 16 seed
+  follows, and times 100 sequential warm requests per row; it refuses a non-loopback API URL.
+  Results in `docs/perf/feed-report.md`. No npm script, so CLAUDE.md's Commands stay as they are.
+- Why: check 34 ("manual, not a gate"); recorded fixtures only.
+- Alternatives: a Vitest benchmark in tests/api (would run with every `test:api`).
+- Thread / PR: M11
+
+## 2026-10-21 — API sign-in helper shared from tests/api/helpers/ (M11)
+- Decision: `tests/api/helpers/member.ts` (a DID log server on :3005 and `signIn()`) is used by
+  the export test and the perf script. The older copies in `signin.test.ts` and
+  `following.test.ts` are left as they are.
+- Why: one more copy would have been the third; changing the existing files isn't M11's scope.
+- Thread / PR: M11
+
+## 2026-10-21 — Check 37's recover-dids run reads .env.identity only if present (M11)
+- Decision: the e2e test spawns `tsx --env-file-if-exists=.env.identity scripts/recover-dids.ts`,
+  so a run can pass the identity settings through the environment (a worktree without `.env`
+  files). CI writes `.env.identity`, so nothing changes there.
+- Why: `--env-file` fails outright when the file is missing; `npm run recover-dids` already uses
+  `--env-file-if-exists`.
+- Thread / PR: M11
 
 ## 2026-10-21 — Modes are code definitions; the mode lives in the URL (M10)
 - Decision: `src/river/modes/` defines Everything (`scope: all`, Mosaic, no surfaces) and Civic

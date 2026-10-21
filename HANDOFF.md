@@ -20,6 +20,50 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M11 Finish: member export, @live tests, feed performance report, deploy checklist — 2026-10-21
+
+- Branch / PR: claude/m11-finish → PR. Built on M5–M10 (unmerged); merge after them, once its own
+  diff is only M11. No needs-adam trigger of its own: no migration, no table, policy or grant
+  change, no auth or session change (the export route only uses `readSession()` and
+  `requireMember()`), no new outbound host in app code (the @live tests and the perf script are
+  not app code; @live goes through the fetch guard to the seed hosts ADR-001 already covers), no
+  `.github/`, `vercel.json` or CLAUDE.md change. The production deploy is not done: it needs Adam.
+- Migrations: none.
+
+**What it does.** `GET /api/me/export` (check 29) returns a member's follows, circles and
+preferences in spec 3.3's shape as a JSON download (`src/river/export/`), read in one forAccount()
+transaction; visitors get 401. Follows are active rules (whole space, stream follow, stream mute)
+by canonical URL and stream key, with the names of their space's circles; seeds still waiting for
+their space are exported as follows. `tests/live/seeds.live.test.ts` (check 32) reads the three
+seed hubs and @w3c@w3c.social through the adapters and the production fetch guard; only `npm run
+test:live` runs it. `scripts/perf-feed.ts` (check 34) times `GET /api/feed` for a member with 20
+follows and a warm cache; `docs/perf/feed-report.md` has the numbers: 25 ms median, 32 ms p95 for
+a member's first page locally. `docs/deploy.md` is the production checklist with each Vercel
+project's variables, names only.
+
+**Keys.** None. Route `GET /api/me/export`. Test helper `tests/api/helpers/member.ts`.
+
+**Tests.** `npm run check`: Test Files 31 passed (31), Tests 452 passed (452), UI built.
+`npm run test:api` (both dev servers, fresh `db reset`): Test Files 14 passed (14), Tests 136
+passed (136). `npm run test:e2e` (fresh `db reset`): 47 passed, against the dev servers. Check 29
+in `tests/e2e/export.spec.ts`, `tests/api/export.test.ts` and `tests/unit/riverExport.test.ts`;
+check 32 in `tests/live/seeds.live.test.ts` (not run here), its isolation in
+`tests/unit/liveTests.test.ts`; check 34 in `docs/perf/feed-report.md`. This thread's worktree has
+no `.env` files: the dev servers got their settings from the environment (as CI's `.env` lists
+them), and check 37's `recover-dids` subprocess now reads `.env.identity` only if present so the
+same works there. The e2e run wasn't repeated against `vite preview` on 4173 (CI does that).
+
+### Follow-ups
+- Adam: run `npm run test:live` once (check 32); it contacts the three hubs and w3c.social.
+- Adam: production deploy per `docs/deploy.md` (merges, role passwords, both Vercel projects'
+  variables, DNS, Resend records, smoke).
+- The UI has no "Download my data" link yet (3.3: "API in v1, screen later"); the You tab is the
+  natural place.
+- Spec questions logged: the export's circles carry no members; ended stream rules in the export;
+  "20 follows" with 16 recorded sources; what "renders" means for a Vitest @live test.
+- `signin.test.ts` and `following.test.ts` still carry their own copy of the sign-in helper; they
+  could move to `tests/api/helpers/member.ts`.
+
 ## M10 Modes and plugins: mode switch, Civic theme, panel surface, plugin registry, Coming up — 2026-10-21
 
 - Branch / PR: claude/m10-modes-plugins → PR. Built on M5–M9 (unmerged); merge after them, once
