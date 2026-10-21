@@ -82,19 +82,14 @@ SELECT s.id, v.source_id, v.kind, now(), v.title, v.summary, v.content_html, NUL
      NULL, NULL,
      '<p>412 neighbors have signed for a crosswalk at Main and Second. We deliver the petition to the town council on Tuesday.</p>',
      '[]', '{"sample": {"age": "6 hours"}}'),
-    -- Podcast (an episode with a duration; the cover image stands in for the audio)
+    -- Podcast: one episode, with a duration; the cover image stands in for the audio. Check 5
+    -- expects exactly one podcast item in News and ideas.
     ('urn:mosaic:sample:small-town-signals', 'urn:mosaic:sample:small-town-signals:1', 'podcast',
      'Episode 41: How a town budget gets made',
      'The finance director walks through a year of budget meetings, from first draft to final vote.',
      '<p>The finance director walks through a year of budget meetings, from first draft to final vote.</p>',
      '[{"type": "image", "url": "/samples/podcast-cover.svg", "alt": "Podcast cover art: a radio tower drawn in two colors", "width": 600, "height": 600, "duration": 2280}]',
      '{"sample": {"age": "8 hours"}}'),
-    ('urn:mosaic:sample:small-town-signals', 'urn:mosaic:sample:small-town-signals:2', 'podcast',
-     'Episode 40: Volunteers who keep the lights on',
-     'Three volunteers on the fire company, the food pantry and the youth league.',
-     '<p>Three volunteers on the fire company, the food pantry and the youth league.</p>',
-     '[{"type": "image", "url": "/samples/podcast-cover.svg", "alt": "Podcast cover art: a radio tower drawn in two colors", "width": 600, "height": 600, "duration": 2715}]',
-     '{"sample": {"age": "7 days 8 hours"}}'),
     -- Video channel (a duration)
     ('urn:mosaic:sample:trailhead-tv', 'urn:mosaic:sample:trailhead-tv:1', 'video',
      'Ridge loop in twelve minutes',
