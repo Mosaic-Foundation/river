@@ -1,0 +1,29 @@
+{
+  "url": "https://mastodon.social/users/wearenew_public/outbox",
+  "status": 200,
+  "headers": {
+    "accept-ranges": "bytes",
+    "age": "0",
+    "alt-svc": "h3=\":443\";ma=86400,h3-29=\":443\";ma=86400,h3-27=\":443\";ma=86400",
+    "cache-control": "max-age=180, public",
+    "content-length": "311",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'; form-action 'none'",
+    "content-type": "application/activity+json; charset=utf-8",
+    "etag": "W/\"b9cc1923d679a26cb83d1c6a32c2bf88\"",
+    "referrer-policy": "same-origin",
+    "server": "Mastodon",
+    "strict-transport-security": "max-age=31557600",
+    "vary": "Accept",
+    "via": "1.1 varnish, 1.1 varnish",
+    "x-cache": "MISS, HIT, MISS",
+    "x-cache-hits": "0, 0, 0",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "d34fb939-b746-451c-b583-9d6f2b3fbadc",
+    "x-runtime": "0.052677",
+    "x-served-by": "cache-fra-etou8220171-FRA, cache-fra-etou8220171-FRA, cache-chi-kigq8000141-CHI",
+    "x-timer": "S1792544740.286881,VS0,VE172",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"@context\":\"https://www.w3.org/ns/activitystreams\",\"id\":\"https://mastodon.social/users/wearenew_public/outbox\",\"type\":\"OrderedCollection\",\"totalItems\":1695,\"first\":\"https://mastodon.social/users/wearenew_public/outbox?page=true\",\"last\":\"https://mastodon.social/users/wearenew_public/outbox?min_id=0&page=true\"}"
+}

@@ -1,0 +1,23 @@
+{
+  "url": "https://mastodon.archive.org/users/internetarchive",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=180, public",
+    "content-length": "2744",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; frame-ancestors 'none'; font-src 'self' https://mastodon.archive.org; img-src 'self' data: blob: https://mastodon.archive.org; media-src 'self' data: https://mastodon.archive.org; manifest-src 'self' https://mastodon.archive.org; form-action 'none'; child-src 'self' blob: https://mastodon.archive.org; worker-src 'self' blob: https://mastodon.archive.org; connect-src 'self' data: blob: https://mastodon.archive.org wss://mastodon.archive.org; script-src 'self' https://mastodon.archive.org 'wasm-unsafe-eval'; frame-src 'self' https:; style-src 'self' https://mastodon.archive.org 'nonce-OOlx8/2EmIhGw7bL9v/t+g=='",
+    "content-type": "application/activity+json; charset=utf-8",
+    "etag": "W/\"12ea025368c3f73ae0988df7706cd54d\"",
+    "referrer-policy": "same-origin",
+    "server": "Mastodon",
+    "strict-transport-security": "max-age=63072000; includeSubDomains, max-age=31536000",
+    "vary": "Accept, Accept-Language, Cookie, Origin",
+    "x-cached": "EXPIRED",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-location": "Proxy",
+    "x-request-id": "2c4da745-4150-4912-8519-8ad19d3de201",
+    "x-runtime": "0.026961",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"@context\":[\"https://www.w3.org/ns/activitystreams\",\"https://w3id.org/security/v1\",{\"manuallyApprovesFollowers\":\"as:manuallyApprovesFollowers\",\"toot\":\"http://joinmastodon.org/ns#\",\"featured\":{\"@id\":\"toot:featured\",\"@type\":\"@id\"},\"featuredTags\":{\"@id\":\"toot:featuredTags\",\"@type\":\"@id\"},\"alsoKnownAs\":{\"@id\":\"as:alsoKnownAs\",\"@type\":\"@id\"},\"movedTo\":{\"@id\":\"as:movedTo\",\"@type\":\"@id\"},\"schema\":\"http://schema.org#\",\"PropertyValue\":\"schema:PropertyValue\",\"value\":\"schema:value\",\"discoverable\":\"toot:discoverable\",\"suspended\":\"toot:suspended\",\"memorial\":\"toot:memorial\",\"indexable\":\"toot:indexable\",\"attributionDomains\":{\"@id\":\"toot:attributionDomains\",\"@type\":\"@id\"},\"focalPoint\":{\"@container\":\"@list\",\"@id\":\"toot:focalPoint\"}}],\"id\":\"https://mastodon.archive.org/users/internetarchive\",\"type\":\"Person\",\"following\":\"https://mastodon.archive.org/users/internetarchive/following\",\"followers\":\"https://mastodon.archive.org/users/internetarchive/followers\",\"inbox\":\"https://mastodon.archive.org/users/internetarchive/inbox\",\"outbox\":\"https://mastodon.archive.org/users/internetarchive/outbox\",\"featured\":\"https://mastodon.archive.org/users/internetarchive/collections/featured\",\"featuredTags\":\"https://mastodon.archive.org/users/internetarchive/collections/tags\",\"preferredUsername\":\"internetarchive\",\"name\":\"internetarchive\",\"summary\":\"\\u003cp\\u003eInternet Archive is a non-profit research library preserving web pages, books, movies \\u0026amp; audio for public access. Explore web history via the Wayback Machine.\\u003c/p\\u003e\",\"url\":\"https://mastodon.archive.org/@internetarchive\",\"manuallyApprovesFollowers\":false,\"discoverable\":true,\"indexable\":false,\"published\":\"2022-11-11T00:00:00Z\",\"memorial\":false,\"publicKey\":{\"id\":\"https://mastodon.archive.org/users/internetarchive#main-key\",\"owner\":\"https://mastodon.archive.org/users/internetarchive\",\"publicKeyPem\":\"-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvyW/QGTRbY3x1CtDcggp\\nFtSDSz+6byTs3h1KnKs7YodhCsFfuXJ2BfZOB1e7TMLwnqC/gOyjwM8anHQ8j1+c\\nqe9cAFedIbtyfZ7u+X5HJr9C4lSDHW/H0jgeOdSWhmfhpAXSmW6l7mg9C3VFZ89s\\nKFtMIZ3p3Hwsowmfqa0TwFQ6Q1qKz+z5gD30NOCjlo66DVkzw8sIk+GjxcVbPJY8\\np3GLt4zC3y3eT08MjuRAz/z1uuwHe2Fx7MS2/NSktJFErfUDVqO5L6kCdc3CExPv\\nOOgzAMwgerwGf6vFsgN0EUDAqyLBPFK8261pf8Sdv9Q2dnEqNQZTjdbTn2xjxhzD\\n5QIDAQAB\\n-----END PUBLIC KEY-----\\n\"},\"tag\":[],\"attachment\":[],\"endpoints\":{\"sharedInbox\":\"https://mastodon.archive.org/inbox\"},\"icon\":{\"type\":\"Image\",\"mediaType\":\"image/jpeg\",\"url\":\"https://mastodon.archive.org/system/accounts/avatars/109/326/087/888/226/666/original/6fd012dbbfe83862.jpeg\"},\"image\":{\"type\":\"Image\",\"mediaType\":\"image/png\",\"url\":\"https://mastodon.archive.org/system/accounts/headers/109/326/087/888/226/666/original/5ba67359e0c195d1.png\"}}"
+}

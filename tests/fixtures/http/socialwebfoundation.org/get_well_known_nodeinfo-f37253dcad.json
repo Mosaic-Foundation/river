@@ -1,0 +1,23 @@
+{
+  "url": "https://socialwebfoundation.org/.well-known/nodeinfo",
+  "status": 200,
+  "headers": {
+    "access-control-allow-headers": "Authorization, X-WP-Nonce, Content-Disposition, Content-MD5, Content-Type",
+    "access-control-expose-headers": "X-WP-Total, X-WP-TotalPages, Link",
+    "allow": "GET",
+    "alt-svc": "clear",
+    "content-type": "application/json; profile=http://nodeinfo.diaspora.software",
+    "host-header": "WordPress.com",
+    "link": "<https://socialwebfoundation.org/wp-json/>; rel=\"https://api.w.org/\"",
+    "server": "nginx",
+    "server-timing": "a8c-cdn, dc;desc=dca, cache;desc=MISS;dur=1132.0",
+    "strict-transport-security": "max-age=31536000",
+    "vary": "accept, content-type, cookie,Origin",
+    "x-ac": "3.dca _atomic_dca MISS",
+    "x-content-type-options": "nosniff",
+    "x-hacker": "Want root?  Visit join.a8c.com and mention this header.",
+    "x-remembering": "Eric Binnion <https://friendsofericbinnion.wordpress.com/>",
+    "x-robots-tag": "noindex"
+  },
+  "body": "{\"links\":[{\"rel\":\"http:\\/\\/nodeinfo.diaspora.software\\/ns\\/schema\\/1.0\",\"href\":\"https:\\/\\/socialwebfoundation.org\\/wp-json\\/nodeinfo\\/1.0\"},{\"rel\":\"http:\\/\\/nodeinfo.diaspora.software\\/ns\\/schema\\/1.1\",\"href\":\"https:\\/\\/socialwebfoundation.org\\/wp-json\\/nodeinfo\\/1.1\"},{\"rel\":\"http:\\/\\/nodeinfo.diaspora.software\\/ns\\/schema\\/2.0\",\"href\":\"https:\\/\\/socialwebfoundation.org\\/wp-json\\/nodeinfo\\/2.0\"},{\"rel\":\"http:\\/\\/nodeinfo.diaspora.software\\/ns\\/schema\\/2.1\",\"href\":\"https:\\/\\/socialwebfoundation.org\\/wp-json\\/nodeinfo\\/2.1\"},{\"rel\":\"http:\\/\\/nodeinfo.diaspora.software\\/ns\\/schema\\/2.2\",\"href\":\"https:\\/\\/socialwebfoundation.org\\/wp-json\\/nodeinfo\\/2.2\"},{\"rel\":\"https:\\/\\/www.w3.org\\/ns\\/activitystreams#Application\",\"href\":\"https:\\/\\/socialwebfoundation.org\\/wp-json\\/activitypub\\/1.0\\/application\"}]}"
+}

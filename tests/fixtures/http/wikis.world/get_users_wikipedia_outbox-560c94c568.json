@@ -1,0 +1,21 @@
+{
+  "url": "https://wikis.world/users/wikipedia/outbox",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=180, public",
+    "content-length": "280",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'; form-action 'none'",
+    "content-type": "application/activity+json; charset=utf-8",
+    "etag": "W/\"73e274389be0c4d462c89c39275524dd\"",
+    "referrer-policy": "same-origin",
+    "server": "Mastodon",
+    "strict-transport-security": "max-age=63072000; includeSubDomains",
+    "vary": "Accept",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "febb8b0e-688a-4ce1-8f6b-64666384f24a",
+    "x-runtime": "0.005317",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"@context\":\"https://www.w3.org/ns/activitystreams\",\"id\":\"https://wikis.world/users/wikipedia/outbox\",\"type\":\"OrderedCollection\",\"totalItems\":617,\"first\":\"https://wikis.world/users/wikipedia/outbox?page=true\",\"last\":\"https://wikis.world/users/wikipedia/outbox?min_id=0&page=true\"}"
+}

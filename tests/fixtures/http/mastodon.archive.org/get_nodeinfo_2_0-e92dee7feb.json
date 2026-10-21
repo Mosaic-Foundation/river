@@ -1,0 +1,23 @@
+{
+  "url": "https://mastodon.archive.org/nodeinfo/2.0",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=1800, public",
+    "content-length": "393",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; frame-ancestors 'none'; font-src 'self' https://mastodon.archive.org; img-src 'self' data: blob: https://mastodon.archive.org; media-src 'self' data: https://mastodon.archive.org; manifest-src 'self' https://mastodon.archive.org; form-action 'self'; child-src 'self' blob: https://mastodon.archive.org; worker-src 'self' blob: https://mastodon.archive.org; connect-src 'self' data: blob: https://mastodon.archive.org wss://mastodon.archive.org; script-src 'self' https://mastodon.archive.org 'wasm-unsafe-eval'; frame-src 'self' https:; style-src 'self' https://mastodon.archive.org 'nonce-E2HZNCAIyZ6ysbuI0uEycQ=='",
+    "content-type": "application/json; charset=utf-8",
+    "etag": "W/\"9f09a4f2cd4072a559fbe7c07ed344d2\"",
+    "referrer-policy": "same-origin",
+    "server": "Mastodon",
+    "strict-transport-security": "max-age=63072000; includeSubDomains, max-age=31536000",
+    "vary": "Accept-Encoding,Accept, Origin",
+    "x-cached": "EXPIRED",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-location": "Proxy",
+    "x-request-id": "a8b36439-4a23-4d95-9d06-ef7c9f361356",
+    "x-runtime": "0.003918",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"version\":\"2.0\",\"software\":{\"name\":\"mastodon\",\"version\":\"4.5.8\"},\"protocols\":[\"activitypub\"],\"services\":{\"outbound\":[],\"inbound\":[]},\"usage\":{\"users\":{\"total\":46,\"activeMonth\":13,\"activeHalfyear\":16},\"localPosts\":98226},\"openRegistrations\":false,\"metadata\":{\"nodeName\":\"Internet Archive\",\"nodeDescription\":\"A Mastodon Server for Internet Archive employees and Role Accounts (Announcements)\"}}"
+}

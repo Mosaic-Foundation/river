@@ -1,0 +1,21 @@
+{
+  "url": "https://wikis.world/.well-known/webfinger?resource=acct:wikipedia@wikis.world",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=259200, public",
+    "content-length": "833",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; frame-ancestors 'none'; font-src 'self' https://wikis.world; img-src 'self' data: blob: https://wikis.world https://cdn.masto.host; media-src 'self' data: https://wikis.world https://cdn.masto.host; manifest-src 'self' https://wikis.world; form-action 'self'; child-src 'self' blob: https://wikis.world; worker-src 'self' blob: https://wikis.world; connect-src 'self' data: blob: https://wikis.world https://cdn.masto.host wss://wikis.world; script-src 'self' https://wikis.world 'wasm-unsafe-eval'; frame-src 'self' https:; style-src 'self' https://wikis.world 'nonce-YWnUYHpAhfDI11//WOCySA=='",
+    "content-type": "application/jrd+json; charset=utf-8",
+    "etag": "W/\"103f2e98560fa6c2c14e8920691e7b8e\"",
+    "referrer-policy": "same-origin",
+    "server": "Mastodon",
+    "strict-transport-security": "max-age=63072000; includeSubDomains",
+    "vary": "Accept, Origin",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "16713cd3-396d-4e58-9f89-38f8e5040156",
+    "x-runtime": "0.003157",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"subject\":\"acct:wikipedia@wikis.world\",\"aliases\":[\"https://wikis.world/@wikipedia\",\"https://wikis.world/users/wikipedia\"],\"links\":[{\"rel\":\"http://webfinger.net/rel/profile-page\",\"type\":\"text/html\",\"href\":\"https://wikis.world/@wikipedia\"},{\"rel\":\"self\",\"type\":\"application/activity+json\",\"href\":\"https://wikis.world/users/wikipedia\"},{\"rel\":\"http://ostatus.org/schema/1.0/subscribe\",\"template\":\"https://wikis.world/authorize_interaction?uri={uri}\"},{\"rel\":\"https://w3id.org/fep/3b86/Create\",\"template\":\"https://wikis.world/share?text={content}\"},{\"rel\":\"https://w3id.org/fep/3b86/Object\",\"template\":\"https://wikis.world/authorize_interaction?uri={object}\"},{\"rel\":\"http://webfinger.net/rel/avatar\",\"type\":\"image/png\",\"href\":\"https://cdn.masto.host/wikisworld/accounts/avatars/110/188/109/032/478/686/original/6e1a9c10ca787772.png\"}]}"
+}

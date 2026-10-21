@@ -20,6 +20,40 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M4 Fediverse adapter: WebFinger, actor, outbox, NodeInfo, REST fallback, boosts — 2026-10-21
+
+- Branch / PR: claude/m4-fediverse-adapter → PR. Branched from M2 (#6) plus M3's shared base
+  (sanitizer, item model; #7), both needs-adam and unmerged. Merge after #6 and #7, once its own
+  diff is only M4.
+- Migrations: none
+
+**What it does.** `src/river/adapters/fediverse/` resolves `@name@server` and profile URLs (WebFinger,
+actor, NodeInfo; Mastodon REST lookup when the actor read is refused), caches the actor 24 h in
+`manifest`, reads the outbox's first page (at most 2, stop at the first known item, never
+`min_id`), maps public items (replies and non-public hidden; Note/photo/article/video/podcast/
+event; Announce → boost), falls back to Mastodon's REST statuses on a 401/403 outbox, else
+`blocked`. `dereferenceBoost` with a 20-per-refresh budget. 45 recorded fixtures from the six seed
+accounts; recorder in `scripts/recorders/fediverse.ts`.
+
+**Keys.** None.
+
+**Tests.** `fediverseInput`, `fediverseMap`, `fediverseAdapter` (98): check 15 adapter part (real
+@w3c WebFinger, actor, NodeInfo, outbox, 2 pages; boosts; replies hidden; resolve from a profile
+URL), 22 (a real @eff post with injected script, onerror and javascript: comes out clean, spans
+kept), all six seeds read, REST fallback (derived 401 with real statuses, shared source ids),
+blocked, refusals with zero requests, 429, boost budget. `npm run check`: Test Files 11 passed
+(11), Tests 183 passed (183), UI built.
+
+### Follow-ups
+- M5 refresh: `fetchNew(space, { guard, now, isKnown, onPage })`; `isKnown` checks
+  `(space_id, source_id)`; store hidden items too; write `fetchStatus`, `lastError`,
+  `newestItemAt`, `manifest`; copy `manifest.actor.name`/`iconUrl` to the space when it changes.
+  The 120 s minimum is the claim statement's job. One boost budget per refresh. Add
+  `src/river/adapters/index.ts` listing both adapters (hub first for URLs).
+- Event start time and location live only in `raw`; an additive `event` field is a follow-up.
+- Fedizen/Bonfire account not fetched: ADR-001 needs Adam's approval first.
+- Seeds: w3c, internetarchive, wikipedia, swf read via ActivityPub; eff and wearenew_public need
+  the REST lookup for the profile only. None blocked.
 ## M3 Civic Hub adapter: resolve, paging, allowlist, templates, stream end; sanitizer and item model — 2026-10-21
 
 - Branch / PR: claude/m3-civic-hub-adapter → PR (needs-adam: sanitizer allowlist). Branched from

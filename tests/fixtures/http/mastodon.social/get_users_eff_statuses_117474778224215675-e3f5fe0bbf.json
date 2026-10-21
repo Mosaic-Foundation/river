@@ -1,0 +1,30 @@
+{
+  "url": "https://mastodon.social/users/eff/statuses/117474778224215675",
+  "status": 200,
+  "headers": {
+    "accept-ranges": "bytes",
+    "age": "0",
+    "alt-svc": "h3=\":443\";ma=86400,h3-29=\":443\";ma=86400,h3-27=\":443\";ma=86400",
+    "cache-control": "max-age=180, public",
+    "content-length": "3484",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; frame-ancestors 'none'; font-src 'self' https://mastodon.social; img-src 'self' data: blob: https://mastodon.social https://files.mastodon.social; media-src 'self' data: https://mastodon.social https://files.mastodon.social; manifest-src 'self' https://mastodon.social; form-action 'none'; child-src 'self' blob: https://mastodon.social; worker-src 'self' blob: https://mastodon.social; connect-src 'self' data: blob: https://mastodon.social https://files.mastodon.social wss://streaming.mastodon.social; script-src 'self' https://mastodon.social 'wasm-unsafe-eval'; frame-src 'self' https:; style-src 'self' https://mastodon.social 'nonce-Vv4Z7zS8d+6C0PEo7uU6Nw=='",
+    "content-type": "application/activity+json; charset=utf-8",
+    "etag": "W/\"876e438cc6892b3f6e65c066ed6fcbde\"",
+    "link": "<https://mastodon.social/users/eff/statuses/117474778224215675>; rel=\"alternate\"; type=\"application/activity+json\"",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "server": "Mastodon",
+    "strict-transport-security": "max-age=31557600",
+    "vary": "Accept, Accept-Language, Cookie",
+    "via": "1.1 varnish, 1.1 varnish",
+    "x-cache": "MISS, MISS, MISS",
+    "x-cache-hits": "0, 0, 0",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "18a1f3ec-59c2-43de-97f6-e8e340493cd8",
+    "x-runtime": "0.019798",
+    "x-served-by": "cache-fra-eddf8230158-FRA, cache-fra-eddf8230158-FRA, cache-chi-kigq8000025-CHI",
+    "x-timer": "S1792544743.477815,VS0,VE165",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"@context\":[\"https://www.w3.org/ns/activitystreams\",{\"ostatus\":\"http://ostatus.org#\",\"atomUri\":\"ostatus:atomUri\",\"inReplyToAtomUri\":\"ostatus:inReplyToAtomUri\",\"conversation\":\"ostatus:conversation\",\"sensitive\":\"as:sensitive\",\"toot\":\"http://joinmastodon.org/ns#\",\"votersCount\":\"toot:votersCount\",\"quote\":{\"@id\":\"https://w3id.org/fep/044f#quote\",\"@type\":\"@id\"},\"quoteUri\":\"http://fedibird.com/ns#quoteUri\",\"_misskey_quote\":\"https://misskey-hub.net/ns#_misskey_quote\",\"quoteAuthorization\":{\"@id\":\"https://w3id.org/fep/044f#quoteAuthorization\",\"@type\":\"@id\"},\"gts\":\"https://gotosocial.org/ns#\",\"interactionPolicy\":{\"@id\":\"gts:interactionPolicy\",\"@type\":\"@id\"},\"canFeature\":{\"@id\":\"https://w3id.org/fep/7aa9#canFeature\",\"@type\":\"@id\"},\"canQuote\":{\"@id\":\"gts:canQuote\",\"@type\":\"@id\"},\"automaticApproval\":{\"@id\":\"gts:automaticApproval\",\"@type\":\"@id\"},\"manualApproval\":{\"@id\":\"gts:manualApproval\",\"@type\":\"@id\"}}],\"id\":\"https://mastodon.social/users/eff/statuses/117474778224215675\",\"type\":\"Note\",\"summary\":null,\"inReplyTo\":null,\"published\":\"2026-10-20T19:01:01Z\",\"url\":\"https://mastodon.social/@eff/117474778224215675\",\"attributedTo\":\"https://mastodon.social/users/eff\",\"to\":[\"https://www.w3.org/ns/activitystreams#Public\"],\"cc\":[\"https://mastodon.social/users/eff/followers\"],\"sensitive\":false,\"atomUri\":\"https://mastodon.social/users/eff/statuses/117474778224215675\",\"inReplyToAtomUri\":null,\"conversation\":\"https://mastodon.social/contexts/41055-117474778224215675\",\"context\":\"https://mastodon.social/contexts/41055-117474778224215675\",\"content\":\"<p>The wait is over! EFF’s Privacy Badger is now available on Safari for macOS. When you use Privacy Badger, you join a movement of millions taking a stand against online tracking. <a href=\\\"https://www.eff.org/deeplinks/2026/10/announcing-privacy-badger-safari-macos\\\" target=\\\"_blank\\\" rel=\\\"nofollow noopener\\\" translate=\\\"no\\\"><span class=\\\"invisible\\\">https://www.</span><span class=\\\"ellipsis\\\">eff.org/deeplinks/2026/10/anno</span><span class=\\\"invisible\\\">uncing-privacy-badger-safari-macos</span></a></p>\",\"contentMap\":{\"en\":\"<p>The wait is over! EFF’s Privacy Badger is now available on Safari for macOS. When you use Privacy Badger, you join a movement of millions taking a stand against online tracking. <a href=\\\"https://www.eff.org/deeplinks/2026/10/announcing-privacy-badger-safari-macos\\\" target=\\\"_blank\\\" rel=\\\"nofollow noopener\\\" translate=\\\"no\\\"><span class=\\\"invisible\\\">https://www.</span><span class=\\\"ellipsis\\\">eff.org/deeplinks/2026/10/anno</span><span class=\\\"invisible\\\">uncing-privacy-badger-safari-macos</span></a></p>\"},\"interactionPolicy\":{\"canQuote\":{\"automaticApproval\":[\"https://www.w3.org/ns/activitystreams#Public\"]}},\"attachment\":[{\"type\":\"Link\",\"href\":\"https://www.eff.org/deeplinks/2026/10/announcing-privacy-badger-safari-macos\"}],\"tag\":[],\"replies\":{\"id\":\"https://mastodon.social/users/eff/statuses/117474778224215675/replies\",\"type\":\"Collection\",\"first\":{\"type\":\"CollectionPage\",\"next\":\"https://mastodon.social/users/eff/statuses/117474778224215675/replies?min_id=117474778259098426&page=true\",\"partOf\":\"https://mastodon.social/users/eff/statuses/117474778224215675/replies\",\"items\":[\"https://mastodon.social/users/eff/statuses/117474778259098426\"]}},\"likes\":{\"id\":\"https://mastodon.social/users/eff/statuses/117474778224215675/likes\",\"type\":\"Collection\",\"totalItems\":35},\"shares\":{\"id\":\"https://mastodon.social/users/eff/statuses/117474778224215675/shares\",\"type\":\"Collection\",\"totalItems\":40}}"
+}

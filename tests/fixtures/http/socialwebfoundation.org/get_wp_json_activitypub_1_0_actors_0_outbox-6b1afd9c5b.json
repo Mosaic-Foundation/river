@@ -1,0 +1,28 @@
+{
+  "url": "https://socialwebfoundation.org/wp-json/activitypub/1.0/actors/0/outbox",
+  "status": 200,
+  "headers": {
+    "access-control-allow-headers": "Authorization, X-WP-Nonce, Content-Disposition, Content-MD5, Content-Type, Accept, Last-Event-ID",
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+    "access-control-allow-origin": "*",
+    "access-control-expose-headers": "X-WP-Total, X-WP-TotalPages, Link",
+    "allow": "GET",
+    "alt-svc": "clear",
+    "cache-control": "max-age=300, must-revalidate",
+    "content-type": "application/activity+json; charset=UTF-8",
+    "host-header": "WordPress.com",
+    "last-modified": "Wed, 21 Oct 2026 00:59:18 GMT",
+    "link": "<https://socialwebfoundation.org/wp-json/>; rel=\"https://api.w.org/\"",
+    "server": "nginx",
+    "server-timing": "a8c-cdn, dc;desc=dca, cache;desc=STALE;dur=2.0",
+    "strict-transport-security": "max-age=31536000",
+    "vary": "Authorization,Origin",
+    "x-ac": "4.dca _atomic_dca STALE",
+    "x-content-type-options": "nosniff",
+    "x-hacker": "Want root?  Visit join.a8c.com and mention this header.",
+    "x-nananana": "Batcache-Set",
+    "x-remembering": "Eric Binnion <https://friendsofericbinnion.wordpress.com/>",
+    "x-robots-tag": "noindex"
+  },
+  "body": "{\"@context\":[\"https:\\/\\/www.w3.org\\/ns\\/activitystreams\",{\"Hashtag\":\"as:Hashtag\",\"sensitive\":\"as:sensitive\",\"dcterms\":\"http:\\/\\/purl.org\\/dc\\/terms\\/\",\"gts\":\"https:\\/\\/gotosocial.org\\/ns#\",\"schema\":\"http:\\/\\/schema.org\\/\",\"exifData\":\"schema:exifData\",\"PropertyValue\":\"schema:PropertyValue\",\"interactionPolicy\":{\"@id\":\"gts:interactionPolicy\",\"@type\":\"@id\"},\"canQuote\":{\"@id\":\"gts:canQuote\",\"@type\":\"@id\"},\"canReply\":{\"@id\":\"gts:canReply\",\"@type\":\"@id\"},\"canLike\":{\"@id\":\"gts:canLike\",\"@type\":\"@id\"},\"canAnnounce\":{\"@id\":\"gts:canAnnounce\",\"@type\":\"@id\"},\"automaticApproval\":{\"@id\":\"gts:automaticApproval\",\"@type\":\"@id\"},\"manualApproval\":{\"@id\":\"gts:manualApproval\",\"@type\":\"@id\"},\"always\":{\"@id\":\"gts:always\",\"@type\":\"@id\"},\"toot\":\"http:\\/\\/joinmastodon.org\\/ns#\",\"blurhash\":\"toot:blurhash\"}],\"id\":\"https:\\/\\/socialwebfoundation.org\\/wp-json\\/activitypub\\/1.0\\/actors\\/0\\/outbox\",\"generator\":\"https:\\/\\/wordpress.org\\/?v=7.1\",\"actor\":\"https:\\/\\/socialwebfoundation.org\\/@swf\",\"type\":\"OrderedCollection\",\"totalItems\":92,\"eventStream\":\"https:\\/\\/socialwebfoundation.org\\/wp-json\\/activitypub\\/1.0\\/actors\\/0\\/outbox\\/stream\",\"first\":\"https:\\/\\/socialwebfoundation.org\\/wp-json\\/activitypub\\/1.0\\/actors\\/0\\/outbox?page=1\",\"last\":\"https:\\/\\/socialwebfoundation.org\\/wp-json\\/activitypub\\/1.0\\/actors\\/0\\/outbox?page=2\"}"
+}
