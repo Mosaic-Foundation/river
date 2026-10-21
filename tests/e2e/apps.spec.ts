@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { identityURL } from "../../playwright.config";
 
 // M0: both deployables answer /health and name themselves (ADR-006).

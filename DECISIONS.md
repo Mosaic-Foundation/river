@@ -113,6 +113,84 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-21 — The River's CSP lives in vercel.json; vite preview serves the same header (M6)
+- Decision: `vercel.json` sends `Content-Security-Policy: default-src 'self'; script-src 'self';
+  style-src 'self'; img-src 'self' https:; font-src 'self'; connect-src 'self'; object-src 'none';
+  base-uri 'self'; form-action 'self'; frame-ancestors 'self'` on every path (UI and API).
+  `ui/vite.config.ts` reads that header from `vercel.json` and serves it unchanged from `vite
+  preview` (CI's e2e target), so the tests run under the production policy. The dev server adds a
+  per-start nonce to `script-src` and `style-src` (`html.cspNonce`) for Vite's inline React Refresh
+  preamble and injected styles; nothing else differs. `build.assetsInlineLimit: 0` keeps fonts and
+  images as files (no `data:`). Circle colors reach CSS as a custom property set through the CSSOM,
+  which `style-src 'self'` allows; no `style=""` markup. Changing `vercel.json` makes the PR
+  needs-adam.
+- Why: spec Appendix B; one source for the policy, proved by `tests/unit/ui/csp.test.ts` and the
+  e2e CSP test (no violation messages on load and with the dialog open).
+- Alternatives: a `<meta http-equiv>` CSP (can't set `frame-ancestors`, and dev would need its
+  own copy); serving the UI through Express (Vercel serves `ui/dist` statically).
+- Thread / PR: M6 (claude/m6-river-ui)
+
+## 2026-10-21 — The dev and preview /api proxy keeps the browser's Host (M6)
+- Decision: `changeOrigin: false` on the Vite proxy, so the API sees the page's own hostname, as
+  it does behind Vercel's rewrite. `localhost` and `127.0.0.1` stay in `INSTANCE_HOST_ALIASES`;
+  `unknown.localhost` (Chromium resolves `*.localhost` to loopback and Vite allows it) gets
+  `unknown_host`, which the e2e test uses for check 26's 404 page through the real stack.
+- Why: with `changeOrigin: true` every page host reached the API as `localhost:3000`, so the
+  unknown-host page could only be faked.
+- Thread / PR: M6
+
+## 2026-10-21 — The unknown-host page is a client page with HTTP 200 (M6)
+- Decision: the UI asks `/api/feed`; on `404 unknown_host` it renders the 404 page (title "Not
+  found", the API's message). The HTML itself comes from Vercel's static `index.html` with status
+  200. Other paths than `/` show "This page doesn't exist." with a link home.
+- Why: Vercel serves `ui/dist` statically and doesn't know instances; a real 404 status would need
+  a function in front of every page view.
+- Alternatives: an edge middleware checking the host (another Vercel feature and a database call
+  per page view).
+- Thread / PR: M6
+
+## 2026-10-21 — Visitor read state in localStorage (M6)
+- Decision: `mosaic-river:read` holds a JSON array of item ids, newest mark last, capped at 2000.
+  "Mark read" toggles to "Mark unread"; "Mark all read" marks the items loaded in the current view
+  (current filters, every loaded page); opening an item's Open link or a link inside its text marks
+  it read. Unreadable or blocked storage counts as nothing read. The page makes only
+  `GET /api/feed` requests (e2e checks it).
+- Why: spec F4, check 23 visitor part. Members' server-side read state arrives in M8.
+- Thread / PR: M6
+
+## 2026-10-21 — Feed page layout and placeholders (M6)
+- Decision: desktop (56rem and up) puts search, circles and content type in the left column and
+  no chips above the feed (mockups README: all filtering stays in the left column). Phone: a header
+  with the logo, a search toggle and Follow; a chip row with a content-type select ("All types")
+  then circle chips; bottom tabs Feed, Circles, Following, You, where the last three say what comes
+  later. Follow opens a short note that following comes with an account. No mode picker until M10.
+  Filters are mirrored in the address bar (`?circle=&type=&q=`) so a reload keeps them. Paging is
+  a "Load more" button. Avatars that fail fall back to initials. Content links inside an item's
+  sanitized HTML get `target="_blank"` on the client (the sanitizer already forces `rel`).
+- Why: spec F1, F4, F5 and the phone paragraph; the mockups are a starting point.
+- Thread / PR: M6
+
+## 2026-10-21 — Layout tokens in theme.css (M6)
+- Decision: sizes that don't change with the theme (avatar, control height, sidebar and feed
+  widths, tab bar, dot, border width, bold weights) are `:root` custom properties in
+  `ui/src/styles/theme.css`; `mosaic.css` and `civic.css` keep only theme tokens. The phone/desktop
+  breakpoint (56rem) is written in the media queries, which can't read custom properties.
+- Why: CLAUDE.md "Themes" (no hard-coded sizes) without making each theme repeat layout values.
+- Thread / PR: M6
+
+## 2026-10-21 — @axe-core/playwright for check 31 (M6)
+- Decision: `@axe-core/playwright` `^4.14.0` (MPL-2.0, Deque's own package; locked at 4.14.0) as
+  a root dev dependency. Check 31 fails on any `critical` or `serious` violation; it also tabs
+  through the page and requires every visible control to take focus.
+- Why: check 31 names axe; dev-only, never shipped.
+- Thread / PR: M6
+
+## 2026-10-21 — UI helpers are tested from the root Vitest suite (M6)
+- Decision: pure UI logic lives in `ui/src/lib/` with no React or DOM, and `tests/unit/ui/`
+  imports it directly. The UI package gets no test runner of its own.
+- Why: one `npm run check`; Playwright covers the components.
+- Thread / PR: M6
+
 ## 2026-10-21 — forHost() and the hostname lookup arrive in M5
 - Decision: `forHost()` (src/db/context.ts) opens a transaction with no settings; row-level
   security lets it read `river.instances` and nothing else (tests/api/db/host.test.ts). The River

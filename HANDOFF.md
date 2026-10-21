@@ -20,6 +20,54 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M6 River UI: Everything mode on desktop and phone, Live and Sample cards, images, CSP — 2026-10-21
+
+- Branch / PR: claude/m6-river-ui → PR (needs-adam: `vercel.json` gains the CSP header). Built on
+  M2–M5 (unmerged); merge after them, once its own diff is only M6.
+- Migrations: none
+
+**What it does.** `/` is the feed from `GET /api/feed`, in Everything mode with the Mosaic theme.
+Desktop: search, circles and content type in the left column. Phone (below 56rem): header with
+search toggle and Follow, a chip row (content-type select, circle chips), compact cards, bottom
+tabs Feed, Circles, Following, You (the last three are placeholders that say what comes later).
+Cards show the source icon (avatar, else initials), name, kind, relative time, Live or Sample
+(Sample opens the F1 explainer in a native `<dialog>`; Escape closes it and focus returns), boost
+line, title, sanitized `contentHtml` (the only HTML rendered) or the summary as text, event date
+and place, civic label and deadline, duration, images (lazy, no referrer, https or `/samples/`,
+removed on error), "Open on {host}" for live items, Mark read/unread, an unread dot. "Mark all read"
+covers the loaded view; visitor read state is in localStorage only. "Load more" pages by cursor.
+`unknown_host` from the API shows the 404 page; other paths show a not-found page. The CSP lives
+in `vercel.json`; `vite preview` serves the same header and the dev server adds a nonce.
+
+**Keys.** None. Dev dependency `@axe-core/playwright` ^4.14.0. Layout tokens (`--size-*`,
+`--layout-*`, `--border-width`, bold weights) in `ui/src/styles/theme.css`. Vite proxy now keeps
+the browser's Host (`changeOrigin: false`).
+
+**Tests.** `npm run check`: Test Files 20 passed (20), Tests 308 passed (308), UI built.
+`npm run test:api` (both dev servers, fresh `db reset`): Test Files 6 passed (6), Tests 56 passed
+(56). `npm run test:e2e`: 22 passed, against the dev servers and again against `vite preview` on
+4173 (CI's path). Checks 3, 4, 21, 26 (UI), 30, 31 in `tests/e2e/river.spec.ts`; every e2e spec
+uses `tests/e2e/fixtures.ts`, which aborts any request off loopback.
+
+### Follow-ups
+- Adam: `vercel.json` now sends the CSP on every path. Check a preview: the feed loads, live
+  avatars and images load from their hosts, and the console shows no CSP violations.
+- The unknown-host page has HTTP status 200 on Vercel (static `index.html`); only the API answers
+  404. A real 404 status needs an edge function per page view (DECISIONS).
+- M8: replace the visitor read state with the member's server read state when signed in (keep
+  localStorage for visitors); "Follow" and the You tab become sign-up/sign-in; Mark read then
+  writes through the API.
+- M9: the Following tab and page; the Follow dialog becomes the follow box (F6); the Circles tab
+  becomes circle editing. Member circles are ids, visitor circles names: the chips send `circle=`
+  by name today (`ui/src/lib/api.ts`).
+- M10: mode picker in the header (phone and desktop), `data-theme` from the mode (River.tsx sets
+  it from the feed's `mode` already), the panel beside the feed (the desktop grid has room for a
+  third column), Civic copy for the 404 page if wanted.
+- Boost cards say "The boosted post opens where it lives." when the boost has no content;
+  dereferencing a boost on open (M5's `dereferenceBoost`) still has no route.
+- The Sample label's dialog and the Follow note share `InfoDialog`; the Follow note's text is a
+  placeholder until M8/M9.
+
 ## M5 Feed API and daily job: samples, refresh on open, filters, search, pg_cron — 2026-10-21
 
 - Branch / PR: claude/m5-feed-api → PR (needs-adam: a column and a SECURITY DEFINER function on

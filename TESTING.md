@@ -29,6 +29,19 @@ first `GET /api/feed` resolves and fetches every seed follow from the recordings
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, M6: e2e `river` (checks 3, 4, 21, 26 UI part, 30, 31, plus filters and the API's
+  empty-state text, search, Load more from the keyboard, boost wording, avatar fallback, the CSP
+  header with no violations, and visitor read state: Mark read, opening a link, reload, Mark all
+  read, only `GET /api/feed` requests). `tests/e2e/fixtures.ts` is an auto fixture every spec now
+  imports: the browser context reaches loopback hosts only and every other request is aborted and
+  recorded; a test fails if anything but an image (or a new tab's page) was attempted off-origin.
+  Check 26 loads `http://unknown.localhost:<port>/` through the real proxy and API. Check 21
+  fails one sample image with a routed 404 and relies on the blocked live images. Unit
+  `ui/format`, `ui/readState`, `ui/csp` (vercel.json's policy). `smoke` and `themes` updated
+  for the feed page (themes ignores image requests, which the fixture blocks). Mutation check:
+  removing the image `onError` fails check 21. Ran against the dev servers and against `vite
+  preview` on 4173 (CI's path). Unit 308, API 56 (fresh `db reset`), e2e 22.
+
 - 2026-10-21, M5: API `feed` (dev server; checks 1, 2, 5, 6, 23 visitor part, 26 API part, filters,
   civic mode, 400s, sample event). Database (`tests/api/db/`, river_app): `refresh` (check 24 with
   a request-counting MockAgent, sequential and concurrent; check 20 with fake timers: answered at

@@ -10,6 +10,29 @@
 @import "./themes/mosaic.css";
 @import "./themes/civic.css";
 
+/*
+ * Layout tokens: sizes that don't change with the theme (M6). Components use these, never raw
+ * lengths. The phone/desktop breakpoint (56rem) is written in media queries, which can't read
+ * custom properties.
+ */
+:root {
+  --border-width: 1px;
+  --size-dot: 0.625rem;
+  --size-icon: 1.25rem;
+  --size-control: 2.75rem;
+  --size-avatar: 2.5rem;
+  --size-swatch: 0.625rem;
+  --size-event-badge: 3rem;
+  --size-media-max: 26rem;
+  --layout-sidebar: 17rem;
+  --layout-feed: 44rem;
+  --layout-page: 72rem;
+  --layout-dialog: 26rem;
+  --layout-tabbar: 4.25rem;
+  --font-weight-bold: 700;
+  --font-weight-semibold: 600;
+}
+
 *,
 *::before,
 *::after {
