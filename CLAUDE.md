@@ -51,7 +51,9 @@ Node 24; if `node --version` shows another major version, run `export PATH=/usr/
    `.env.example`, by name only. (Lint enforces this.)
 2. Import `pg` only under `src/db/`. Every query runs inside `forInstance()`, `forAccount()` or
    `forIdentity()`, which open a transaction and set `app.instance_id` and `app.account_id` with
-   `set_config(name, $1, true)`. SET cannot take bind parameters; never splice ids into SQL text.
+   `set_config(name, $1, true)`. The one exception is `forHost()`, which opens a transaction with
+   no settings for the River's hostname lookup and may read `river.instances` only.
+   SET cannot take bind parameters; never splice ids into SQL text.
    Never pass a `name` to a query (the pooler can't hold prepared statements). (Lint enforces the
    import rule.)
 3. No outbound network calls from app code unless an ADR in `decisions/` names the hosts and the
