@@ -16,6 +16,32 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-21 — "Final results of streams any account followed" outlives the follow
+- Question: spec 3.1 keeps "is_final_result items of streams any account followed", and F7 clears
+  Ended follows 90 days after their stream ends, about when the final result turns 90 days old.
+  Read as "a follow row exists now", the result would be deleted soon after its follow.
+- Reading used: the daily job marks `streams.keep_final_result` on every stream an account follows
+  (the stream, or its whole space, rule follow) before retention runs, and never clears it. A
+  stream counts as followed once and for good. Muted streams and visitors' seed follows don't count.
+- Proposed change: spec 3.1 adds `streams.keep_final_result` and says "ever followed".
+- Thread / PR: M5 (claude/m5-feed-api)
+
+### 2026-10-21 — auth_requests has no created_at
+- Question: spec 4.5 deletes "auth_attempts and auth_requests older than 1 day", but 3.2 gives
+  auth_requests no `created_at` (only `expires_at`, 10 minutes after creation).
+- Reading used: the job deletes `identity.auth_requests` whose `expires_at` is more than a day ago,
+  and `river.auth_attempts` by `created_at` (3.1 has it). Both only when the table exists
+  (`to_regclass`), so M7 and M8 must keep those column names or change the job.
+- Thread / PR: M5
+
+### 2026-10-21 — A withdrawn stream's items are hidden, the stream itself unchanged
+- Question: 4.2 says to hide a withdrawn process's items; it doesn't say what happens to the
+  stream or its follows.
+- Reading used: items get `hidden = true`; the stream keeps its status and its follows, so a
+  member who followed it sees an empty stream, not an Ended one. If the hub serves the process
+  again, a later fetch that includes those items stores them visible again.
+- Thread / PR: M5
+
 ### 2026-10-21 — mastodon.social refuses the actor, not the outbox
 - Question: spec 4.3 gives the 401/403 fallback only for the outbox read, but mastodon.social
   (two seed accounts) answers unsigned actor reads with 401 while serving outboxes with 200.
@@ -63,7 +89,9 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Proposed change: CLAUDE.md constraint 2 names that fourth helper.
 - Resolved (Adam, 2026-10-20): approved. `forHost()` may read `river.instances` and nothing else.
   The M6 PR amends CLAUDE.md constraint 2 to name it (that PR is `needs-adam`).
-- Thread / PR: M1 (claude/vibrant-keller-6qnr0g)
+- Done in M5 instead (2026-10-21): the feed resolves the instance from the hostname, so M5 adds
+  `forHost()` and carries the CLAUDE.md amendment; that PR is `needs-adam`.
+- Thread / PR: M1 (claude/vibrant-keller-6qnr0g), M5 (claude/m5-feed-api)
 
 ### 2026-10-20 — Shared tables still need an instance setting
 - Question: spec 3 says shared tables (`spaces`, `streams`, public `items`) "allow read to
@@ -84,6 +112,104 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n)
 
 ## Log
+
+## 2026-10-21 — forHost() and the hostname lookup arrive in M5
+- Decision: `forHost()` (src/db/context.ts) opens a transaction with no settings; row-level
+  security lets it read `river.instances` and nothing else (tests/api/db/host.test.ts). The River
+  maps the request's hostname (Express `req.hostname`, lowercased, port and trailing dot dropped)
+  to its instance; `INSTANCE_HOST_ALIASES` and every host when `VERCEL_ENV=preview` map to the seed
+  instance; anything else gets JSON 404 `unknown_host` on API routes (M6 adds the page). Lookups are
+  cached per process for a minute. CLAUDE.md constraint 2 names `forHost()` in this PR.
+- Why: Adam approved the helper for M6, but the feed (M5) needs the instance first.
+- Thread / PR: M5 (claude/m5-feed-api)
+
+## 2026-10-21 — @vercel/functions for waitUntil
+- Decision: `@vercel/functions` `^3.9.11` (Apache-2.0, Vercel's own package; locked at 3.9.11,
+  released 2026-10-02), used only for `waitUntil`. Outside Vercel it is a no-op and the work simply
+  runs on in the long-lived dev server.
+- Why: spec 4.5 names it for fetches still running when the response budget ends.
+- Alternatives: none that keep a Vercel function alive after the response.
+- Thread / PR: M5
+
+## 2026-10-21 — A test-only adapter clock
+- Decision: `TEST_CLOCK_NOW` (ISO 8601) fixes the River's adapter clock (`src/river/clock.ts`)
+  for API and e2e runs, so first-fetch URLs (`since` = now − 90 days) match the hub recordings.
+  It is a test-only variable like `FETCH_FIXTURES_DIR`: refused when `VERCEL` is set. Database
+  time (`now()`, the claim statement, retention) is never affected. CI's `.env` sets it.
+- Why: M3 follow-up; recordings carry a fixed `since`.
+- Alternatives: re-recording on every run (network in tests); faking Date in the server.
+- Thread / PR: M5
+
+## 2026-10-21 — Sample spaces (M5)
+- Decision: seven sample spaces in a migration (hosted gets them too): Riverside Rovers Soccer Club
+  (club), The Okafor Family (family, photos), The Millbrook Ledger (publication), Elm Street
+  Neighbors (neighborhood, an event with `raw.startTime` and `raw.location.name`), Safe Streets for
+  Millbrook (organization: an issue campaign), Small Town Signals (podcast: one episode, so check 5
+  finds exactly one) and Trailhead TV (video). Canonical URL `urn:mosaic:sample:{slug}`: unique,
+  and no adapter or the fetch guard (https only) accepts it. Item source ids extend it
+  (`…:{slug}:1`). Each item keeps its age in `raw.sample.age` (and an event's `raw.sample.startsIn`);
+  `river.restamp_samples(at)` dates them at seed time and daily. Images are SVG placeholders in
+  `ui/public/samples/`, referenced by same-origin paths, with alt text; a podcast or video's
+  `duration` sits on its cover image's media entry, since there is no audio or video file. The
+  seed instance follows all seven by URN; Soccer, Family and Neighborhood list their sample, News
+  and ideas the publication and the podcast; the campaign and the video channel are in no circle.
+- Why: spec 4.4, Appendix D; seed_follows and default_circles must agree (catalog test).
+- Alternatives: a `sample:` URL scheme (looks fetchable to people); seed.sql (never reaches hosted).
+- Thread / PR: M5
+
+## 2026-10-21 — How the refresh writes (M5)
+- Decision: a followed name finds its space without a request: exact canonical URL first, then a
+  hub by its origin, a fediverse handle by the handle cached in `manifest.actor.handle`, a profile
+  URL by actor id or home URL. A name with no space is resolved within the budget and inserted
+  with `ON CONFLICT (canonical_url)`; a failed resolve waits 120 s per process before retrying.
+  Claims for one request run in one transaction, one exact 4.5 statement per space. Each page is
+  stored in its own transaction with one `INSERT … SELECT FROM jsonb_to_recordset … ON CONFLICT
+  (space_id, source_id) DO UPDATE` that refreshes every column but `is_final_result`. After the
+  fetch: space columns (`etag`/`etag_url` only when the adapter reports them, `newest_item_at` only
+  grows, a refreshed fediverse actor's name and icon), a `streams` row for every stream key seen,
+  titles and ends from `StreamUpdate`s, `river.mark_stream_follows_ended()` for ended streams, and
+  the final result moved to `finalItemSourceId` only when at least as new as the current one. A
+  304 marks the space ok. Any failure leaves `fetch_status` error (blocked for server-only),
+  `error_count + 1` and the F6 sentence in `last_error`; the claim is released in `finally` with
+  the database's clock. Withdrawn probes: at most 5 per hub space per refresh, streams with no
+  item in 7 days and not checked for a day (by the adapter clock), any outcome stamps
+  `last_checked_at`, only `exists = false` hides. Only the feed's first page refreshes; paging reads.
+- Why: spec 4.2, 4.3, 4.5 and the M3/M4 follow-ups.
+- Thread / PR: M5
+
+## 2026-10-21 — The feed API's shape (M5)
+- Decision: `GET /api/feed?mode=&circle=&type=&q=&cursor=` answers `{ instance, mode, circles,
+  items, nextCursor, empty, emptyMessage, refresh: { claimed, pending } }`. Each item has its id,
+  kind, time, title (else the stream's title), summary, sanitized HTML, url (null for samples),
+  media, author, boost, civic details, final-result flag, `event` (start and place, when known),
+  `source` (`live` or `sample`) and `space` (id, name, icon, category, adapter). Visitor circles
+  come from `default_circles` and are named by their name (`circle=News and ideas`); members' will
+  be ids. `type` takes the F5 names, singular or plural, any case. Search: `plainto_tsquery
+  ('simple', q)` on `items.search`, or the source name by `ILIKE` with `%`/`_` taken literally. 30
+  items a page, keyset cursor on `(published_at, id)` with Postgres's own timestamp text (keeps
+  microseconds). Bad mode, circle, type or cursor: 400. `Cache-Control: no-store`; no cookie.
+  The visitor's scope (`visitorView`, `scopeFor`) is follows + circles + one civic-role circle;
+  M8/M9 build the same shape from a member's rows under `forAccount()` and add stream rules.
+- Why: spec F1, F5, F9, 4.5; check 23 (visitors cause no writes beyond the refresh).
+- Thread / PR: M5
+
+## 2026-10-21 — The daily job (M5)
+- Decision: `river.daily_job(at timestamptz DEFAULT now())`, scheduled by pg_cron as
+  `river-daily` at `17 4 * * *`, as postgres. In order: Ended follows for ended streams (in case a
+  refresh missed it), mark followed streams' `keep_final_result`, retention (items older than 90
+  days except final results of marked streams and samples), delete follows ended more than 90
+  days ago, delete `river.auth_attempts` (created_at) and `identity.auth_requests` (expires_at)
+  older than a day when those tables exist, re-stamp samples. It returns counts as jsonb.
+  river_app can't execute it or `restamp_samples`; it may execute the SECURITY DEFINER
+  `river.mark_stream_follows_ended(stream_id)`, which only copies an ended stream's `ended_at`
+  onto `ends_with_stream` follows (the refresh runs with no account, and follows are visible only
+  to their own account). pg_cron 1.6.4 is preloaded in the local stack (checked); Supabase offers
+  it on hosted projects too, which `deploy-migrations` proves on merge (no hosted access from
+  here). The migration runs `CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA pg_catalog`.
+- Why: spec 3.1, 4.2, 4.5; CLAUDE.md "Database" (one pg_cron job, SQL only).
+- Alternatives: river_app DELETE grants and an app-side job (Hobby has no cron, and the job must
+  cross instances).
+- Thread / PR: M5
 
 ## 2026-10-21 — Fediverse resolve, identity and manifest (M4)
 - Decision: WebFinger rel=self (activity+json or the ld+json profile type), then the actor with
