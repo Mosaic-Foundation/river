@@ -37,8 +37,8 @@ describe("mode switch and links", () => {
   });
 
   it("sends the mode to the feed API", () => {
-    expect(feedSearch({ mode: "civic", circle: "All", type: "all" })).toBe("?mode=civic");
-    expect(feedSearch({ mode: "", type: "events" })).toBe("?type=events");
+    expect(feedSearch({ mode: "civic", circle: "All", types: [] })).toBe("?mode=civic");
+    expect(feedSearch({ mode: "", types: ["events"] })).toBe("?type=events");
   });
 
   it("gives the Following page the mode's theme", () => {

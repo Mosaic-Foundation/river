@@ -3,7 +3,14 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { Instance } from "../../src/river/instances.js";
 import { isSeedAlias, normalizeHost } from "../../src/river/instances.js";
-import { decodeCursor, encodeCursor, FeedInputError, parseContentType } from "../../src/river/feed/query.js";
+import {
+  decodeCursor,
+  encodeCursor,
+  FeedInputError,
+  parseContentType,
+  parseContentTypes,
+  parseNetworks,
+} from "../../src/river/feed/query.js";
 import { spaceKeyFor, type SpaceRow } from "../../src/river/feed/spaces.js";
 import { parseMode, scopeFor, visitorView, type ReaderView } from "../../src/river/feed/visitor.js";
 
@@ -58,6 +65,29 @@ describe("content types (spec F5)", () => {
 
   it("refuses an unknown type", () => {
     expect(() => parseContentType("memes")).toThrow(FeedInputError);
+  });
+
+  it("reads several types at once, deduplicated; any 'all' means every kind", () => {
+    expect(parseContentTypes("posts,Videos")).toEqual(["post", "video"]);
+    expect(parseContentTypes("posts, post ,")).toEqual(["post"]);
+    expect(parseContentTypes("posts,all")).toBeUndefined();
+    expect(parseContentTypes("")).toBeUndefined();
+    expect(parseContentTypes(undefined)).toBeUndefined();
+    expect(() => parseContentTypes("posts,memes")).toThrow(FeedInputError);
+  });
+});
+
+describe("networks (ui-revisions-1 item 4)", () => {
+  it("names adapters: hubs is civic_hub, fediverse is fediverse", () => {
+    expect(parseNetworks("hubs")).toEqual(["civic_hub"]);
+    expect(parseNetworks("Fediverse,hubs")).toEqual(["fediverse", "civic_hub"]);
+    expect(parseNetworks("")).toBeUndefined();
+    expect(parseNetworks(undefined)).toBeUndefined();
+  });
+
+  it("refuses an unknown network", () => {
+    expect(() => parseNetworks("bluesky")).toThrow(FeedInputError);
+    expect(() => parseNetworks("sample")).toThrow(FeedInputError);
   });
 });
 

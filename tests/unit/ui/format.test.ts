@@ -5,6 +5,9 @@ import {
   circleColor,
   CONTENT_TYPES,
   deadlineLabel,
+  NETWORKS,
+  parseList,
+  toggleValue,
   eventDate,
   formatDuration,
   initials,
@@ -25,11 +28,20 @@ describe("card helpers", () => {
 
   it("lists F5's content types in order, with the values /api/feed accepts", () => {
     expect(CONTENT_TYPES.map((t) => t.label)).toEqual([
-      "All", "Posts", "Articles", "Podcasts", "Videos", "Photos", "Events", "Civic activity",
+      "Posts", "Articles", "Podcasts", "Videos", "Photos", "Events", "Civic activity",
     ]);
     expect(CONTENT_TYPES.map((t) => t.value)).toEqual([
-      "all", "posts", "articles", "podcasts", "videos", "photos", "events", "civic",
+      "posts", "articles", "podcasts", "videos", "photos", "events", "civic",
     ]);
+    expect(NETWORKS.map((n) => n.value)).toEqual(["hubs", "fediverse"]);
+  });
+
+  it("reads and toggles filter lists in their own order (ui-revisions-1 items 2, 4)", () => {
+    expect(parseList("videos,POSTS,memes,posts", CONTENT_TYPES)).toEqual(["posts", "videos"]);
+    expect(parseList(null, CONTENT_TYPES)).toEqual([]);
+    expect(toggleValue(["videos"], "posts", CONTENT_TYPES)).toEqual(["posts", "videos"]);
+    expect(toggleValue(["posts", "videos"], "posts", CONTENT_TYPES)).toEqual(["videos"]);
+    expect(toggleValue([], "fediverse", NETWORKS)).toEqual(["fediverse"]);
   });
 
   it("labels kinds, defaulting to Post", () => {
@@ -127,9 +139,12 @@ describe("card helpers", () => {
 
 describe("feed query string", () => {
   it("leaves out All and empty values, and encodes the rest", () => {
-    expect(feedSearch({ circle: "All", type: "all", q: "  " })).toBe("");
-    expect(feedSearch({ circle: "News and ideas", type: "podcasts", q: " budget ", cursor: "abc" })).toBe(
+    expect(feedSearch({ circle: "All", types: [], networks: [], q: "  " })).toBe("");
+    expect(feedSearch({ circle: "News and ideas", types: ["podcasts"], q: " budget ", cursor: "abc" })).toBe(
       "?circle=News+and+ideas&type=podcasts&q=budget&cursor=abc",
+    );
+    expect(feedSearch({ types: ["posts", "videos"], networks: ["hubs", "fediverse"] })).toBe(
+      "?type=posts%2Cvideos&network=hubs%2Cfediverse",
     );
   });
 });
