@@ -170,6 +170,8 @@ test("check 7, member: Civic reads the circle whose role is civic, renamed or no
   await page.getByRole("button", { name: "Create a passkey" }).click();
   await throughCallback(page, () => page.getByRole("link", { name: "Continue to Mosaic River" }).click());
   await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
+  // A member's River is their own: no Sample River line (ui-revisions-1 item 8).
+  await expect(page.getByTestId("sample-banner")).toHaveCount(0);
   const civicNames = await civicSpaceNames(page);
 
   // Civic before: the hubs only (the campaign sample is followed but in no circle).
