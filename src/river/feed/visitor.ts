@@ -6,11 +6,11 @@
 // streams), a list of circles naming spaces, and one civic-role circle. Only where those lists come
 // from differs.
 import type { DefaultCircle, Instance } from "../instances.js";
+import { isMode, MODE_DEFINITIONS, type Mode } from "../modes/index.js";
 import { FeedInputError, type FeedScope } from "./query.js";
 import type { SpaceRow } from "./spaces.js";
 
-export const MODES = ["everything", "civic"] as const;
-export type Mode = (typeof MODES)[number];
+export { MODES, type Mode } from "../modes/index.js";
 
 /** A reader's circle, as the feed returns it. Visitor circles are named by their name. */
 export interface ReaderCircle {
@@ -58,15 +58,16 @@ export function visitorView(instance: Instance, spaces: Map<string, SpaceRow>): 
 
 export function parseMode(raw: string | undefined, instance: Instance): Mode {
   const value = raw === undefined || raw === "" ? instance.defaultMode : raw.toLowerCase();
-  if (!(MODES as readonly string[]).includes(value) || !instance.modesEnabled.includes(value)) {
+  if (!isMode(value) || !instance.modesEnabled.some((m) => m.toLowerCase() === value)) {
     throw new FeedInputError("mode", `Mode "${raw}" isn't enabled here`);
   }
-  return value as Mode;
+  return value;
 }
 
 /**
  * The scope after the circle and the mode (spec F5, F9): circle (one at a time) AND the mode's
- * scope. Civic mode keeps spaces with category civic plus members of the civic-role circle.
+ * scope. Civic mode keeps spaces with category civic plus members of the reader's circle whose
+ * `role` is civic: found by role, never by name, so a renamed Civic circle still counts.
  */
 export function scopeFor(view: ReaderView, mode: Mode, circleId: string | undefined): FeedScope {
   let circle: ReaderCircle | undefined;
@@ -77,7 +78,7 @@ export function scopeFor(view: ReaderView, mode: Mode, circleId: string | undefi
   const civicCircle = view.circles.find((c) => c.role === "civic");
   const allowed = (spaceId: string): boolean => {
     if (circle && !circle.spaceIds.includes(spaceId)) return false;
-    if (mode === "civic") {
+    if (MODE_DEFINITIONS[mode].scope === "civic") {
       return view.categories.get(spaceId) === "civic" || Boolean(civicCircle?.spaceIds.includes(spaceId));
     }
     return true;

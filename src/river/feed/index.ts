@@ -2,9 +2,14 @@
 // what is stored. Visitors read the instance's seed follows and default circles (visitorView);
 // members their own rows under forAccount() (memberView), with their read state. Both go through
 // the same scopeFor() and queryFeed().
-import { forAccount, forInstance } from "../../db/context.js";
+import { forAccount, forInstance, type Db } from "../../db/context.js";
+import type { ItemKind } from "../../shared/items/index.js";
 import { applyPendingSeeds, type Viewer } from "../accounts.js";
+import { riverNow } from "../clock.js";
 import type { Instance } from "../instances.js";
+import { enabledModes, MODE_DEFINITIONS } from "../modes/index.js";
+import type { Surface } from "../plugins/api.js";
+import { builtInRegistry, runSurface, type SurfaceOutput } from "../plugins/registry.js";
 import {
   decodeCursor,
   EMPTY_MESSAGE,
@@ -12,7 +17,9 @@ import {
   parseContentType,
   markViewRead,
   queryFeed,
+  queryViewItems,
   type FeedItem,
+  type FeedScope,
 } from "./query.js";
 import { memberView } from "./member.js";
 import { refreshFollowed, refreshSpaces, type RefreshDeps, type RefreshReport } from "./refresh.js";
@@ -32,6 +39,15 @@ export interface FeedParams {
 export interface FeedResponse {
   instance: { name: string; theme: string; modes: string[]; defaultMode: string };
   mode: Mode;
+  /** The instance's modes for the switch, in its order; the UI hides the switch for one mode. */
+  modes: Array<{ id: Mode; title: string }>;
+  /** The current mode's theme (spec 4.7: Everything is Mosaic, Civic is Civic). */
+  theme: "mosaic" | "civic";
+  /**
+   * Plugin outputs per surface for the current view (spec 4.7), on the first page only (null on
+   * later pages). Empty when the mode places no plugin.
+   */
+  surfaces: Partial<Record<Surface, SurfaceOutput[]>> | null;
   circles: Array<{ id: string; name: string; color: string | null; role: "civic" | null }>;
   items: FeedItem[];
   nextCursor: string | null;
@@ -50,6 +66,36 @@ function instanceSummary(instance: Instance): FeedResponse["instance"] {
     modes: instance.modesEnabled,
     defaultMode: instance.defaultMode,
   };
+}
+
+function modeSummary(instance: Instance, mode: Mode): Pick<FeedResponse, "mode" | "modes" | "theme"> {
+  return {
+    mode,
+    modes: enabledModes(instance.modesEnabled).map(({ id, title }) => ({ id, title })),
+    theme: MODE_DEFINITIONS[mode].theme,
+  };
+}
+
+/**
+ * Runs the plugins the mode places, on the current view's items (the same scope and filters as
+ * the feed). Reads the items only when some surface has a plugin.
+ */
+async function viewSurfaces(
+  db: Db,
+  instance: Instance,
+  mode: Mode,
+  scope: FeedScope,
+  filter: { kind?: ItemKind; q?: string },
+  now: Date,
+): Promise<Partial<Record<Surface, SurfaceOutput[]>>> {
+  const placed = Object.entries(MODE_DEFINITIONS[mode].surfaces) as Array<[Surface, readonly string[]]>;
+  if (!placed.some(([, ids]) => ids.length > 0)) return {};
+  const items = await queryViewItems(db, scope, filter);
+  const surfaces: Partial<Record<Surface, SurfaceOutput[]>> = {};
+  for (const [surface, ids] of placed) {
+    surfaces[surface] = runSurface(builtInRegistry, surface, ids, { items, now, config: instance.plugins });
+  }
+  return surfaces;
 }
 
 /** Validates the parameters every feed request shares, before any work. */
@@ -88,9 +134,13 @@ export async function visitorFeed(
       const scope = scopeFor(view, mode, params.circle);
       const page = await queryFeed(db, scope, { kind, q: params.q, cursor });
       const empty = page.items.length === 0 && !cursor;
+      const surfaces = cursor
+        ? null
+        : await viewSurfaces(db, instance, mode, scope, { kind, q: params.q }, deps.now ?? riverNow());
       return {
         instance: instanceSummary(instance),
-        mode,
+        ...modeSummary(instance, mode),
+        surfaces,
         circles: view.circles.map(({ id, name, color, role }) => ({ id, name, color, role })),
         items: page.items,
         nextCursor: page.nextCursor,
@@ -150,9 +200,13 @@ export async function memberFeed(
     const scope = scopeFor(view, mode, circle);
     const page = await queryFeed(db, scope, { kind, q: params.q, cursor, withRead: true });
     const empty = page.items.length === 0 && !cursor;
+    const surfaces = cursor
+      ? null
+      : await viewSurfaces(db, instance, mode, scope, { kind, q: params.q }, deps.now ?? riverNow());
     return {
       instance: instanceSummary(instance),
-      mode,
+      ...modeSummary(instance, mode),
+      surfaces,
       circles: view.circles.map(({ id, name, color, role }) => ({ id, name, color, role })),
       items: page.items,
       nextCursor: page.nextCursor,
