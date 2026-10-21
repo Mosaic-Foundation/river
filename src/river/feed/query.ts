@@ -96,6 +96,8 @@ export interface FeedFilter {
   kinds?: ItemKind[];
   /** Spaces of any of these adapters (networks); undefined for every network. */
   adapters?: string[];
+  /** One item only (the reader view, ui-revisions-1 item 1). */
+  itemId?: string;
   q?: string;
   cursor?: Cursor;
   limit?: number;
@@ -211,6 +213,7 @@ function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values:
                   SELECT * FROM unnest($2::uuid[], $3::text[])))
         AND ($4::text[] IS NULL OR i.kind = ANY($4::text[]))
         AND ($11::text[] IS NULL OR s.adapter = ANY($11::text[]))
+        AND ($12::uuid IS NULL OR i.id = $12::uuid)
         AND ($5::text IS NULL
              OR i.search @@ plainto_tsquery('simple', $5)
              OR s.name ILIKE $6)
@@ -227,6 +230,7 @@ function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values:
       muted.map((m) => m.spaceId),
       muted.map((m) => m.key),
       filter.adapters ?? null,
+      filter.itemId ?? null,
     ],
   };
 }

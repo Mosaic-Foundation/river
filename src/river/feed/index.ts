@@ -239,3 +239,34 @@ export async function memberMarkAllRead(
     deps.source,
   );
 }
+
+/**
+ * One stored item for the reader view (ui-revisions-1 item 1): the reader's own scope in
+ * Everything (all their follows, whatever the mode or filters), nothing fetched. Undefined when
+ * the item doesn't exist, is hidden, or isn't in what the reader follows. A member's item says
+ * whether they read it.
+ */
+export async function readerItem(
+  instance: Instance,
+  viewer: Viewer | undefined,
+  rawId: string,
+  deps: Pick<RefreshDeps, "source"> = {},
+): Promise<FeedItem | undefined> {
+  const id = rawId.toLowerCase();
+  if (!UUID.test(id)) throw new FeedInputError("item", "Unknown item");
+  const one = async (db: Db, scope: FeedScope, withRead: boolean) =>
+    (await queryFeed(db, scope, { itemId: id, limit: 1, withRead })).items[0];
+  if (viewer) {
+    return forAccount(instance.id, viewer.accountId, async (db) => one(db, scopeFor(await memberView(db), "everything", undefined), true), deps.source);
+  }
+  const inputs = instance.seedFollows.map((f) => f.url);
+  const circleInputs = instance.defaultCircles.flatMap((c) => c.members);
+  return forInstance(
+    instance.id,
+    async (db) => {
+      const spaces = await findSpaces(db, [...new Set([...inputs, ...circleInputs])]);
+      return one(db, scopeFor(visitorView(instance, spaces), "everything", undefined), false);
+    },
+    deps.source,
+  );
+}
