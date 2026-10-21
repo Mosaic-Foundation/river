@@ -80,6 +80,25 @@ export function safeImageUrl(url: string | null | undefined): string | undefined
   }
 }
 
+/**
+ * Audio and video for the reader view (Appendix B as amended: media-src 'self' https:): https
+ * only, straight from the source. Anything else is not played.
+ */
+export function safeMediaUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && !parsed.username && !parsed.password ? parsed.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The audio and video the reader view plays: https sources only, at most `limit`. */
+export function playableMedia(media: readonly MediaRef[] | null | undefined, limit = 4): MediaRef[] {
+  return (media ?? []).filter((m) => m && (m.type === "audio" || m.type === "video") && safeMediaUrl(m.url)).slice(0, limit);
+}
+
 /** The images a card shows: image media with a usable URL, at most `limit`. */
 export function cardImages(media: readonly MediaRef[] | null | undefined, limit = 4): MediaRef[] {
   return (media ?? [])

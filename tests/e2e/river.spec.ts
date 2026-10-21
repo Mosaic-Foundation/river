@@ -241,6 +241,7 @@ test.describe("hosts and pages", () => {
     const csp = res!.headers()["content-security-policy"] ?? "";
     expect(csp).toMatch(/(^|; )script-src 'self'( 'nonce-[^']+')?(;|$)/);
     expect(csp).toMatch(/(^|; )img-src 'self' https:(;|$)/);
+    expect(csp).toMatch(/(^|; )media-src 'self' https:(;|$)/);
     expect(csp).toMatch(/(^|; )connect-src 'self'(;|$)/);
     expect(csp).not.toContain("unsafe-inline");
     await expect(page.getByTestId("feed-card").first()).toBeVisible({ timeout: 30_000 });

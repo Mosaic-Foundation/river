@@ -449,3 +449,45 @@ test.describe("item 7: related hub cards are grouped", () => {
     expect(after.filter((id) => ids.includes(id))).toEqual([]);
   });
 });
+
+test.describe("reader view: audio and video from https sources (Adam, 2026-10-21)", () => {
+  test("a live video plays in the reader from its https source, loading nothing until played", async ({ page }) => {
+    const media: string[] = [];
+    page.on("request", (req) => {
+      if (req.resourceType() === "media") media.push(req.url());
+    });
+    // Find a stored item with a video, then open it straight from its address.
+    type Page = { items: Array<{ id: string; media: Array<{ type: string; url: string }> }>; nextCursor: string | null };
+    let item: Page["items"][number] | undefined;
+    let cursor: string | null = null;
+    for (let n = 0; n < 20 && !item; n++) {
+      const body = (await (await page.request.get(`/api/feed?network=fediverse${cursor ? `&cursor=${cursor}` : ""}`)).json()) as Page;
+      item = body.items.find((i) => i.media.some((m) => m.type === "video"));
+      cursor = body.nextCursor;
+      if (!cursor) break;
+    }
+    expect(item, "the recordings hold a fediverse post with a video").toBeTruthy();
+    const video = item!.media.find((m) => m.type === "video")!;
+
+    await page.setViewportSize(DESKTOP);
+    await page.goto(`/item/${item!.id}`);
+    const player = page.getByTestId("reader").getByTestId("reader-player").first();
+    await expect(player).toBeVisible({ timeout: 30_000 });
+    expect(await player.evaluate((el) => el.tagName)).toBe("VIDEO");
+    await expect(player).toHaveAttribute("src", video.url);
+    expect(new URL(video.url).protocol).toBe("https:");
+    await expect(player).toHaveAttribute("controls", "");
+    await expect(player).toHaveAttribute("preload", "none");
+    await expect(player).toHaveAccessibleName(new RegExp(`^Video from ${new URL(video.url).host.replace(/\./g, "\\.")}`));
+    await expect(page.getByTestId("reader")).not.toContainText("plays on");
+    // Nothing was requested before play (the fixture also fails the test on any blocked media).
+    expect(media).toEqual([]);
+    const results = await new AxeBuilder({ page }).include("[data-testid=reader]").analyze();
+    expect(results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id)).toEqual([]);
+  });
+
+  test("cards still show no player", async ({ page }) => {
+    await openFeed(page, "/?network=fediverse");
+    await expect(page.getByTestId("feed-card").locator("video, audio")).toHaveCount(0);
+  });
+});

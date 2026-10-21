@@ -55,6 +55,12 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, reader audio and video: unit `ui/csp` asserts `media-src 'self' https:`;
+  `ui/format` covers safeMediaUrl (https only, no userinfo) and playableMedia; e2e
+  `revisions.spec.ts` opens a recorded fediverse post with a video at `/item/{id}` and checks the
+  `<video>` (https src, controls, `preload="none"`, accessible name, no media request before play,
+  axe) and that cards have no player; `river.spec.ts` CSP test checks media-src.
+
 - 2026-10-21, UI revisions 1 (item 7): unit `ui/groups`; e2e `revisions.spec.ts` grouped hub
   cards (one card per hub process on the first page, `data-group-size`, the lead's label, the
   disclosure lists the earlier updates without opening the reader, Enter on one opens it, group

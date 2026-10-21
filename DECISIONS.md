@@ -16,6 +16,16 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-21 — Appendix B's CSP and the reader's audio and video
+- Question: Appendix B's policy has no `media-src`, so `default-src 'self'` kept audio and video
+  from other hosts out of the reader view.
+- Reading used: Adam approved `media-src 'self' https:` (2026-10-21). The reader plays https
+  media only, with `preload="none"` so nothing loads until the reader presses play. Cards stay
+  without players.
+- Proposed change: add `media-src 'self' https:` to Appendix B and a line to 4.8 ("audio and
+  video load straight from the source over https, only when played, in the reader view").
+- Thread / PR: UI revisions 1, media PR
+
 ### 2026-10-21 — 4.7 says Everything has no panel
 - Question: spec 4.7 and F9 give Everything "no panel"; ui-revisions-1 item 6 gives it Coming up.
 - Reading used: ui-revisions-1 wins (Adam, 2026-10-21); Civic's panel is unchanged.
@@ -237,6 +247,18 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-21 — The reader plays https audio and video (supersedes "plays on {host}")
+- Decision: the reader view renders `<video>` and `<audio>` with `controls` and
+  `preload="none"` for media whose URL is https (no userinfo), up to four, labelled by type and
+  host. Non-https media keeps "This {kind} plays on {host}." Media requests carry the page's
+  Referrer-Policy (strict-origin-when-cross-origin: the River's origin only); media elements have
+  no per-element referrer setting, unlike images (`no-referrer`).
+- Why: Adam asked for in-River playback (2026-10-21). `preload="none"` keeps opening an item
+  from contacting the media host until the reader chooses to play.
+- Alternatives: a same-origin proxy (an outbound call from the server, which would need an ADR);
+  posters and metadata preloading (requests to the host on open).
+- Thread / PR: UI revisions 1, media PR
 
 ## 2026-10-21 — Grouping related hub cards in the UI (UI revisions 1, item 7)
 - Decision: the UI folds loaded hub items (adapter `civic_hub`) that share a space and stream key

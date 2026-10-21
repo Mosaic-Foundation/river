@@ -11,7 +11,9 @@ tokens, keyboard access and labels on every control.
    has a "Back to River" control and an "Open original" link (new tab,
    `rel="noopener noreferrer"`; live items only). Card footers drop "Open on …" and show only the
    source host (e.g. "mastodon.social"). Links, buttons and Mark read inside a card keep their own
-   behavior. The reader uses the stored item only: no new outside fetch.
+   behavior. The reader uses the stored item only: no new outside fetch. Audio and video from
+   https sources play in the reader, straight from their source, loading only when played (Adam,
+   2026-10-21; the CSP gains `media-src 'self' https:`). Cards show no player.
    - Checks: a click on a card's text opens `/item/{id}` with the item's content, author and
      source; the sidebar is still visible; "Back to River" and the browser's Back both return to
      the feed at the same scroll position; "Open original" has `target="_blank"` and `rel`
