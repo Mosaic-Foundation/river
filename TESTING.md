@@ -55,6 +55,12 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, UI revisions 1 (item 7): unit `ui/groups`; e2e `revisions.spec.ts` grouped hub
+  cards (one card per hub process on the first page, `data-group-size`, the lead's label, the
+  disclosure lists the earlier updates without opening the reader, Enter on one opens it, group
+  Mark read and Mark unread write every id); `river.spec.ts` Mark all read compares with the sum
+  of `data-group-size`.
+
 - 2026-10-21, UI revisions 1 (item 6): unit `plugins` (Coming up's intro for "view" and
   "followed", Everything's placement and reach, the API's keys now include `reach`); API `modes`
   (Everything has Coming up in date order, the same with filters on); e2e `revisions.spec.ts`

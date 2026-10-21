@@ -393,3 +393,59 @@ test.describe("item 6: Coming up in Everything", () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 });
+
+test.describe("item 7: related hub cards are grouped", () => {
+  test("one card per hub process, the latest status leading, the others folded in", async ({ page }) => {
+    await openFeed(page, "/?network=hubs");
+    const grouped = cards(page).filter({ has: page.getByTestId("card-group") });
+    await expect(grouped.first()).toBeVisible();
+    // No two cards share a hub process.
+    const keys = await cards(page).evaluateAll((els) => els.map((el) => el.getAttribute("data-item-id")));
+    expect(new Set(keys).size).toBe(keys.length);
+    const fromApi = (await (await page.request.get("/api/feed?network=hubs")).json()) as {
+      items: Array<{ id: string; streamKey: string | null; space: { id: string }; civic: { label?: string } | null }>;
+    };
+    const streams = new Set(fromApi.items.map((i) => `${i.space.id} ${i.streamKey ?? i.id}`));
+    expect(await cards(page).count()).toBe(streams.size);
+
+    const card = grouped.first();
+    const leadId = (await card.getAttribute("data-item-id"))!;
+    const lead = fromApi.items.find((i) => i.id === leadId)!;
+    const siblings = fromApi.items.filter((i) => i.streamKey === lead.streamKey && i.id !== leadId);
+    expect(siblings.length).toBeGreaterThan(0);
+    await expect(card).toHaveAttribute("data-group-size", String(1 + siblings.length));
+    if (lead.civic?.label) await expect(card.locator(".card-chips")).toContainText(lead.civic.label);
+
+    // The earlier updates are listed when expanded, without opening the reader.
+    const summary = card.getByText(siblings.length === 1 ? "1 earlier update" : `${siblings.length} earlier updates`);
+    const list = card.getByRole("list", { name: "Earlier updates, newest first" });
+    await expect(list).toBeHidden();
+    await summary.click();
+    await expect(page.getByTestId("reader")).toHaveCount(0);
+    await expect(list.getByRole("listitem")).toHaveCount(siblings.length);
+    for (const sibling of siblings) {
+      await expect(list.locator(`[data-item-id="${sibling.id}"]`)).toContainText(sibling.civic?.label ?? "");
+    }
+    // From the keyboard too: an earlier update opens in the reader.
+    await list.getByRole("link").first().press("Enter");
+    await expect(page.getByTestId("reader")).toHaveAttribute("data-item-id", siblings[0]!.id);
+  });
+
+  test("Mark read on a group marks every item in it", async ({ page }) => {
+    await openFeed(page, "/?network=hubs");
+    const card = cards(page).filter({ has: page.getByTestId("card-group") }).first();
+    await expect(card.getByTestId("unread-dot")).toBeVisible();
+    const ids = [
+      (await card.getAttribute("data-item-id"))!,
+      ...(await card.locator(".card-group-item").evaluateAll((els) => els.map((el) => el.getAttribute("data-item-id")!))),
+    ];
+    expect(ids.length).toBeGreaterThan(1);
+    await card.getByRole("button", { name: "Mark read" }).click();
+    await expect(card.getByTestId("unread-dot")).toHaveCount(0);
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("mosaic-river:read") ?? "[]") as string[]);
+    expect(stored).toEqual(expect.arrayContaining(ids));
+    await card.getByRole("button", { name: "Mark unread" }).click();
+    const after = await page.evaluate(() => JSON.parse(localStorage.getItem("mosaic-river:read") ?? "[]") as string[]);
+    expect(after.filter((id) => ids.includes(id))).toEqual([]);
+  });
+});
