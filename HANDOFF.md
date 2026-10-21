@@ -20,6 +20,52 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## M12 Real media (stretch): PeerTube channels, an RSS/Atom/podcast adapter — 2026-10-21
+
+- Branch / PR: claude/m12-media → PR, **needs-adam**: a migration that changes an existing
+  column's CHECK (`spaces.adapter` gains `rss`), a drafted ADR (ADR-007, Proposed, which amends
+  ADR-001's host list), and a new kind of outside data source (feeds; new outbound requests: feed
+  links a page names, and a PeerTube channel's Video objects). No auth, session, `.github/`,
+  `vercel.json`, CLAUDE.md, fetch guard, sanitizer allowlist, keys, recovery or `seed.sql` change.
+- Migrations: `20261021200000_rss_adapter.sql`.
+
+**What it does.** PeerTube channels follow through the fediverse adapter by handle or URL and
+read as `video` spaces ("PeerTube channel"): the channel's outbox announces its own videos by
+IRI, so for PeerTube spaces those Videos are fetched (at most 20 per refresh) and stored as
+`video` items with title, length (`duration`), thumbnail (widest `icon`), watch page and file
+(top-level or the HLS playlist's), keyed by the Announce. A new `rss` adapter (last in the
+registry) follows RSS 2.0, RSS 1.0 and Atom feeds and podcasts by feed URL or by a page's
+`<link rel="alternate">`: audio enclosures make `podcast` items with `itunes:duration`, video
+enclosures `video`, others `article` or `post`; HTML through the sanitizer, no email address kept
+from authors, ETag/304 on refresh, newest 50 from the last 90 days. Its XML reader is in the repo,
+lenient, and refuses entity declarations. The follow box (and seed resolve) now tries each adapter
+that takes an address in turn. Following groups "Feeds and podcasts". No real seed was added;
+DECISIONS.md proposes three for Adam.
+
+**Keys.** None. Adapter value `rss`; `npm run record-fixtures -- --media <address>`;
+`scripts/synthetic-media-fixtures.ts`.
+
+**Tests.** Fixtures are SYNTHETIC (`tests/fixtures/http/synthetic-tube.example`,
+`synthetic-podcast.example`): this sandbox's egress refused every PeerTube and podcast host tried,
+so they are written to the published formats on reserved `.example` hosts and labelled (TESTING.md,
+fixtures README). `npm run check`: Test Files 33 passed (33), Tests 516 passed (516), UI built.
+`npm run test:api` (both dev servers, fresh `db reset`): Test Files 15 passed (15), Tests 141
+passed (141). `npm run test:e2e` (fresh `db reset`): 48 passed. New: unit `rssFeed`,
+`mediaAdapters`, additions to `fediverseMap`, `adapterRegistry`, `followResolve`; API `media`;
+e2e `media` (follows the podcast by home page and the channel by handle; cards show kind, "42 min"
+/ "4:33" and "Open on {host}").
+
+### Follow-ups
+- Adam: review ADR-007 and the migration (needs-adam); pick real seeds from DECISIONS.md
+  ("Proposed real media seeds"), record them with `--media` from a machine that can reach them,
+  check PeerTube's outbox order and the feed's size (the guard caps bodies at 2 MB), then retire
+  the synthetic fixtures.
+- Feeds over 2 MB (long-running podcasts) can't be read; raising the cap is a fetch guard change.
+- No inline player: cards link out ("Open on {host}"); the audio/video file URL is stored in
+  `media` for a later player.
+- Spec questions logged: section 5 still lists RSS as out of scope; PeerTube channel category;
+  thumbnails in `media`; PeerTube videos fetched at refresh; PeerTube outbox order.
+
 ## M11 Finish: member export, @live tests, feed performance report, deploy checklist — 2026-10-21
 
 - Branch / PR: claude/m11-finish → PR. Built on M5–M10 (unmerged); merge after them, once its own
