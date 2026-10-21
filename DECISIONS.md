@@ -16,6 +16,16 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-21 — A stream-only follow's final result after 90 days
+- Question: F7 clears Ended follows 90 days after the stream ends, and retention keeps the final
+  result for good; but once the stream-only follow is gone, the member's River no longer includes
+  that stream, so the kept result shows only to those following the whole space.
+- Reading used: as written (the follow is deleted; the result stays stored). The mockup's "their
+  final results stay in your River" holds for the 90 days the follow is under Ended.
+- Proposed change: spec F7 says whether a cleared Ended follow should leave a "final result only"
+  rule behind.
+- Thread / PR: M9
+
 ### 2026-10-21 — TRUSTED_DID_HOSTS names a host with its port
 - Question: spec 4.6 and Appendix D say "DIDs whose host is in TRUSTED_DID_HOSTS (v1:
   id.mosaic.social)", and CI wrote `localhost`, but a local DID's host component is
@@ -157,6 +167,82 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-21 — Following API (M9)
+- Decision: members-only routes under `/api` (src/river/following/routes.ts), each running in
+  `forAccount()` after the Origin check: `POST /follow/preview {input}` (resolves, stores nothing;
+  a POST so another page can't make the River fetch addresses), `POST /follows {input, scope:
+  space|stream, circleIds}` (resolves again, stores the space with `upsertSpace`, the rule and
+  circle memberships, then `refreshSpaces()` within the 6 s budget, as the feed does), `GET
+  /following` (Spaces, Quiet ids, Ended, circles), `DELETE /following/spaces/:id`, `PUT
+  /following/streams/:id {rule}`, `DELETE /following/rules/:id`, `POST /following/quiet/unfollow`,
+  and circles (`POST /circles`, `PATCH/DELETE /circles/:id`, `PUT/DELETE
+  /circles/:id/spaces/:spaceId`). Resolve failures answer 422 `{error: reason, message}` with
+  exactly the F6 sentence (`ADAPTER_MESSAGES`), never the adapter's detail. Visitors 401.
+- Why: spec F6–F8; Appendix B (Origin); constraint 2.
+- Thread / PR: M9 (claude/m9-following)
+
+## 2026-10-21 — Stream rules and the most specific rule (M9)
+- Decision: rows in `river.follows`: (space, no stream, follow) = whole space; (space, stream,
+  follow) = just this stream; (space, stream, mute) = muted stream. Both stream rules are made with
+  `ends_with_stream = true` ("until the process ends"); a rule on a stream that already ended goes
+  straight to Ended (`mark_stream_follows_ended`). One rule per stream (the unique key), so
+  muting a followed stream turns it into a mute. A mute hides the stream only inside a followed
+  space; a followed stream shows without its space. No whole-space mute (unfollow does that).
+  Unfollowing a space deletes its whole-space follow and live stream rules and its circle
+  memberships; ended rules stay under Ended. No migration: M1's grants already cover it.
+- Why: spec F7 ("most specific rule wins"; mockup labels "Following/Muted, until the process
+  ends"), 3.1.
+- Thread / PR: M9
+
+## 2026-10-21 — Ended follows in the feed (M9)
+- Decision: a stream follow with `ended_at` keeps showing what its stream stored (End,
+  Aggregation, Result) until the daily job deletes the follow 90 days on; retention has already
+  removed all but the final result by then. An ended mute keeps hiding. Ended lists stream rules
+  (follows and mutes) with "Remove"; Spaces never lists them.
+- Why: the mockup's note ("Finished streams move to Ended; their final results stay in your
+  River"); hiding a stream the moment its result arrives would drop the result itself.
+- Alternatives: only the final result after the end (needs a per-item rule in the feed query).
+- Thread / PR: M9
+
+## 2026-10-21 — Quiet (M9)
+- Decision: a whole-space follow is Quiet when the space is not a sample, has been fetched at
+  least once, and `newest_item_at` (null counts as never) is older than 90 days by the River's
+  clock (`riverNow()`, so TEST_CLOCK_NOW fixes it in tests, matching the fixtures). Stream-only
+  follows are never Quiet. "Unfollow all quiet spaces" unfollows them exactly as Unfollow does.
+- Why: spec F7, 3.1 ("Sample spaces are exempt from Quiet"); a never-fetched space has no evidence
+  of being quiet.
+- Thread / PR: M9
+
+## 2026-10-21 — The civic-role circle stays (M9)
+- Decision: the circle with `role = civic` can be renamed and recolored (the role column is never
+  written by the app) but not deleted (409 "The Civic circle can't be deleted. You can rename
+  it."). Circle names are unique per member (case-insensitive), 1–60 characters; colors `#rrggbb`
+  from a palette of eight; at most 50 circles; only followed spaces can be added.
+- Why: spec F8/F9: Civic mode reads that circle, and there's no screen to move the role.
+- Thread / PR: M9
+
+## 2026-10-21 — The Following page's shape (M9)
+- Decision: `/following` (a client route; vercel.json already serves index.html) with the follow
+  box and Spaces/Quiet/Ended in the main column and circles beside it, as the mockup. On a phone
+  the same parts are the River's Following and Circles tabs; the header's Follow opens the
+  Following tab (phone) or `/following#follow` (desktop); members also get a Following link.
+  Spaces are grouped by adapter ("Civic Hubs", "Fediverse", "Samples"), each row collapsed; a hub
+  row expands to its streams: those with the member's rules first, then up to 25 known streams
+  with visible items, newest first, each with Mute / Follow just this. Stream titles fall back to
+  the stream's first titled item, then "Process {id}". The preview's kind is "Civic Hub" or
+  "{NodeInfo software} account"; the address is the hub's host or the account's handle. Tabs are
+  pressed buttons, not ARIA tabs. Visitors get a sign-up prompt in both tabs and on the page.
+- Why: spec F6, F7, phone paragraph; mockups/following.png.
+- Thread / PR: M9
+
+## 2026-10-21 — seed_pending kept (M9)
+- Decision: M8's `seed_pending` preference stays as it is: a seed with no stored space at sign-up
+  is copied when its space appears. The follow box doesn't touch it; a pending entry naming a
+  deleted circle is skipped (as before).
+- Why: it only matters on a River nobody has opened since its seeds changed; folding it into the
+  follow flow would add nothing.
+- Thread / PR: M9
 
 ## 2026-10-21 — Sessions are signed, stateless cookies (M8)
 - Decision: the River's session is a cookie `__Host-river-session` holding

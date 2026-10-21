@@ -30,6 +30,10 @@
   --layout-dialog: 26rem;
   --layout-account-name: 16rem;
   --layout-tabbar: 4.25rem;
+  --layout-following: 52rem;
+  --layout-circles: 20rem;
+  --layout-row-text: 12rem;
+  --layout-stream-title: 10rem;
   --font-weight-bold: 700;
   --font-weight-semibold: 600;
 }

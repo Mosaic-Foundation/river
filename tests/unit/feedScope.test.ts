@@ -5,7 +5,7 @@ import type { Instance } from "../../src/river/instances.js";
 import { isSeedAlias, normalizeHost } from "../../src/river/instances.js";
 import { decodeCursor, encodeCursor, FeedInputError, parseContentType } from "../../src/river/feed/query.js";
 import { spaceKeyFor, type SpaceRow } from "../../src/river/feed/spaces.js";
-import { parseMode, scopeFor, visitorView } from "../../src/river/feed/visitor.js";
+import { parseMode, scopeFor, visitorView, type ReaderView } from "../../src/river/feed/visitor.js";
 
 const instance: Instance = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -80,6 +80,7 @@ describe("visitor scope", () => {
     expect(scopeFor(view, "everything", undefined)).toEqual({
       spaceIds: ["hub", "w3c", "podcast", "family", "video"],
       streams: [{ spaceId: "longmont", key: "https://longmont.civic.social/process/proc_1" }],
+      mutedStreams: [],
     });
   });
 
@@ -92,7 +93,7 @@ describe("visitor scope", () => {
   });
 
   it("a circle narrows to its members", () => {
-    expect(scopeFor(view, "everything", "News and ideas")).toEqual({ spaceIds: ["w3c", "podcast"], streams: [] });
+    expect(scopeFor(view, "everything", "News and ideas")).toEqual({ spaceIds: ["w3c", "podcast"], streams: [], mutedStreams: [] });
     expect(scopeFor(view, "everything", "All").spaceIds).toHaveLength(5);
     expect(() => scopeFor(view, "everything", "Bowling")).toThrow(FeedInputError);
   });
@@ -101,9 +102,10 @@ describe("visitor scope", () => {
     expect(scopeFor(view, "civic", undefined)).toEqual({
       spaceIds: ["hub"],
       streams: [{ spaceId: "longmont", key: "https://longmont.civic.social/process/proc_1" }],
+      mutedStreams: [],
     });
     // circle AND mode
-    expect(scopeFor(view, "civic", "Family")).toEqual({ spaceIds: [], streams: [] });
+    expect(scopeFor(view, "civic", "Family")).toEqual({ spaceIds: [], streams: [], mutedStreams: [] });
   });
 
   it("modes must be enabled on the instance", () => {
@@ -111,6 +113,41 @@ describe("visitor scope", () => {
     expect(parseMode("civic", instance)).toBe("civic");
     expect(() => parseMode("civic", { ...instance, modesEnabled: ["everything"] })).toThrow(FeedInputError);
     expect(() => parseMode("party", instance)).toThrow(FeedInputError);
+  });
+});
+
+describe("member stream rules: the most specific rule wins (spec F7, check 17)", () => {
+  const view: ReaderView = {
+    follows: [
+      { spaceId: "floyd" },
+      { spaceId: "longmont", streamKey: "https://longmont.civic.social/process/proc_1" },
+    ],
+    mutes: [
+      { spaceId: "floyd", streamKey: "https://floyd.civic.social/process/proc_muted" },
+      // A mute in a space that isn't followed as a whole changes nothing.
+      { spaceId: "demosville", streamKey: "https://demosville.civic.social/process/proc_2" },
+    ],
+    circles: [{ id: "c1", name: "Civic", color: null, role: "civic", spaceIds: ["longmont"] }],
+    categories: new Map([
+      ["floyd", "civic"],
+      ["longmont", "civic"],
+    ]),
+  };
+
+  it("a muted stream stays hidden inside a followed space; a followed stream shows on its own", () => {
+    expect(scopeFor(view, "everything", undefined)).toEqual({
+      spaceIds: ["floyd"],
+      streams: [{ spaceId: "longmont", key: "https://longmont.civic.social/process/proc_1" }],
+      mutedStreams: [{ spaceId: "floyd", key: "https://floyd.civic.social/process/proc_muted" }],
+    });
+  });
+
+  it("a circle that leaves the space out leaves its mutes out too", () => {
+    expect(scopeFor(view, "everything", "c1")).toEqual({
+      spaceIds: [],
+      streams: [{ spaceId: "longmont", key: "https://longmont.civic.social/process/proc_1" }],
+      mutedStreams: [],
+    });
   });
 });
 

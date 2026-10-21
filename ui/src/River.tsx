@@ -1,6 +1,7 @@
 // The feed page at / (spec F1, F4, F5, F10; §7 M6, M8: Everything mode, desktop and phone). A
 // visitor's read state stays in this browser and the page makes no server write (check 23); a
-// signed-in member's is saved to their account through the API and comes back with the feed.
+// signed-in member's is saved to their account through the API and comes back with the feed. On a phone,
+// members follow, unfollow and edit circles in the Following and Circles tabs (M9, spec F6-F8).
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   loadFeed,
@@ -20,6 +21,14 @@ import { FeedCard } from "./components/FeedCard";
 import { FilterChips, FilterSidebar, SearchField, type FilterState } from "./components/Filters";
 import { InfoDialog } from "./components/InfoDialog";
 import { NotFound } from "./components/NotFound";
+import { CirclesPanel } from "./components/CirclesPanel";
+import { FollowBox } from "./components/FollowBox";
+import { FollowingList } from "./components/FollowingList";
+import { useFollowing } from "./components/useFollowing";
+import { SignUpPrompt } from "./Following";
+
+/** The phone layout's media query (river.css: below 56rem). */
+const PHONE_QUERY = "(max-width: 55.99rem)";
 
 type Load =
   | { status: "loading" }
@@ -138,6 +147,14 @@ export function River() {
   const viewer = load.status === "ok" ? load.viewer : undefined;
   const reads = viewer ? serverReads : browserReads;
   const now = useNow();
+  // The phone's Following and Circles tabs (members): changes there reload the feed too.
+  const reloadFeed = useCallback(() => setRetry((n) => n + 1), []);
+  const following = useFollowing(Boolean(viewer) && (tab === "following" || tab === "circles"), reloadFeed);
+  const reloadFollowing = following.reload;
+  const afterFollow = useCallback(() => {
+    reloadFollowing();
+    reloadFeed();
+  }, [reloadFollowing, reloadFeed]);
 
   useEffect(() => {
     filtersToUrl(filters);
@@ -235,7 +252,15 @@ export function River() {
       <Header
         searchOpen={searchOpen}
         onToggleSearch={() => setSearchOpen((open) => !open)}
-        onFollow={(trigger) => setFollowTrigger(trigger)}
+        onFollow={(trigger) => {
+          // Visitors: the sign-up note. Members: the follow box (the phone's Following tab, or the
+          // Following page on a desktop).
+          if (!viewer) setFollowTrigger(trigger);
+          else if (window.matchMedia(PHONE_QUERY).matches) {
+            setTab("following");
+            window.setTimeout(() => document.getElementById("follow-input-phone")?.focus(), 0);
+          } else window.location.assign("/following#follow");
+        }}
         viewer={viewer}
         onSignOut={endSession}
       />
@@ -329,10 +354,32 @@ export function River() {
             <YouPanel viewer={viewer} onSignOut={endSession} />
           </section>
         )}
-        {tab !== "feed" && tab !== "you" && (
+        {(tab === "following" || tab === "circles") && (
           <section className="tab-placeholder phone-only" aria-labelledby="tab-title">
             <h1 id="tab-title">{TAB_PLACEHOLDERS[tab].title}</h1>
-            <p>{viewer ? TAB_PLACEHOLDERS[tab].member : TAB_PLACEHOLDERS[tab].text}</p>
+            {viewer === null && <SignUpPrompt text={TAB_PLACEHOLDERS[tab].text} />}
+            {viewer && following.state.status === "loading" && (
+              <p className="feed-status" role="status">
+                Loading what you follow…
+              </p>
+            )}
+            {viewer && following.state.status === "error" && (
+              <div className="feed-status" role="alert">
+                <p>{following.state.message}</p>
+                <button type="button" className="button button-primary" onClick={following.reload}>
+                  Try again
+                </button>
+              </div>
+            )}
+            {viewer && following.state.status === "ok" && tab === "following" && (
+              <>
+                <FollowBox circles={following.state.page.circles} onFollowed={afterFollow} inputId="follow-input-phone" />
+                <FollowingList page={following.state.page} run={following.run} busy={following.busy} />
+              </>
+            )}
+            {viewer && following.state.status === "ok" && tab === "circles" && (
+              <CirclesPanel page={following.state.page} run={following.run} busy={following.busy} />
+            )}
           </section>
         )}
       </div>
@@ -353,24 +400,16 @@ export function River() {
         onClose={() => setFollowTrigger(null)}
         testId="follow-dialog"
       >
-        {viewer ? (
-          <p>
-            Following more Civic Hubs and fediverse accounts is coming next. Your River started with this River's
-            default follows and circles, which are now yours.
-          </p>
-        ) : (
-          <>
-            <p>
-              Following Civic Hubs and fediverse accounts comes with an account. Until then you're reading this
-              River's default follows.
-            </p>
-            <p>
-              <a className="button button-primary" href={SIGN_IN_URL}>
-                Sign up
-              </a>
-            </p>
-          </>
-        )}
+        {/* Visitors only: members get the follow box. */}
+        <p>
+          Following Civic Hubs and fediverse accounts comes with an account. Until then you're reading this River's
+          default follows.
+        </p>
+        <p>
+          <a className="button button-primary" href={SIGN_IN_URL}>
+            Sign up
+          </a>
+        </p>
       </InfoDialog>
     </div>
   );

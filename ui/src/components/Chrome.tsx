@@ -1,6 +1,6 @@
 // The River's frame: the header (logo, phone search toggle, sign-in or the member's name and Sign
-// out on desktop, Follow) and the phone's bottom tabs (spec 2, phone paragraph), plus the You
-// panel. The mode picker arrives with modes (M10).
+// out on desktop, a member's Following link, Follow) and the phone's bottom tabs (spec 2, phone paragraph),
+// plus the You panel. The mode picker arrives with modes (M10).
 import { SIGN_IN_URL, viewerLabel, type Viewer } from "../lib/api";
 import type { Tab } from "../lib/tabs";
 import { CirclesIcon, FeedIcon, FollowingIcon, PlusIcon, SearchIcon, YouIcon } from "./Icons";
@@ -39,6 +39,11 @@ export function Header({ searchOpen, onToggleSearch, onFollow, viewer, onSignOut
         {viewer === null && (
           <a className="button button-quiet desktop-inline" href={SIGN_IN_URL}>
             Sign in
+          </a>
+        )}
+        {viewer && (
+          <a className="button button-quiet desktop-inline" href="/following">
+            Following
           </a>
         )}
         {viewer && (
