@@ -1107,3 +1107,16 @@ a.button {
 .card-group-item time {
   color: var(--color-text-muted);
 }
+
+/* Reader audio and video (https sources, loaded only when played). */
+.reader-media {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.reader-video {
+  height: auto;
+  background: var(--color-surface-alt);
+}

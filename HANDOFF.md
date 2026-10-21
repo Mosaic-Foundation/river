@@ -40,6 +40,25 @@ check`: 465 passed; API `identity`: 14 passed.
 
 ### Follow-ups
 - Read the next production log line for `GET /authorize`; it should now name the failing setting.
+## Reader view plays https audio and video (CSP media-src) — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → media PR (needs-adam: `vercel.json` CSP)
+- Migrations: none.
+
+**What it does.** Adds `media-src 'self' https:` to the River's CSP in `vercel.json` (Vite dev and
+preview read it from there). The reader view plays an item's https audio and video in place with
+native controls and `preload="none"`, so nothing loads until play; other media still says where it
+plays. Cards don't get players.
+
+**Keys.** None.
+
+**Tests.** Unit `ui/csp` (media-src), `ui/format` (safeMediaUrl, playableMedia); e2e
+`revisions.spec.ts` (a live fediverse video in the reader: https src, controls, preload none,
+labelled, no media request before play, axe; no players on cards); `river.spec.ts` CSP check
+includes media-src.
+
+### Follow-ups
+- Adam merges (CSP change). Spec Appendix B and 4.8 wording proposed in DECISIONS.md.
 
 ## UI revisions 1, item 7: related hub cards grouped — 2026-10-21
 
