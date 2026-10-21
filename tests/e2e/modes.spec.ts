@@ -107,7 +107,9 @@ test("check 7: Civic mode shows only civic items, wears the Civic theme and show
   await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
   await expectTheme(page, "mosaic");
   await expect(modeSwitch(page).getByRole("button", { name: "Everything" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByTestId("plugin-panel")).toHaveCount(0); // Everything: no panel
+  // Everything: Coming up only (ui-revisions-1 item 6), no Civic slots.
+  await expect(page.getByTestId("plugin-coming-up")).toBeVisible();
+  await expect(page.getByTestId("plugin-your-representatives")).toHaveCount(0);
   await expect(cards(page).getByRole("button", { name: "Sample", exact: true }).first()).toBeVisible();
   const civicNames = await civicSpaceNames(page);
   expect(civicNames.size).toBe(3); // the three seed hubs
@@ -132,7 +134,7 @@ test("check 7: Civic mode shows only civic items, wears the Civic theme and show
   await expectTheme(page, "civic");
   await expectCivicPanel(page);
   await modeSwitch(page).getByRole("button", { name: "Everything" }).click();
-  await expect(page.getByTestId("plugin-panel")).toHaveCount(0);
+  await expect(page.getByTestId("plugin-your-representatives")).toHaveCount(0);
   await expectTheme(page, "mosaic");
   await expect(page).not.toHaveURL(/mode=/);
   await expect(page.getByRole("heading", { level: 1, name: "Everything" })).toBeVisible();

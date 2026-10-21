@@ -513,7 +513,16 @@ export function River() {
         </main>
 
         {panel.length > 0 && !readerId && (
-          <div className={tab === "feed" ? "plugin-column" : "plugin-column hidden-phone"}>
+          // Everything's Coming up sits below the feed on a phone; Civic's panel above it.
+          <div
+            className={[
+              "plugin-column",
+              mode === "everything" ? "plugin-column-after" : "",
+              tab === "feed" ? "" : "hidden-phone",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <PluginPanel plugins={panel} label={`${modeTitle} panel`} />
           </div>
         )}
