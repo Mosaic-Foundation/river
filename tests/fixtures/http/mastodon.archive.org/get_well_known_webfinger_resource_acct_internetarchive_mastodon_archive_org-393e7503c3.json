@@ -1,0 +1,23 @@
+{
+  "url": "https://mastodon.archive.org/.well-known/webfinger?resource=acct:internetarchive@mastodon.archive.org",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=259200, public",
+    "content-length": "713",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; frame-ancestors 'none'; font-src 'self' https://mastodon.archive.org; img-src 'self' data: blob: https://mastodon.archive.org; media-src 'self' data: https://mastodon.archive.org; manifest-src 'self' https://mastodon.archive.org; form-action 'self'; child-src 'self' blob: https://mastodon.archive.org; worker-src 'self' blob: https://mastodon.archive.org; connect-src 'self' data: blob: https://mastodon.archive.org wss://mastodon.archive.org; script-src 'self' https://mastodon.archive.org 'wasm-unsafe-eval'; frame-src 'self' https:; style-src 'self' https://mastodon.archive.org 'nonce-1GdMXeieGesJ54oXMxKm1A=='",
+    "content-type": "application/jrd+json; charset=utf-8",
+    "etag": "W/\"666f14944072ac395b7867ff72496bc9\"",
+    "referrer-policy": "same-origin",
+    "server": "Mastodon",
+    "strict-transport-security": "max-age=63072000; includeSubDomains, max-age=31536000",
+    "vary": "Origin",
+    "x-cached": "HIT",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-location": "Proxy",
+    "x-request-id": "dce80d81-fe5e-4055-8077-ce22fe53f800",
+    "x-runtime": "0.188528",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"subject\":\"acct:internetarchive@mastodon.archive.org\",\"aliases\":[\"https://mastodon.archive.org/@internetarchive\",\"https://mastodon.archive.org/users/internetarchive\"],\"links\":[{\"rel\":\"http://webfinger.net/rel/profile-page\",\"type\":\"text/html\",\"href\":\"https://mastodon.archive.org/@internetarchive\"},{\"rel\":\"self\",\"type\":\"application/activity+json\",\"href\":\"https://mastodon.archive.org/users/internetarchive\"},{\"rel\":\"http://ostatus.org/schema/1.0/subscribe\",\"template\":\"https://mastodon.archive.org/authorize_interaction?uri={uri}\"},{\"rel\":\"http://webfinger.net/rel/avatar\",\"type\":\"image/jpeg\",\"href\":\"https://mastodon.archive.org/system/accounts/avatars/109/326/087/888/226/666/original/6fd012dbbfe83862.jpeg\"}]}"
+}

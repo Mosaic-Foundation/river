@@ -1,0 +1,22 @@
+{
+  "url": "https://w3c.social/.well-known/nodeinfo",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=259200, public",
+    "content-length": "110",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; frame-ancestors 'none'; font-src 'self' https://w3c.social; img-src 'self' data: blob: https://w3c.social https://w3csocial.files.fedi.monster; media-src 'self' data: https://w3c.social https://w3csocial.files.fedi.monster; manifest-src 'self' https://w3c.social; form-action 'self'; child-src 'self' blob: https://w3c.social; worker-src 'self' blob: https://w3c.social; connect-src 'self' data: blob: https://w3c.social https://w3csocial.files.fedi.monster wss://w3c.social; script-src 'self' https://w3c.social 'wasm-unsafe-eval'; frame-src 'self' https:; style-src 'self' https://w3c.social 'nonce-x2IPjYGJfg/P8x4OBpPwRA=='",
+    "content-type": "application/json; charset=utf-8",
+    "etag": "W/\"6bbcda6617a5a4f479bf117fb7a8e483\"",
+    "referrer-policy": "same-origin",
+    "server": "nginx/1.18.0",
+    "strict-transport-security": "max-age=63072000; includeSubDomains",
+    "vary": "Accept-Encoding,Origin",
+    "x-cached": "HIT",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "9594c27d-2ca4-4a5d-baf5-606c6fbd489f",
+    "x-runtime": "0.002427",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"links\":[{\"rel\":\"http://nodeinfo.diaspora.software/ns/schema/2.0\",\"href\":\"https://w3c.social/nodeinfo/2.0\"}]}"
+}

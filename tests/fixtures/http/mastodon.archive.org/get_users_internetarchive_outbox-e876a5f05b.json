@@ -1,0 +1,23 @@
+{
+  "url": "https://mastodon.archive.org/users/internetarchive/outbox",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=180, public",
+    "content-length": "331",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'; form-action 'none'",
+    "content-type": "application/activity+json; charset=utf-8",
+    "etag": "W/\"c9a95d87b4f197e17c2db02d3098783c\"",
+    "referrer-policy": "same-origin",
+    "server": "Mastodon",
+    "strict-transport-security": "max-age=63072000; includeSubDomains, max-age=31536000",
+    "vary": "Accept",
+    "x-cached": "EXPIRED",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-location": "Proxy",
+    "x-request-id": "3e02958e-be75-43bb-aaca-1890b9e40e58",
+    "x-runtime": "0.019171",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"@context\":\"https://www.w3.org/ns/activitystreams\",\"id\":\"https://mastodon.archive.org/users/internetarchive/outbox\",\"type\":\"OrderedCollection\",\"totalItems\":1594,\"first\":\"https://mastodon.archive.org/users/internetarchive/outbox?page=true\",\"last\":\"https://mastodon.archive.org/users/internetarchive/outbox?min_id=0\\u0026page=true\"}"
+}

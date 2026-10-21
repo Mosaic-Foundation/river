@@ -1,0 +1,27 @@
+{
+  "url": "https://mastodon.social/users/wearenew_public",
+  "status": 401,
+  "headers": {
+    "accept-ranges": "bytes",
+    "alt-svc": "h3=\":443\";ma=86400,h3-29=\":443\";ma=86400,h3-27=\":443\";ma=86400",
+    "cache-control": "private, no-store",
+    "content-length": "30",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; frame-ancestors 'none'; font-src 'self' https://mastodon.social; img-src 'self' data: blob: https://mastodon.social https://files.mastodon.social; media-src 'self' data: https://mastodon.social https://files.mastodon.social; manifest-src 'self' https://mastodon.social; form-action 'none'; child-src 'self' blob: https://mastodon.social; worker-src 'self' blob: https://mastodon.social; connect-src 'self' data: blob: https://mastodon.social https://files.mastodon.social wss://streaming.mastodon.social; script-src 'self' https://mastodon.social 'wasm-unsafe-eval'; frame-src 'self' https:; style-src 'self' https://mastodon.social 'nonce-JikwXvfgjH3gZgSbn/NJTQ=='",
+    "content-type": "application/json; charset=utf-8",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "server": "Mastodon",
+    "strict-transport-security": "max-age=31557600",
+    "vary": "Accept, Accept-Language, Cookie, Signature, Origin",
+    "via": "1.1 varnish, 1.1 varnish",
+    "x-cache": "MISS, MISS, MISS",
+    "x-cache-hits": "0, 0, 0",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "b8cfceef-1f18-483c-b66e-747fb23a9177",
+    "x-runtime": "0.019516",
+    "x-served-by": "cache-fra-etou8220111-FRA, cache-fra-etou8220175-FRA, cache-chi-kigq8000141-CHI",
+    "x-timer": "S1792544740.693125,VS0,VE196",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"error\":\"Request not signed\"}"
+}

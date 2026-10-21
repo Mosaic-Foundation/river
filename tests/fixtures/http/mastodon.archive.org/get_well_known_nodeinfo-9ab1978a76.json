@@ -1,0 +1,23 @@
+{
+  "url": "https://mastodon.archive.org/.well-known/nodeinfo",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=259200, public",
+    "content-length": "120",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; frame-ancestors 'none'; font-src 'self' https://mastodon.archive.org; img-src 'self' data: blob: https://mastodon.archive.org; media-src 'self' data: https://mastodon.archive.org; manifest-src 'self' https://mastodon.archive.org; form-action 'self'; child-src 'self' blob: https://mastodon.archive.org; worker-src 'self' blob: https://mastodon.archive.org; connect-src 'self' data: blob: https://mastodon.archive.org wss://mastodon.archive.org; script-src 'self' https://mastodon.archive.org 'wasm-unsafe-eval'; frame-src 'self' https:; style-src 'self' https://mastodon.archive.org 'nonce-9zgXyQyZYaTNoKISq2o82Q=='",
+    "content-type": "application/json; charset=utf-8",
+    "etag": "W/\"ff8492994f8ecf274568d1c4109080e3\"",
+    "referrer-policy": "same-origin",
+    "server": "Mastodon",
+    "strict-transport-security": "max-age=63072000; includeSubDomains, max-age=31536000",
+    "vary": "Accept-Encoding,Origin",
+    "x-cached": "HIT",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-location": "Proxy",
+    "x-request-id": "24504ab5-9ed7-45c4-b70d-04907a00eeb4",
+    "x-runtime": "0.035264",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"links\":[{\"rel\":\"http://nodeinfo.diaspora.software/ns/schema/2.0\",\"href\":\"https://mastodon.archive.org/nodeinfo/2.0\"}]}"
+}

@@ -1,0 +1,22 @@
+{
+  "url": "https://w3c.social/.well-known/webfinger?resource=acct:w3c@w3c.social",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=259200, public",
+    "content-length": "786",
+    "content-security-policy": "base-uri 'none'; default-src 'none'; frame-ancestors 'none'; font-src 'self' https://w3c.social; img-src 'self' data: blob: https://w3c.social https://w3csocial.files.fedi.monster; media-src 'self' data: https://w3c.social https://w3csocial.files.fedi.monster; manifest-src 'self' https://w3c.social; form-action 'self'; child-src 'self' blob: https://w3c.social; worker-src 'self' blob: https://w3c.social; connect-src 'self' data: blob: https://w3c.social https://w3csocial.files.fedi.monster wss://w3c.social; script-src 'self' https://w3c.social 'wasm-unsafe-eval'; frame-src 'self' https:; style-src 'self' https://w3c.social 'nonce-Rd/mpV9OwP+UQQJ4LbrdLQ=='",
+    "content-type": "application/jrd+json; charset=utf-8",
+    "etag": "W/\"f7496a4a65f4ad884807075cb4114a3f\"",
+    "referrer-policy": "same-origin",
+    "server": "nginx/1.18.0",
+    "strict-transport-security": "max-age=63072000; includeSubDomains",
+    "vary": "Accept, Origin",
+    "x-cached": "MISS",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "8364f94f-2954-4deb-890d-14bc5fe0493d",
+    "x-runtime": "0.005683",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"subject\":\"acct:w3c@w3c.social\",\"aliases\":[\"https://w3c.social/@w3c\",\"https://w3c.social/users/w3c\"],\"links\":[{\"rel\":\"http://webfinger.net/rel/profile-page\",\"type\":\"text/html\",\"href\":\"https://w3c.social/@w3c\"},{\"rel\":\"self\",\"type\":\"application/activity+json\",\"href\":\"https://w3c.social/users/w3c\"},{\"rel\":\"http://ostatus.org/schema/1.0/subscribe\",\"template\":\"https://w3c.social/authorize_interaction?uri={uri}\"},{\"rel\":\"https://w3id.org/fep/3b86/Create\",\"template\":\"https://w3c.social/share?text={content}\"},{\"rel\":\"https://w3id.org/fep/3b86/Object\",\"template\":\"https://w3c.social/authorize_interaction?uri={object}\"},{\"rel\":\"http://webfinger.net/rel/avatar\",\"type\":\"image/png\",\"href\":\"https://w3csocial.files.fedi.monster/accounts/avatars/000/001/647/original/d6bf8c5c8955c92b.png\"}]}"
+}

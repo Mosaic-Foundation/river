@@ -1,0 +1,29 @@
+{
+  "url": "https://mastodon.social/users/eff/outbox",
+  "status": 200,
+  "headers": {
+    "accept-ranges": "bytes",
+    "age": "17",
+    "alt-svc": "h3=\":443\";ma=86400,h3-29=\":443\";ma=86400,h3-27=\":443\";ma=86400",
+    "cache-control": "max-age=180, public",
+    "content-length": "276",
+    "content-security-policy": "default-src 'none'; frame-ancestors 'none'; form-action 'none'",
+    "content-type": "application/activity+json; charset=utf-8",
+    "etag": "W/\"be015ead9994fbec3189c088373b0d47\"",
+    "referrer-policy": "same-origin",
+    "server": "Mastodon",
+    "strict-transport-security": "max-age=31557600",
+    "vary": "Accept",
+    "via": "1.1 varnish, 1.1 varnish",
+    "x-cache": "MISS, HIT, MISS",
+    "x-cache-hits": "0, 1, 0",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "90e56bb8-24c8-4f41-9127-5c26551ad8e2",
+    "x-runtime": "0.013898",
+    "x-served-by": "cache-fra-eddf8230055-FRA, cache-fra-eddf8230031-FRA, cache-chi-kigq8000025-CHI",
+    "x-timer": "S1792544742.090587,VS0,VE100",
+    "x-xss-protection": "0"
+  },
+  "body": "{\"@context\":\"https://www.w3.org/ns/activitystreams\",\"id\":\"https://mastodon.social/users/eff/outbox\",\"type\":\"OrderedCollection\",\"totalItems\":23813,\"first\":\"https://mastodon.social/users/eff/outbox?page=true\",\"last\":\"https://mastodon.social/users/eff/outbox?min_id=0&page=true\"}"
+}
