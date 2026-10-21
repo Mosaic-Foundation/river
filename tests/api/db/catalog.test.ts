@@ -22,7 +22,7 @@ afterAll(async () => {
 describe("database roles", () => {
   it("each app connects as its own role, never postgres", async () => {
     const r = await forInstance(SEED_INSTANCE, (db) => db.query("SELECT current_user AS who"), river);
-    const i = await forIdentity((db) => db.query("SELECT current_user AS who"), identity);
+    const i = await forIdentity({}, (db) => db.query("SELECT current_user AS who"), identity);
     expect(r.rows[0].who).toBe("river_app");
     expect(i.rows[0].who).toBe("identity_app");
   });

@@ -34,7 +34,7 @@ export interface RiverDb extends Db {
 }
 
 /** The transaction-local settings RLS policies read. */
-export type SettingName = "app.instance_id" | "app.account_id";
+export type SettingName = "app.instance_id" | "app.account_id" | "app.person_id" | "app.auth_request_id";
 
 /** The slice of pg.PoolClient this module uses. */
 export interface TxClient {
@@ -108,12 +108,32 @@ export async function forHost<T>(fn: (db: Db) => Promise<T>, source?: ClientSour
   return inTransaction([], fn, source);
 }
 
+/** Whose identity rows a forIdentity() transaction may reach. */
+export interface IdentityScope {
+  /** A person's own rows in people, passkeys, did_log, keys, audit_log and recovery_tokens. */
+  personId?: string;
+  /** One auth_requests row (one WebAuthn ceremony); its random id is the browser's capability. */
+  authRequestId?: string;
+}
+
 /**
- * The identity host's queries, as identity_app on the identity schema. The identity tables arrive
- * in M7, which decides which settings their policies read; until then this sets none.
+ * The identity host's queries, as identity_app on the identity schema (migration
+ * 20261021140000_identity_tables.sql). Sets `app.person_id` and/or `app.auth_request_id`; the
+ * policies match nothing else, so a transaction with neither sees no row. Before a person is
+ * known, the app calls the schema's narrow lookup functions (identity.person_by_credential() and
+ * friends) inside forIdentity({}) and then opens a context for the person they name.
  */
-export async function forIdentity<T>(fn: (db: Db) => Promise<T>, source?: ClientSource): Promise<T> {
-  return inTransaction([], fn, source);
+export async function forIdentity<T>(
+  scope: IdentityScope,
+  fn: (db: Db) => Promise<T>,
+  source?: ClientSource,
+): Promise<T> {
+  const settings: Array<readonly [SettingName, string]> = [];
+  if (scope.personId !== undefined) settings.push(["app.person_id", requireId("personId", scope.personId)]);
+  if (scope.authRequestId !== undefined) {
+    settings.push(["app.auth_request_id", requireId("authRequestId", scope.authRequestId)]);
+  }
+  return inTransaction(settings, fn, source);
 }
 
 /**
