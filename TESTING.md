@@ -55,6 +55,13 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, UI revisions 1 (item 6): unit `plugins` (Coming up's intro for "view" and
+  "followed", Everything's placement and reach, the API's keys now include `reach`); API `modes`
+  (Everything has Coming up in date order, the same with filters on); e2e `revisions.spec.ts`
+  (Everything panel right of the feed, sorted and upcoming, unchanged by a type filter; below the
+  feed at 390 px; reader keeps `?mode=civic&type=civic` and shows the author); `modes.spec.ts`
+  check 7 expects Coming up, not the Civic slots, in Everything.
+
 - 2026-10-21, UI revisions 1 (item 1): API `feed` `GET /items/{id}` (equal to the feed's item,
   404 unknown, 400 malformed, 404 outside the follows or hidden); e2e `revisions.spec.ts` reader
   view (click opens `/item/{id}` beside the sidebar, reload loads it from the API, scroll restored
