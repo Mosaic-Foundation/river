@@ -408,6 +408,11 @@ test("check 37: recover-dids re-keys a DID with the recovery key; same SCID, sam
   expect(noteVerifies(firstNote, personKey ?? "")).toBe(true);
   const scid = before.log[0].parameters.scid;
 
+  // did:webvh versionTime has one-second precision and must increase, so a re-key in the same
+  // second as sign-up is refused. Adam never runs it that fast; the test waits the second out.
+  const firstVersion = Date.parse(before.log[0].versionTime);
+  await page.waitForTimeout(Math.max(0, firstVersion + 1100 - Date.now()));
+
   // Adam's command, with the run's throwaway recovery key and the identity host's settings (from
   // .env.identity, or from the environment when a run passes them that way).
   const run = spawnSync(
