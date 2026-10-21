@@ -1,0 +1,24 @@
+{
+  "url": "https://floyd.civic.social/events?page=true&context=https%3A%2F%2Ffloyd.civic.social%2Fprocess%2Fproc_beta_vote_energy_001&limit=1",
+  "status": 200,
+  "headers": {
+    "access-control-allow-headers": "Content-Type, Authorization",
+    "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "age": "0",
+    "cache-control": "public, max-age=0, must-revalidate",
+    "content-length": "1926",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data: https:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    "content-type": "application/activity+json; charset=utf-8",
+    "etag": "W/\"786-msvScwVjmJEzxdByMDOG6OZXoj8\"",
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "server": "Vercel",
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-powered-by": "Express",
+    "x-vercel-cache": "MISS",
+    "x-vercel-id": "cle1::iad1::m8mnd-1792544688662-a1c0b1e12241"
+  },
+  "body": "{\"@context\":[\"https://www.w3.org/ns/activitystreams\",\"https://civic.social/ns/civic\"],\"id\":\"https://floyd.civic.social/events?context=https%3A%2F%2Ffloyd.civic.social%2Fprocess%2Fproc_beta_vote_energy_001&limit=1&page=true\",\"type\":\"OrderedCollectionPage\",\"partOf\":\"https://floyd.civic.social/events?context=https%3A%2F%2Ffloyd.civic.social%2Fprocess%2Fproc_beta_vote_energy_001&limit=1\",\"orderedItems\":[{\"@context\":[\"https://www.w3.org/ns/activitystreams\",\"https://civic.social/ns/civic\",{\"hub\":\"https://floyd.civic.social/ns#\"}],\"id\":\"https://floyd.civic.social/activities/evt_5d489f2720b643bf\",\"type\":\"Announce\",\"actor\":\"https://floyd.civic.social/users/user_4f02a6460fc64b2b\",\"published\":\"2026-09-09T03:33:57.683+00:00\",\"to\":[\"https://www.w3.org/ns/activitystreams#Public\"],\"generator\":{\"id\":\"did:web:floyd.civic.social\",\"type\":[\"Organization\",\"civic:Hub\"],\"name\":\"Floyd Civic Hub\",\"url\":\"https://floyd.civic.social\"},\"location\":{\"type\":\"Place\",\"name\":\"Floyd County, Virginia\",\"civic:code\":\"us-va-floyd\"},\"context\":{\"id\":\"https://floyd.civic.social/process/proc_beta_vote_energy_001\",\"type\":\"civic:Process\",\"civic:processType\":\"civic.vote\"},\"object\":{\"type\":\"civic:Result\",\"hub:payload\":{\"result\":{\"tally\":{\"Warming and cooling centers with backup power for long outages.\":4,\"Incentives for homes and farms to add their own solar and battery backup.\":7,\"Backup power for critical services first: emergency services, water, and the clinic.\":15,\"A county resilience assessment: find out what we have, what's at risk, and what it would cost.\":11},\"computed_at\":\"2026-09-09T03:33:57.683Z\",\"total_votes\":33},\"process\":{\"type\":\"civic.vote\"}}},\"url\":\"https://floyd.civic.social/process/proc_beta_vote_energy_001\"}],\"next\":\"https://floyd.civic.social/events?context=https%3A%2F%2Ffloyd.civic.social%2Fprocess%2Fproc_beta_vote_energy_001&limit=1&page=true&cursor=MjAyNi0wOS0wOVQwMzozMzo1Ny42ODMrMDA6MDB8ZXZ0XzVkNDg5ZjI3MjBiNjQzYmY\"}"
+}

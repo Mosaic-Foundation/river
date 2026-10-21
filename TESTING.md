@@ -29,6 +29,10 @@ Newest first: date, slice, tests added, counts.
   part, 22, all six seeds, REST fallback, blocked, refusals, 429, boost budget). Fixtures: 45
   recorded fediverse responses; derived cases built at run time in
   `tests/unit/helpers/fediverseFixtures.ts`. Unit 183 on this branch (M3's tests live on #7).
+- 2026-10-21, M3: unit `sanitize` (check 22 sanitizer half, allowlist, https-only links) and
+  `civicHub/` (`allowlist`, `hubTemplates`, `map`, `adapter`: checks 18 adapter part, 22, 25,
+  plus 13/14/16 through resolve). Fixtures: 36 recorded hub responses; derived cases inline and
+  labelled. Unit 174.
 - 2026-10-21, M2: unit `fetchGuard` (address table from the hub; check 16 with an injected
   resolver and a counting MockAgent: refused, F6 wording, zero requests; redirect targets never
   requested; pinned lookup and rebinding; redirects; 2 MB; timeout; 2 per host; Retry-After;

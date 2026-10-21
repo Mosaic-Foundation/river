@@ -28,6 +28,28 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Question: "Replies are hidden" doesn't say whether an account's replies to its own posts count.
 - Reading used: hidden too (the conservative reading).
 - Thread / PR: M4
+### 2026-10-21 — An empty limit=1 page doesn't mean a stream is gone
+- Question: spec 4.2 validates a stream (and detects a withdrawn one, check 33) with
+  `?context={key}&limit=1`, treating an empty page as gone. Recorded Longmont streams answer
+  `orderedItems: []` with a `next` (the hub filters non-public events after the limit), while a
+  process the hub doesn't serve answers empty with no `next` (recorded on all three hubs).
+- Reading used: `probeStream()` returns `exists = items.length > 0 || next present`; resolve
+  refuses only when it is false. M5's withdrawn check must use `exists`, not the item count.
+- Proposed change: spec 4.2 says "empty and no `next`".
+- Thread / PR: M3 (claude/m3-civic-hub-adapter)
+
+### 2026-10-21 — Process ids aren't always hex
+- Question: spec 4.2 says `proc_[0-9a-f]+`, but Floyd serves `proc_beta_vote_energy_001`.
+- Reading used: accept `proc_[a-z0-9_]{1,64}`; the key is validated against the hub before use.
+- Proposed change: spec 4.2 says `proc_[a-z0-9_]+`.
+- Thread / PR: M3
+
+### 2026-10-21 — Where voting_closes_at lives
+- Question: spec 4.2 names `hub:payload.voting_closes_at`; recorded civic:Start activities nest it
+  at `hub:payload.process.voting_closes_at`.
+- Reading used: read either.
+- Proposed change: spec 4.2 names `hub:payload.process.voting_closes_at`.
+- Thread / PR: M3
 
 ### 2026-10-20 — Where the hostname lookup runs
 - Question: CLAUDE.md says every query runs inside forInstance(), forAccount() or forIdentity(),
@@ -101,6 +123,60 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   never retried); server-only is returned as `fetchStatus: "blocked"`, a lasting state.
 - Why: spec 4.3 (boosts fetched only when opened, at most 20 per refresh), F6.
 - Thread / PR: M4
+## 2026-10-21 — The sanitizer and the item model come first in M3
+- Decision: `src/shared/sanitize/` (sanitize-html ^2.18.1, MIT) implements Appendix B's allowlist:
+  only absolute https hrefs survive (a relative href would resolve against the River's origin),
+  `rel="nofollow noopener noreferrer"` on every link, `class` only as `invisible`/`ellipsis`.
+  `toPlainText()` strips all tags for titles and summaries. `src/shared/items/` holds the one item
+  shape (ADR-003) and the `Adapter` contract; adapters are pure (fetch through a given guard,
+  return items plus space and stream changes, `onPage` per page) and M5's refresh writes them.
+  Both were written before M3 and M4 forked so the two adapters share them.
+- Why: spec §7 puts the sanitizer in M3, and M4 needs it and the contract too.
+- Thread / PR: M3
+
+## 2026-10-21 — The hub allowlist is a code table with per-processType rows (M3)
+- Decision: `src/river/adapters/civicHub/allowlist.ts` lists spec 4.2's rows keyed by activity,
+  object and optional processType (a processType row wins). Hubs send a proposal's or project's
+  end as `civic:End civic:Process` with processType `civic.proposal`/`civic.project`, so those
+  get rows ("A proposal closed" / "A project archived") beside the spec's `civic:Proposal` /
+  `hub:Project` rows. Create and Update hub:Project are two rows. Only `Create hub:Aggregation`
+  with processType `civic.meeting_summary` is kind `article`. The row's text goes in
+  `civic.label`, a new optional CivicDetails field.
+- Why: spec 4.2, ADR-003; the recorded hubs send the civic:Process form.
+- Alternatives: object type only (real proposal and project ends would read "A process ended").
+- Thread / PR: M3
+
+## 2026-10-21 — Hub templates, official responses and final results (M3)
+- Decision: `hubTemplates.ts` uses the spec's keys plus `brief.headline`, `result.total_votes`
+  and `response.official_title`, never a response's excerpt; template text is plain, at most 500
+  characters, with AS2 `object.summary` as fallback. `Create hub:OfficialResponse` shows unless
+  `hub:payload.feed_anchor === false` (one card per burst, as the hub does). Per fetch and stream,
+  the latest Announce civic:Result or Create civic:Outcome is the final item, else the civic:End;
+  `finalItemSourceId` is set whenever a stream has a candidate (Floyd's briefs never send End),
+  and `status: ended` only when an End arrives.
+- Why: spec 4.2; results arrive after the End, often in a later refresh.
+- Alternatives: only the four named keys; mark finals only after an End in the same fetch.
+- Thread / PR: M3
+
+## 2026-10-21 — Hub paging, errors, ETags and resolve (M3)
+- Decision: first fetch when `newestItemAt` is null, else refresh. `next` is followed as given,
+  only on the feed's origin, never to a page already read; items dedupe on `sourceId` within a
+  fetch. ETag and `etagUrl` come from the first page (null when absent). A first-page failure
+  throws `AdapterError`; a later one keeps earlier pages with `fetchStatus: "error"`.
+  `newestItemAt` counts hidden items. `accepts()` takes URLs and bare hosts, not `@name@server` or
+  `https://server/@name`. `civic.json` gives `not_a_space` for `no_hub`, a non-200, non-JSON, or
+  a missing name, `space.id` or https `feeds[0]`; a 5xx is `unreachable`. Icons only if https.
+- Why: spec 4.2, 4.5, F6.
+- Thread / PR: M3
+
+## 2026-10-21 — Hub fixture clock and recorder (M3)
+- Decision: `tests/fixtures/civicHubClock.ts` fixes `now` at 2026-10-21T00:00:00Z. The recorder
+  (`scripts/recorders/civicHub.ts`) runs the adapter over a recording guard, so replayed URLs are
+  exactly what the adapter sends, and clears each hub's folder first. Derived sequences live
+  inline in tests, labelled; none are under `tests/fixtures/http/`. API and e2e replay of hub feeds
+  needs the server clock at that time (M5).
+- Why: feed URLs carry `since`.
+- Thread / PR: M3
 
 ## 2026-10-21 — The fetch guard's shape (M2)
 - Decision: `src/shared/fetch/` exports `createFetchGuard(options)` and a process-wide
