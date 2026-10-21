@@ -26,7 +26,9 @@
     "check": "npm run lint && npm run typecheck && npm run test:unit && npm run lint --prefix ui && npm run build --prefix ui"
   },
   "dependencies": {
+    "@simplewebauthn/server": "14.0.3",
     "@vercel/functions": "^3.9.11",
+    "didwebvh-ts": "2.8.0",
     "express": "^4.22.3",
     "pg": "^8.23.1",
     "sanitize-html": "^2.18.1",
@@ -35,6 +37,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "@playwright/test": "1.64.1",
+    "@simplewebauthn/browser": "14.0.0",
     "@types/express": "^4.17.25",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.23.1",
