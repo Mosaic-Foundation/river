@@ -1,0 +1,15 @@
+{
+  "url": "https://demosville.civic.social/events?page=true&limit=50&since=2026-09-28T03%3A00%3A53.587Z",
+  "requestHeaders": {
+    "if-none-match": "W/\"913-tqlNpLAp+E8RlgCIiWIcGx1l81w\""
+  },
+  "status": 304,
+  "headers": {
+    "cache-control": "public, max-age=0, must-revalidate",
+    "etag": "W/\"913-tqlNpLAp+E8RlgCIiWIcGx1l81w\"",
+    "server": "Vercel",
+    "x-vercel-cache": "MISS",
+    "x-vercel-id": "cle1::iad1::fcp5n-1792544683450-9cc95b337de9"
+  },
+  "body": ""
+}

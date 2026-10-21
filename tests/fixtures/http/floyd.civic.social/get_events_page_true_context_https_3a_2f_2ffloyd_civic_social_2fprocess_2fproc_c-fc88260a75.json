@@ -1,0 +1,24 @@
+{
+  "url": "https://floyd.civic.social/events?page=true&context=https%3A%2F%2Ffloyd.civic.social%2Fprocess%2Fproc_c892efdbd7644b0c&limit=1",
+  "status": 200,
+  "headers": {
+    "access-control-allow-headers": "Content-Type, Authorization",
+    "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "age": "0",
+    "cache-control": "public, max-age=0, must-revalidate",
+    "content-length": "1710",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data: https:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    "content-type": "application/activity+json; charset=utf-8",
+    "etag": "W/\"6ae-HR0R2lKvwa5w5HauuxeTgk+GFAQ\"",
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "server": "Vercel",
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-powered-by": "Express",
+    "x-vercel-cache": "MISS",
+    "x-vercel-id": "cle1::iad1::zjsbk-1792544688401-d57471b15ad4"
+  },
+  "body": "{\"@context\":[\"https://www.w3.org/ns/activitystreams\",\"https://civic.social/ns/civic\"],\"id\":\"https://floyd.civic.social/events?context=https%3A%2F%2Ffloyd.civic.social%2Fprocess%2Fproc_c892efdbd7644b0c&limit=1&page=true\",\"type\":\"OrderedCollectionPage\",\"partOf\":\"https://floyd.civic.social/events?context=https%3A%2F%2Ffloyd.civic.social%2Fprocess%2Fproc_c892efdbd7644b0c&limit=1\",\"orderedItems\":[{\"@context\":[\"https://www.w3.org/ns/activitystreams\",\"https://civic.social/ns/civic\",{\"hub\":\"https://floyd.civic.social/ns#\"}],\"id\":\"https://floyd.civic.social/activities/evt_64ead8e4b1ae499b\",\"type\":\"Create\",\"actor\":\"https://floyd.civic.social/system/meeting-summary-cron\",\"published\":\"2026-10-14T11:32:02.549+00:00\",\"to\":[\"https://www.w3.org/ns/activitystreams#Public\"],\"generator\":{\"id\":\"did:web:floyd.civic.social\",\"type\":[\"Organization\",\"civic:Hub\"],\"name\":\"Floyd Civic Hub\",\"url\":\"https://floyd.civic.social\"},\"location\":{\"type\":\"Place\",\"name\":\"Floyd County, Virginia\",\"civic:code\":\"us-va-floyd\"},\"context\":{\"id\":\"https://floyd.civic.social/process/proc_c892efdbd7644b0c\",\"type\":\"civic:Process\",\"civic:processType\":\"civic.meeting_summary\"},\"object\":{\"type\":\"hub:Aggregation\",\"hub:payload\":{\"process\":{\"type\":\"civic.meeting_summary\"},\"block_count\":22,\"result_type\":\"summary\",\"meeting_date\":\"2026-10-13\",\"result_summary\":\"22 topic blocks covering Regular Meeting\",\"participant_count\":0,\"aggregation_method\":\"summarization\"}},\"url\":\"https://floyd.civic.social/meeting-summary/proc_c892efdbd7644b0c\"}],\"next\":\"https://floyd.civic.social/events?context=https%3A%2F%2Ffloyd.civic.social%2Fprocess%2Fproc_c892efdbd7644b0c&limit=1&page=true&cursor=MjAyNi0xMC0xNFQxMTozMjowMi41NDkrMDA6MDB8ZXZ0XzY0ZWFkOGU0YjFhZTQ5OWI\"}"
+}

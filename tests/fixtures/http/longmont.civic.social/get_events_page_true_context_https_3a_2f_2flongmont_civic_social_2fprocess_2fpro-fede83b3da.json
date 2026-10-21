@@ -1,0 +1,24 @@
+{
+  "url": "https://longmont.civic.social/events?page=true&context=https%3A%2F%2Flongmont.civic.social%2Fprocess%2Fproc_6f0e951d42ec492a&limit=1",
+  "status": 200,
+  "headers": {
+    "access-control-allow-headers": "Content-Type, Authorization",
+    "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "age": "0",
+    "cache-control": "public, max-age=0, must-revalidate",
+    "content-length": "626",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data: https:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    "content-type": "application/activity+json; charset=utf-8",
+    "etag": "W/\"272-0Rgsbikyns8p/uH/pOHyXJ/9kpk\"",
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "server": "Vercel",
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-powered-by": "Express",
+    "x-vercel-cache": "MISS",
+    "x-vercel-id": "cle1::iad1::8smzz-1792544691614-40715ff898bb"
+  },
+  "body": "{\"@context\":[\"https://www.w3.org/ns/activitystreams\",\"https://civic.social/ns/civic\"],\"id\":\"https://longmont.civic.social/events?context=https%3A%2F%2Flongmont.civic.social%2Fprocess%2Fproc_6f0e951d42ec492a&limit=1&page=true\",\"type\":\"OrderedCollectionPage\",\"partOf\":\"https://longmont.civic.social/events?context=https%3A%2F%2Flongmont.civic.social%2Fprocess%2Fproc_6f0e951d42ec492a&limit=1\",\"orderedItems\":[],\"next\":\"https://longmont.civic.social/events?context=https%3A%2F%2Flongmont.civic.social%2Fprocess%2Fproc_6f0e951d42ec492a&limit=1&page=true&cursor=MjAyNi0xMC0wOVQwNTowMjoyMi4zOTMrMDA6MDB8ZXZ0XzdhNTQ4Yjk2MDM3ZDQ1Yzc\"}"
+}

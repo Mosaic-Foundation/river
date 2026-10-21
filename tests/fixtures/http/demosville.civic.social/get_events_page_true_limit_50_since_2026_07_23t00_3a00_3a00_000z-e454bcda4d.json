@@ -1,0 +1,24 @@
+{
+  "url": "https://demosville.civic.social/events?page=true&limit=50&since=2026-07-23T00%3A00%3A00.000Z",
+  "status": 200,
+  "headers": {
+    "access-control-allow-headers": "Content-Type, Authorization",
+    "access-control-allow-methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+    "age": "0",
+    "cache-control": "public, max-age=0, must-revalidate",
+    "content-length": "2323",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data: https:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    "content-type": "application/activity+json; charset=utf-8",
+    "etag": "W/\"913-GVHCW/zx9R2BkRDO01FJ9+HVdLM\"",
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "server": "Vercel",
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-powered-by": "Express",
+    "x-vercel-cache": "MISS",
+    "x-vercel-id": "cle1::iad1::hnvxv-1792544682662-0677edaa7bcb"
+  },
+  "body": "{\"@context\":[\"https://www.w3.org/ns/activitystreams\",\"https://civic.social/ns/civic\"],\"id\":\"https://demosville.civic.social/events?since=2026-07-23T00%3A00%3A00.000Z&page=true\",\"type\":\"OrderedCollectionPage\",\"partOf\":\"https://demosville.civic.social/events?since=2026-07-23T00%3A00%3A00.000Z\",\"orderedItems\":[{\"@context\":[\"https://www.w3.org/ns/activitystreams\",\"https://civic.social/ns/civic\",{\"hub\":\"https://demosville.civic.social/ns#\"}],\"id\":\"https://demosville.civic.social/activities/evt_d652df6de1ee4035\",\"type\":\"Offer\",\"actor\":\"https://demosville.civic.social/process/proc_65384a6859204b65/participants/anon-02eff4d80ecef770\",\"published\":\"2026-10-12T03:00:53.587+00:00\",\"to\":[\"https://www.w3.org/ns/activitystreams#Public\"],\"generator\":{\"id\":\"did:web:demosville.civic.social\",\"type\":[\"Organization\",\"civic:Hub\"],\"name\":\"Demosville Civic Hub\",\"url\":\"https://demosville.civic.social\"},\"context\":{\"id\":\"https://demosville.civic.social/process/proc_65384a6859204b65\",\"type\":\"civic:Process\",\"civic:processType\":\"civic.vote\"},\"object\":{\"type\":\"hub:ProposedProcess\",\"id\":\"https://demosville.civic.social/process/proc_65384a6859204b65\",\"hub:payload\":{\"process\":{\"type\":\"civic.vote\",\"method\":\"yes_no_unsure\",\"options\":[\"yes\",\"no\",\"unsure\"],\"support_threshold\":5}}},\"url\":\"https://demosville.civic.social/process/proc_65384a6859204b65\"},{\"@context\":[\"https://www.w3.org/ns/activitystreams\",\"https://civic.social/ns/civic\",{\"hub\":\"https://demosville.civic.social/ns#\"}],\"id\":\"https://demosville.civic.social/activities/evt_27931e3ce5ef4955\",\"type\":\"Create\",\"actor\":\"https://demosville.civic.social/process/proc_65384a6859204b65/participants/anon-02eff4d80ecef770\",\"published\":\"2026-10-12T03:00:53.527+00:00\",\"to\":[\"https://www.w3.org/ns/activitystreams#Public\"],\"generator\":{\"id\":\"did:web:demosville.civic.social\",\"type\":[\"Organization\",\"civic:Hub\"],\"name\":\"Demosville Civic Hub\",\"url\":\"https://demosville.civic.social\"},\"context\":{\"id\":\"https://demosville.civic.social/process/proc_65384a6859204b65\",\"type\":\"civic:Process\",\"civic:processType\":\"civic.vote\"},\"object\":{\"type\":\"civic:Process\",\"id\":\"https://demosville.civic.social/process/proc_65384a6859204b65\",\"name\":\"Audit 3 Vote\",\"hub:payload\":{\"process\":{\"type\":\"civic.vote\",\"title\":\"Audit 3 Vote\"}}},\"url\":\"https://demosville.civic.social/process/proc_65384a6859204b65\"}]}"
+}

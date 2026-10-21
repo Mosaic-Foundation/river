@@ -1,0 +1,15 @@
+{
+  "url": "https://longmont.civic.social/events?page=true&limit=50&since=2026-10-06T11%3A32%3A55.530Z",
+  "requestHeaders": {
+    "if-none-match": "W/\"d6a1-gBX7ObrboYpcXCaH0NW20BvMkKo\""
+  },
+  "status": 304,
+  "headers": {
+    "cache-control": "public, max-age=0, must-revalidate",
+    "etag": "W/\"d6a1-gBX7ObrboYpcXCaH0NW20BvMkKo\"",
+    "server": "Vercel",
+    "x-vercel-cache": "MISS",
+    "x-vercel-id": "cle1::iad1::2rz4f-1792544690659-08c37276a9a7"
+  },
+  "body": ""
+}
