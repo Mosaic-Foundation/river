@@ -2,9 +2,26 @@
 //   1. Environment variables are read only through src/config/env.ts.
 //   2. `pg` is imported only under src/db/; everything else uses forInstance(), forAccount() or
 //      forIdentity() from src/db/context.ts (CLAUDE.md constraint 2, ADR-004).
+//   3. undici, node:http(s) and global fetch only under src/shared/fetch/ (constraint 3, ADR-001).
+//      The identity host's browser script (src/identity/client/) runs in the browser and may fetch.
 // The UI has its own config in ui/eslint.config.js. docs/ holds reference copies of code from
 // other repos (read, never imported), so it is not linted.
 import tsParser from "@typescript-eslint/parser";
+
+const PG_MESSAGE = "Query through forInstance(), forAccount() or forIdentity() in src/db/context.ts.";
+const PG = {
+  paths: [{ name: "pg", message: PG_MESSAGE }],
+  patterns: [{ group: ["pg/*", "pg-*"], message: PG_MESSAGE }],
+};
+
+const NET_MESSAGE = "Outbound requests go through the fetch guard in src/shared/fetch/ (ADR-001).";
+const NET = {
+  paths: ["undici", "node:http", "node:https", "http", "https", "node:http2", "http2"].map((name) => ({
+    name,
+    message: NET_MESSAGE,
+  })),
+  patterns: [{ group: ["undici/*"], message: NET_MESSAGE }],
+};
 
 export default [
   {
@@ -35,26 +52,35 @@ export default [
       ],
     },
   },
+  // no-restricted-imports: one block per area, with disjoint files, because a later block that
+  // matches the same file replaces the rule's whole option list instead of adding to it.
   {
     files: ["src/**/*.ts", "api/**/*.ts", "identity/**/*.ts"],
-    ignores: ["src/db/**"],
+    ignores: ["src/db/**", "src/shared/fetch/**", "src/shared/http/**"],
     rules: {
       "no-restricted-imports": [
         "error",
-        {
-          paths: [
-            {
-              name: "pg",
-              message: "Query through forInstance(), forAccount() or forIdentity() in src/db/context.ts.",
-            },
-          ],
-          patterns: [
-            {
-              group: ["pg/*", "pg-*"],
-              message: "Query through forInstance(), forAccount() or forIdentity() in src/db/context.ts.",
-            },
-          ],
-        },
+        { paths: [...PG.paths, ...NET.paths], patterns: [...PG.patterns, ...NET.patterns] },
+      ],
+    },
+  },
+  {
+    files: ["src/db/**/*.ts"],
+    rules: { "no-restricted-imports": ["error", NET] },
+  },
+  // src/shared/http/ adapts the inbound request (node:http types only); it makes no requests.
+  {
+    files: ["src/shared/fetch/**/*.ts", "src/shared/http/**/*.ts"],
+    rules: { "no-restricted-imports": ["error", PG] },
+  },
+  // 3. No global fetch on the server: outbound requests go through the fetch guard (ADR-001).
+  {
+    files: ["src/**/*.ts", "api/**/*.ts", "identity/**/*.ts"],
+    ignores: ["src/identity/client/**"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        { name: "fetch", message: "Use the fetch guard in src/shared/fetch/ (ADR-001)." },
       ],
     },
   },
