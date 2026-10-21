@@ -20,6 +20,166 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Identity host: configuration errors say what failed in the log — 2026-10-21
+
+- Branch / PR: claude/identity-error-message → PR (self-merge; not needs-adam)
+- Migrations: none.
+
+**What it does.** Production `GET /authorize` logged only "identity: GET /authorize failed: Error".
+The identity error handler now logs an error's message when the error has no code (the
+configuration errors from `env.ts`, `db/pool.ts` and `identity/config.ts`, which name a setting),
+on one line and capped at 300 characters. An error with a code (a database SQLSTATE, or a driver
+or system code such as ECONNREFUSED) still logs its name and code only, so database messages and
+details never reach the log. The line comes from `errorLogLine()` in `src/identity/routes.ts`.
+
+**Keys.** None.
+
+**Tests.** Unit `identityErrorLog` (a config error's message logged; a database error's message
+and detail withheld; coded system errors withheld; long messages capped; non-errors). `npm run
+check`: 465 passed; API `identity`: 14 passed.
+
+### Follow-ups
+- Read the next production log line for `GET /authorize`; it should now name the failing setting.
+## Reader view plays https audio and video (CSP media-src) — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → media PR (needs-adam: `vercel.json` CSP)
+- Migrations: none.
+
+**What it does.** Adds `media-src 'self' https:` to the River's CSP in `vercel.json` (Vite dev and
+preview read it from there). The reader view plays an item's https audio and video in place with
+native controls and `preload="none"`, so nothing loads until play; other media still says where it
+plays. Cards don't get players.
+
+**Keys.** None.
+
+**Tests.** Unit `ui/csp` (media-src), `ui/format` (safeMediaUrl, playableMedia); e2e
+`revisions.spec.ts` (a live fediverse video in the reader: https src, controls, preload none,
+labelled, no media request before play, axe; no players on cards); `river.spec.ts` CSP check
+includes media-src.
+
+### Follow-ups
+- Adam merges (CSP change). Spec Appendix B and 4.8 wording proposed in DECISIONS.md.
+
+## UI revisions 1, item 7: related hub cards grouped — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → PR 5 of the UI revisions series (self-merge)
+- Migrations: none.
+
+**What it does.** Hub activities about the same process or meeting (same space and stream key)
+show as one card: the latest leads with its status, the others fold under "N earlier updates"
+(a disclosure listing each with its label and time; each opens in the reader). Mark read/unread
+and opening the card cover the whole group. Grouping is in `ui/src/lib/groups.ts`, on the loaded
+items; the API is unchanged. This completes `docs/spec/ui-revisions-1.md`.
+
+**Keys.** None.
+
+**Tests.** Unit `ui/groups` (folding, order, no grouping across spaces, without a stream or
+outside hubs); e2e `revisions.spec.ts` item 7 (one card per process, lead's status, earlier
+updates listed and opened from the keyboard, group Mark read/unread); `river.spec.ts` counts
+folded items for Mark all read.
+
+### Follow-ups
+- None from the revisions list.
+
+## UI revisions 1, item 6: Coming up in Everything — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → PR 4 of the UI revisions series (self-merge)
+- Migrations: none.
+
+**What it does.** Everything mode gets a right-hand "Coming up" column: up to five upcoming
+deadlines and event starts across everything followed, soonest first, unaffected by circle,
+type, network or search. On a phone it sits below the feed. Modes gained `pluginReach`; plugins
+get `reach` in their API. Also from the reader view's review: the feed now stays mounted (hidden)
+while an item is open, so Back restores the exact scroll position even while images load, and
+tests now check the author and the kept query string.
+
+**Keys.** None.
+
+**Tests.** Unit `plugins` (intro per reach, Everything's placement); API `modes` (Everything's
+panel, unchanged by filters); e2e `revisions.spec.ts` item 6 (desktop column, date order, filter,
+phone order) and the reader's query string; `modes.spec.ts` updated for Everything's panel.
+
+### Follow-ups
+- None.
+
+## UI revisions 1, item 1: the reader view — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → PR 3 of the UI revisions series (self-merge)
+- Migrations: none.
+
+**What it does.** A click anywhere on a card (outside its links and buttons) opens the item at
+`/item/{id}` inside the River, sidebar still visible: full sanitized content, all images, author,
+source, details, "Open original" (new tab, `noopener noreferrer`, live items only) and Mark
+read/unread. "Back to River" and the browser's Back return to the same scroll position and focus
+the opened card. Card footers show only the source host. New `GET /api/items/{id}` (reader's own
+follows, 404 otherwise) serves a reloaded or shared item link; nothing is fetched from outside.
+
+**Keys.** None.
+
+**Tests.** API `feed` (one item: live and sample equal to the feed's, 404, 400, nothing outside
+the follows); e2e `revisions.spec.ts` item 1 (six tests); `river.spec.ts` check 4 rewritten for
+the host footer and Open original; visitor and member read-state tests open items in the reader.
+
+### Follow-ups
+- Spec F1's "Open on {host}" card link is superseded by ui-revisions-1 item 1.
+
+## UI revisions 1, items 2-4: toggle pills, active filter chips, Networks — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → PR 2 of the UI revisions series (self-merge)
+- Migrations: none.
+
+**What it does.** Content types are toggle pills (several at once, dark fill and a check mark,
+none means All) on desktop and in the phone chip row; the phone's type select is gone. A
+Networks section (Civic Hubs; Fediverse, "Mastodon and compatible") works the same way. Circles,
+Content type and Networks collapse from their heading buttons. Above the feed, one chip per active
+filter with an ✕, plus "Clear all". `/api/feed` and `POST /api/read-state/all` take `type` as a
+comma-separated list and a new `network` list (DECISIONS.md).
+
+**Keys.** None.
+
+**Tests.** Unit `feedScope` (parseContentTypes, parseNetworks), `ui/format` (parseList,
+toggleValue, the query string); API `feed` (several types, each network, both); e2e
+`revisions.spec.ts` items 2, 3, 4; `river.spec.ts` check 30 uses the phone pills.
+
+### Follow-ups
+- Collapsed sections aren't remembered across reloads.
+
+## UI revisions 1, items 5 and 8: Civic circles and the Sample River line — 2026-10-21
+
+- Branch / PR: claude/eloquent-newton-v3ftlr → PR 1 of the UI revisions series (self-merge)
+- Migrations: none.
+
+**What it does.** Adds `docs/spec/ui-revisions-1.md` (Adam's eight UI revisions with acceptance
+checks). Civic mode now lists only the `role = civic` circle (plus All) in the sidebar and the
+phone chip row; switching to Civic from another circle falls back to All. Visitors see one line
+above the header: "Sample River · Sign in to make it your own".
+
+**Keys.** None.
+
+**Tests.** e2e `revisions.spec.ts` (items 5 and 8); `modes.spec.ts` checks a member sees no
+sample line. `npm run check` green.
+
+### Follow-ups
+- Items 1, 2, 3, 4, 6, 7 follow in their own PRs.
+
+## Production fix: sanitize-html loads under Vercel's CommonJS loader — 2026-10-21
+
+- Branch / PR: claude/sanitize-html-esm-commonjs-cu2n3p → PR (self-merge; no needs-adam file)
+- Migrations: none.
+
+**What it does.** Production was down on both Vercel projects: every function crashed at load with
+ERR_REQUIRE_ESM because sanitize-html 2.18.1 pulls in htmlparser2 12 (ES-only) and Vercel's loader
+require()s it. Plain Node 24 can, so CI passed. `package.json` now overrides sanitize-html's
+htmlparser2 to ^10.1.0 (CommonJS build; output unchanged, `npm audit` clean). `identity/package.json`
+sets Node 24.x for the mosaic-id project.
+
+**Keys.** None.
+
+**Tests.** Unit `sanitizeCjsLoad` reproduces the Vercel loader with `--no-experimental-require-module`
+(fails without the override). `npm run check`: 32 files, 453 tests passed; UI build green.
+
+### Follow-ups
+- Drop the override once sanitize-html ships a build that loads under require() without it.
 ## M12 Real media (stretch): PeerTube channels, an RSS/Atom/podcast adapter — 2026-10-21
 
 - Branch / PR: claude/m12-media → PR, **needs-adam**: a migration that changes an existing

@@ -64,6 +64,51 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, identity error log: unit `identityErrorLog` checks `errorLogLine()`: a coded error
+  (SQLSTATE 23505 with an email in its detail, ECONNREFUSED) logs name and code only; an uncoded
+  configuration error logs its message on one line, capped at 300 characters.
+- 2026-10-21, reader audio and video: unit `ui/csp` asserts `media-src 'self' https:`;
+  `ui/format` covers safeMediaUrl (https only, no userinfo) and playableMedia; e2e
+  `revisions.spec.ts` opens a recorded fediverse post with a video at `/item/{id}` and checks the
+  `<video>` (https src, controls, `preload="none"`, accessible name, no media request before play,
+  axe) and that cards have no player; `river.spec.ts` CSP test checks media-src.
+
+- 2026-10-21, UI revisions 1 (item 7): unit `ui/groups`; e2e `revisions.spec.ts` grouped hub
+  cards (one card per hub process on the first page, `data-group-size`, the lead's label, the
+  disclosure lists the earlier updates without opening the reader, Enter on one opens it, group
+  Mark read and Mark unread write every id); `river.spec.ts` Mark all read compares with the sum
+  of `data-group-size`.
+
+- 2026-10-21, UI revisions 1 (item 6): unit `plugins` (Coming up's intro for "view" and
+  "followed", Everything's placement and reach, the API's keys now include `reach`); API `modes`
+  (Everything has Coming up in date order, the same with filters on); e2e `revisions.spec.ts`
+  (Everything panel right of the feed, sorted and upcoming, unchanged by a type filter; below the
+  feed at 390 px; reader keeps `?mode=civic&type=civic` and shows the author); `modes.spec.ts`
+  check 7 expects Coming up, not the Civic slots, in Everything.
+
+- 2026-10-21, UI revisions 1 (item 1): API `feed` `GET /items/{id}` (equal to the feed's item,
+  404 unknown, 400 malformed, 404 outside the follows or hidden); e2e `revisions.spec.ts` reader
+  view (click opens `/item/{id}` beside the sidebar, reload loads it from the API, scroll restored
+  by Back to River and browser Back, Forward reopens, Mark read/links/Sample keep their behavior,
+  keyboard and focus return, axe, marks read, unknown item, phone width); `river.spec.ts` check 4
+  revised (host in the footer, Open original's target and rel); read-state tests (visitor and
+  member) open items in the reader instead of a new tab.
+
+- 2026-10-21, UI revisions 1 (items 2-4): unit `feedScope` (several types, networks, refusals)
+  and `ui/format` (list parsing and toggling, query string); API `feed` (type lists, `network`
+  hubs/fediverse/both, `network=bluesky` is 400); e2e `revisions.spec.ts`: type pills (pressed,
+  check mark, dark fill, URL, reload, deselect, keyboard, phone, no checkbox or select), active
+  chips (four filters, each ✕, Clear all), Networks (order, each network, both, samples back when
+  none) and collapsible sections.
+
+- 2026-10-21, UI revisions 1 (items 5, 8): e2e `revisions.spec.ts`: Civic mode lists only All
+  and the civic circle (desktop and phone) and falls back to All; the visitor's Sample River line
+  sits above the header with a Sign in link and no sideways scroll. `modes.spec.ts`: a member sees
+  no sample line.
+
+- 2026-10-21, sanitize-html CJS fix: unit `sanitizeCjsLoad` loads sanitize-html in a child Node
+  with `--no-experimental-require-module` (what Vercel's function loader does) and sanitizes one
+  string. Fails with ERR_REQUIRE_ESM if htmlparser2 12 comes back. Unit 453.
 - 2026-10-21, M12 (stretch, real media): unit `rssFeed` (the XML reader: CDATA, entities, numeric
   references, canonical namespace prefixes, entity declarations refused, sloppy markup survived,
   runaway nesting refused; `itunes:duration` in seconds, MM:SS and HH:MM:SS and what it rejects;

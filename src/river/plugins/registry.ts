@@ -74,7 +74,7 @@ export function runSurface(
   registry: PluginRegistry,
   surface: Surface,
   ids: readonly string[],
-  view: { items: readonly PluginItem[]; now: Date; config?: readonly unknown[] },
+  view: { items: readonly PluginItem[]; now: Date; config?: readonly unknown[]; reach?: "view" | "followed" },
 ): SurfaceOutput[] {
   const outputs: SurfaceOutput[] = [];
   const items = deepFreeze(view.items.map((item) => structuredClone(item)));
@@ -85,6 +85,7 @@ export function runSurface(
     const api: ViewApi = Object.freeze({
       items: plugin.manifest.capabilities.includes("read:items") ? items : Object.freeze([]),
       now: view.now.toISOString(),
+      reach: view.reach ?? "view",
     });
     try {
       const output = plugin.render(api);

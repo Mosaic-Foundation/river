@@ -1,15 +1,21 @@
-// Filters (spec F5): circle (one at a time, "All" default) AND content type, plus search.
-// Desktop: everything in the left column. Phone: a chip row (content type, then circles); search
-// sits behind the header's search button.
+// Filters (spec F5, ui-revisions-1 items 2-4): circle (one at a time, "All" default) AND content
+// types AND networks (toggle pills, several at once, none means all), plus search. Desktop:
+// everything in the left column, each section collapsible. Phone: a chip row (content types,
+// networks, then circles); search sits behind the header's search button. Above the feed, a chip
+// per active filter with its own ✕, and "Clear all".
+import { useId, useState } from "react";
 import type { FeedCircle } from "../lib/api";
-import { circleColor, CONTENT_TYPES } from "../lib/format";
-import { SearchIcon } from "./Icons";
+import { circleColor, CONTENT_TYPES, NETWORKS } from "../lib/format";
+import { CheckIcon, ChevronIcon, CloseIcon, SearchIcon } from "./Icons";
 
 export interface FilterState {
   /** The mode (spec F9): "" for the instance's default. Set by the header's switch, not here. */
   mode: string;
   circle: string;
-  type: string;
+  /** Content-type values (CONTENT_TYPES); empty for All. */
+  types: string[];
+  /** Network values (NETWORKS); empty for every network. */
+  networks: string[];
   q: string;
 }
 
@@ -18,6 +24,7 @@ export interface FiltersProps {
   value: FilterState;
   onCircle: (circle: string) => void;
   onType: (type: string) => void;
+  onNetwork: (network: string) => void;
   onSearch: (q: string) => void;
 }
 
@@ -43,6 +50,8 @@ export function SearchField({ id, value, onSearch }: { id: string; value: string
       </label>
       <SearchIcon className="search-icon" />
       <input
+        // A new key when the search is cleared from outside (a chip's ✕, Clear all) empties the field.
+        key={value === "" ? "empty" : "search"}
         id={id}
         name="q"
         type="search"
@@ -63,18 +72,53 @@ export function SearchField({ id, value, onSearch }: { id: string; value: string
   );
 }
 
-export function FilterSidebar({ circles, value, onCircle, onType, onSearch }: FiltersProps) {
-  const allCircles: Array<Pick<FeedCircle, "id" | "name" | "color">> = [{ id: "All", name: "All", color: null }, ...circles];
+/** A toggle pill: pressed shows a dark fill and a check mark (ui-revisions-1 item 2). */
+function Pill({ label, pressed, onToggle, title }: { label: string; pressed: boolean; onToggle: () => void; title?: string }) {
+  return (
+    <button type="button" className="pill" aria-pressed={pressed} onClick={onToggle} title={title}>
+      {pressed && <CheckIcon className="pill-check" />}
+      {label}
+    </button>
+  );
+}
+
+/** A sidebar section whose heading button collapses and expands it (ui-revisions-1 item 4). */
+function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+  const id = useId();
+  return (
+    <nav className="filter-group" aria-labelledby={`${id}-heading`}>
+      <h2 className="filter-heading" id={`${id}-heading`}>
+        <button
+          type="button"
+          className="filter-toggle"
+          aria-expanded={open}
+          aria-controls={`${id}-body`}
+          onClick={() => setOpen((o) => !o)}
+        >
+          {title}
+          <ChevronIcon className="filter-chevron" />
+        </button>
+      </h2>
+      <div id={`${id}-body`} hidden={!open}>
+        {children}
+      </div>
+    </nav>
+  );
+}
+
+function allCircles(circles: FeedCircle[]): Array<Pick<FeedCircle, "id" | "name" | "color">> {
+  return [{ id: "All", name: "All", color: null }, ...circles];
+}
+
+export function FilterSidebar({ circles, value, onCircle, onType, onNetwork, onSearch }: FiltersProps) {
   return (
     <aside className="sidebar" aria-label="Filters">
       <SearchField id="search-desktop" value={value.q} onSearch={onSearch} />
 
-      <nav className="filter-group" aria-labelledby="filter-circles">
-        <h2 className="filter-heading" id="filter-circles">
-          Circles
-        </h2>
+      <FilterSection title="Circles">
         <ul className="filter-list">
-          {allCircles.map((c) => (
+          {allCircles(circles).map((c) => (
             <li key={c.id}>
               <button
                 type="button"
@@ -88,52 +132,56 @@ export function FilterSidebar({ circles, value, onCircle, onType, onSearch }: Fi
             </li>
           ))}
         </ul>
-      </nav>
+      </FilterSection>
 
-      <nav className="filter-group" aria-labelledby="filter-types">
-        <h2 className="filter-heading" id="filter-types">
-          Content type
-        </h2>
-        <ul className="filter-list">
+      <FilterSection title="Content type">
+        <ul className="pill-list">
           {CONTENT_TYPES.map((t) => (
             <li key={t.value}>
-              <button
-                type="button"
-                className="filter-option"
-                aria-pressed={value.type === t.value}
-                onClick={() => onType(t.value)}
-              >
-                {t.label}
-              </button>
+              <Pill label={t.label} pressed={value.types.includes(t.value)} onToggle={() => onType(t.value)} />
             </li>
           ))}
         </ul>
-      </nav>
+      </FilterSection>
+
+      <FilterSection title="Networks">
+        <ul className="pill-list">
+          {NETWORKS.map((n) => (
+            <li key={n.value}>
+              <Pill label={n.label} pressed={value.networks.includes(n.value)} onToggle={() => onNetwork(n.value)} />
+              {n.detail && <span className="pill-detail">{n.detail}</span>}
+            </li>
+          ))}
+        </ul>
+      </FilterSection>
     </aside>
   );
 }
 
-export function FilterChips({ circles, value, onCircle, onType }: Omit<FiltersProps, "onSearch">) {
-  const allCircles: Array<Pick<FeedCircle, "id" | "name" | "color">> = [{ id: "All", name: "All", color: null }, ...circles];
+export function FilterChips({ circles, value, onCircle, onType, onNetwork }: Omit<FiltersProps, "onSearch">) {
   return (
     <div className="chip-row" role="group" aria-label="Filters">
-      <label className="visually-hidden" htmlFor="type-chip">
-        Content type
-      </label>
-      <select
-        id="type-chip"
-        className="chip chip-select"
-        value={value.type}
-        onChange={(e) => onType(e.currentTarget.value)}
-      >
+      <ul className="chip-list" aria-label="Content type">
         {CONTENT_TYPES.map((t) => (
-          <option key={t.value} value={t.value}>
-            {t.value === "all" ? "All types" : t.label}
-          </option>
+          <li key={t.value}>
+            <Pill label={t.label} pressed={value.types.includes(t.value)} onToggle={() => onType(t.value)} />
+          </li>
         ))}
-      </select>
+      </ul>
+      <ul className="chip-list" aria-label="Networks">
+        {NETWORKS.map((n) => (
+          <li key={n.value}>
+            <Pill
+              label={n.label}
+              title={n.detail}
+              pressed={value.networks.includes(n.value)}
+              onToggle={() => onNetwork(n.value)}
+            />
+          </li>
+        ))}
+      </ul>
       <ul className="chip-list" aria-label="Circles">
-        {allCircles.map((c) => (
+        {allCircles(circles).map((c) => (
           <li key={c.id}>
             <button
               type="button"
@@ -147,6 +195,59 @@ export function FilterChips({ circles, value, onCircle, onType }: Omit<FiltersPr
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+export interface ActiveFiltersProps {
+  circles: FeedCircle[];
+  value: FilterState;
+  onChange: (patch: Partial<FilterState>) => void;
+}
+
+/** One chip per active filter, each with an ✕, plus "Clear all" (ui-revisions-1 item 3). */
+export function ActiveFilters({ circles, value, onChange }: ActiveFiltersProps) {
+  const chips: Array<{ key: string; label: string; remove: Partial<FilterState> }> = [];
+  if (value.circle !== "All") {
+    const name = circles.find((c) => c.id === value.circle)?.name ?? value.circle;
+    chips.push({ key: "circle", label: `Circle: ${name}`, remove: { circle: "All" } });
+  }
+  for (const t of CONTENT_TYPES.filter((t) => value.types.includes(t.value))) {
+    chips.push({ key: `type-${t.value}`, label: t.label, remove: { types: value.types.filter((v) => v !== t.value) } });
+  }
+  for (const n of NETWORKS.filter((n) => value.networks.includes(n.value))) {
+    chips.push({
+      key: `network-${n.value}`,
+      label: n.label,
+      remove: { networks: value.networks.filter((v) => v !== n.value) },
+    });
+  }
+  if (value.q) chips.push({ key: "q", label: `Search: “${value.q}”`, remove: { q: "" } });
+  if (chips.length === 0) return null;
+  return (
+    <div className="active-filters" role="group" aria-label="Active filters" data-testid="active-filters">
+      <ul className="active-filter-list">
+        {chips.map((chip) => (
+          <li key={chip.key} className="active-filter" data-testid="active-filter">
+            <span>{chip.label}</span>
+            <button
+              type="button"
+              className="active-filter-remove"
+              aria-label={`Remove filter: ${chip.label}`}
+              onClick={() => onChange(chip.remove)}
+            >
+              <CloseIcon />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        className="button button-quiet active-filters-clear"
+        onClick={() => onChange({ circle: "All", types: [], networks: [], q: "" })}
+      >
+        Clear all
+      </button>
     </div>
   );
 }

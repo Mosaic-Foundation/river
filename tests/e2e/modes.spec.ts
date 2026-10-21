@@ -107,7 +107,9 @@ test("check 7: Civic mode shows only civic items, wears the Civic theme and show
   await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
   await expectTheme(page, "mosaic");
   await expect(modeSwitch(page).getByRole("button", { name: "Everything" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByTestId("plugin-panel")).toHaveCount(0); // Everything: no panel
+  // Everything: Coming up only (ui-revisions-1 item 6), no Civic slots.
+  await expect(page.getByTestId("plugin-coming-up")).toBeVisible();
+  await expect(page.getByTestId("plugin-your-representatives")).toHaveCount(0);
   await expect(cards(page).getByRole("button", { name: "Sample", exact: true }).first()).toBeVisible();
   const civicNames = await civicSpaceNames(page);
   expect(civicNames.size).toBe(3); // the three seed hubs
@@ -132,7 +134,7 @@ test("check 7: Civic mode shows only civic items, wears the Civic theme and show
   await expectTheme(page, "civic");
   await expectCivicPanel(page);
   await modeSwitch(page).getByRole("button", { name: "Everything" }).click();
-  await expect(page.getByTestId("plugin-panel")).toHaveCount(0);
+  await expect(page.getByTestId("plugin-your-representatives")).toHaveCount(0);
   await expectTheme(page, "mosaic");
   await expect(page).not.toHaveURL(/mode=/);
   await expect(page.getByRole("heading", { level: 1, name: "Everything" })).toBeVisible();
@@ -170,6 +172,8 @@ test("check 7, member: Civic reads the circle whose role is civic, renamed or no
   await page.getByRole("button", { name: "Create a passkey" }).click();
   await throughCallback(page, () => page.getByRole("link", { name: "Continue to Mosaic River" }).click());
   await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
+  // A member's River is their own: no Sample River line (ui-revisions-1 item 8).
+  await expect(page.getByTestId("sample-banner")).toHaveCount(0);
   const civicNames = await civicSpaceNames(page);
 
   // Civic before: the hubs only (the campaign sample is followed but in no circle).

@@ -34,9 +34,44 @@ export function parseContentType(raw: string | undefined): ItemKind | undefined 
   throw new FeedInputError("type", `Unknown content type "${raw}"`);
 }
 
+/**
+ * Several content types at once (ui-revisions-1 item 2): `posts,videos`, each read as
+ * parseContentType reads one. Undefined for All (empty, or any part "all").
+ */
+export function parseContentTypes(raw: string | undefined): ItemKind[] | undefined {
+  if (raw === undefined || raw.trim() === "") return undefined;
+  const kinds = new Set<ItemKind>();
+  for (const part of raw.split(",").map((p) => p.trim())) {
+    if (part === "") continue;
+    const kind = parseContentType(part);
+    if (kind === undefined) return undefined;
+    kinds.add(kind);
+  }
+  return kinds.size > 0 ? [...kinds] : undefined;
+}
+
+/** Network filter values (ui-revisions-1 item 4) and the adapter each one shows. */
+export const NETWORKS: Record<string, string> = {
+  hubs: "civic_hub",
+  fediverse: "fediverse",
+};
+
+/** `hubs,fediverse`, any case: the adapters to show; undefined for all networks. */
+export function parseNetworks(raw: string | undefined): string[] | undefined {
+  if (raw === undefined || raw.trim() === "") return undefined;
+  const adapters = new Set<string>();
+  for (const part of raw.split(",").map((p) => p.trim().toLowerCase())) {
+    if (part === "") continue;
+    const adapter = NETWORKS[part];
+    if (!adapter) throw new FeedInputError("network", `Unknown network "${part}"`);
+    adapters.add(adapter);
+  }
+  return adapters.size > 0 ? [...adapters] : undefined;
+}
+
 export class FeedInputError extends Error {
   constructor(
-    readonly field: "mode" | "circle" | "type" | "q" | "cursor",
+    readonly field: "mode" | "circle" | "type" | "network" | "q" | "cursor" | "item",
     message: string,
   ) {
     super(message);
@@ -57,7 +92,12 @@ export interface FeedScope {
 }
 
 export interface FeedFilter {
-  kind?: ItemKind;
+  /** Any of these kinds; undefined for every kind. */
+  kinds?: ItemKind[];
+  /** Spaces of any of these adapters (networks); undefined for every network. */
+  adapters?: string[];
+  /** One item only (the reader view, ui-revisions-1 item 1). */
+  itemId?: string;
   q?: string;
   cursor?: Cursor;
   limit?: number;
@@ -171,7 +211,9 @@ function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values:
                      WHERE m.space_id = i.space_id AND m.key = i.stream_key))
              OR (i.space_id, i.stream_key) IN (
                   SELECT * FROM unnest($2::uuid[], $3::text[])))
-        AND ($4::text IS NULL OR i.kind = $4)
+        AND ($4::text[] IS NULL OR i.kind = ANY($4::text[]))
+        AND ($11::text[] IS NULL OR s.adapter = ANY($11::text[]))
+        AND ($12::uuid IS NULL OR i.id = $12::uuid)
         AND ($5::text IS NULL
              OR i.search @@ plainto_tsquery('simple', $5)
              OR s.name ILIKE $6)
@@ -180,13 +222,15 @@ function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values:
       scope.spaceIds,
       scope.streams.map((st) => st.spaceId),
       scope.streams.map((st) => st.key),
-      filter.kind ?? null,
+      filter.kinds ?? null,
       q,
       q ? likePattern(q) : null,
       filter.cursor?.at ?? null,
       filter.cursor?.id ?? null,
       muted.map((m) => m.spaceId),
       muted.map((m) => m.key),
+      filter.adapters ?? null,
+      filter.itemId ?? null,
     ],
   };
 }

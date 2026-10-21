@@ -11,7 +11,7 @@ import type { Viewer } from "./accounts.js";
 import { authRoutes } from "./auth/routes.js";
 import { checkOrigin, readSession, requireMember } from "./auth/session.js";
 import { memberExport } from "./export/index.js";
-import { FeedInputError, memberFeed, memberMarkAllRead, visitorFeed, type FeedParams } from "./feed/index.js";
+import { FeedInputError, memberFeed, memberMarkAllRead, readerItem, visitorFeed, type FeedParams } from "./feed/index.js";
 import { followingRoutes } from "./following/routes.js";
 import { requireInstance, type Instance } from "./instances.js";
 
@@ -73,6 +73,7 @@ export function riverRoutes(): Router {
         mode: param(req, "mode"),
         circle: param(req, "circle"),
         type: param(req, "type"),
+        network: param(req, "network"),
         q: param(req, "q"),
         cursor: param(req, "cursor"),
       };
@@ -80,6 +81,21 @@ export function riverRoutes(): Router {
       const viewer = res.locals.viewer as Viewer | undefined;
       const feed = viewer ? await memberFeed(instance, viewer, params) : await visitorFeed(instance, params);
       res.set("Cache-Control", "no-store").json(feed);
+    } catch (err) {
+      feedError(err, res, next);
+    }
+  });
+
+  // One stored item for the reader view (ui-revisions-1 item 1), from what the reader follows.
+  // Fetches nothing from outside. 404 for an item that isn't there or isn't the reader's to see.
+  router.get("/items/:id", requireInstance(), readSession(), async (req, res, next) => {
+    try {
+      const item = await readerItem(res.locals.instance as Instance, res.locals.viewer as Viewer | undefined, String(req.params.id));
+      if (!item) {
+        res.status(404).set("Cache-Control", "no-store").json({ error: "not_found", message: "This item isn't in your River." });
+        return;
+      }
+      res.set("Cache-Control", "no-store").json({ item });
     } catch (err) {
       feedError(err, res, next);
     }
@@ -116,13 +132,14 @@ export function riverRoutes(): Router {
     }
   });
 
-  // "Mark all read" for the member's current view: { mode?, circle?, type?, q? }.
+  // "Mark all read" for the member's current view: { mode?, circle?, type?, network?, q? }.
   router.post("/read-state/all", requireInstance(), readSession(), requireMember(), async (req, res, next) => {
     try {
       const marked = await memberMarkAllRead(res.locals.instance as Instance, res.locals.viewer as Viewer, {
         mode: bodyParam(req.body, "mode"),
         circle: bodyParam(req.body, "circle"),
         type: bodyParam(req.body, "type"),
+        network: bodyParam(req.body, "network"),
         q: bodyParam(req.body, "q"),
       });
       res.set("Cache-Control", "no-store").json({ marked });

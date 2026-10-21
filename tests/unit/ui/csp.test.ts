@@ -20,10 +20,12 @@ function csp(): Map<string, string> {
 }
 
 describe("River CSP", () => {
-  it("allows no inline scripts, images from self and https, connections to self only", () => {
+  it("allows no inline scripts, images and media from self and https, connections to self only", () => {
     const policy = csp();
     expect(policy.get("script-src")).toBe("'self'");
     expect(policy.get("img-src")).toBe("'self' https:");
+    // The reader view's audio and video, straight from the source (Adam, 2026-10-21).
+    expect(policy.get("media-src")).toBe("'self' https:");
     expect(policy.get("connect-src")).toBe("'self'");
     expect(policy.get("default-src")).toBe("'self'");
     expect(policy.get("object-src")).toBe("'none'");

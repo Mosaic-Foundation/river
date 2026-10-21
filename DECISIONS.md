@@ -16,6 +16,21 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-21 — Appendix B's CSP and the reader's audio and video
+- Question: Appendix B's policy has no `media-src`, so `default-src 'self'` kept audio and video
+  from other hosts out of the reader view.
+- Reading used: Adam approved `media-src 'self' https:` (2026-10-21). The reader plays https
+  media only, with `preload="none"` so nothing loads until the reader presses play. Cards stay
+  without players.
+- Proposed change: add `media-src 'self' https:` to Appendix B and a line to 4.8 ("audio and
+  video load straight from the source over https, only when played, in the reader view").
+- Thread / PR: UI revisions 1, media PR
+
+### 2026-10-21 — 4.7 says Everything has no panel
+- Question: spec 4.7 and F9 give Everything "no panel"; ui-revisions-1 item 6 gives it Coming up.
+- Reading used: ui-revisions-1 wins (Adam, 2026-10-21); Civic's panel is unchanged.
+- Proposed change: 4.7 "everything (all follows, Coming up across all follows, Mosaic theme)".
+- Thread / PR: UI revisions 1, PR 4
 ### 2026-10-21 — Section 5 still lists the RSS adapter as out of scope (M12)
 - Question: section 5 says "An RSS or podcast adapter, and real video or podcast seeds (stretch
   M12)" is out of scope for v1, while section 7's M12 row builds it.
@@ -269,6 +284,67 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-21 — The reader plays https audio and video (supersedes "plays on {host}")
+- Decision: the reader view renders `<video>` and `<audio>` with `controls` and
+  `preload="none"` for media whose URL is https (no userinfo), up to four, labelled by type and
+  host. Non-https media keeps "This {kind} plays on {host}." Media requests carry the page's
+  Referrer-Policy (strict-origin-when-cross-origin: the River's origin only); media elements have
+  no per-element referrer setting, unlike images (`no-referrer`).
+- Why: Adam asked for in-River playback (2026-10-21). `preload="none"` keeps opening an item
+  from contacting the media host until the reader chooses to play.
+- Alternatives: a same-origin proxy (an outbound call from the server, which would need an ADR);
+  posters and metadata preloading (requests to the host on open).
+- Thread / PR: UI revisions 1, media PR
+
+## 2026-10-21 — Grouping related hub cards in the UI (UI revisions 1, item 7)
+- Decision: the UI folds loaded hub items (adapter `civic_hub`) that share a space and stream key
+  (the hub process) into one card: the newest leads with its status label, the rest sit under
+  "N earlier updates". Grouping runs on the loaded pages, so Load more folds new items into
+  groups already shown. A group is unread while any item in it is; Mark read and Mark unread
+  cover the whole group, and opening the card marks the group read. The unread count counts
+  cards. The API is unchanged.
+- Why: a process's activities (opened, results summarized, outcome recorded) are one story; the
+  stream key is the hub's own process id, so meetings and processes group without guessing.
+- Alternatives: grouping in the API (paging would cut groups across pages); grouping by title
+  (two processes can share one, as Floyd's do).
+- Thread / PR: UI revisions 1, PR 5
+
+## 2026-10-21 — Coming up in Everything reads everything followed (UI revisions 1, item 6)
+- Decision: modes gain `pluginReach`. Everything places Coming up on `river.panel` with reach
+  "followed": the mode's whole scope, without circle, types, networks or search. Civic keeps
+  "view" (spec 4.7). Plugins get `reach` in their ViewApi, so Coming up's intro says "Dates from
+  everything you follow." It lists deadlines as well as event starts, as in Civic. On a phone the
+  column comes after the feed.
+- Why: item 6 says "upcoming events across all followed sources"; a filter shouldn't empty it.
+  A hub's vote closing is a dated event to a reader.
+- Alternatives: events only (would hide every hub deadline); running it on the view (filters
+  would empty it); a phone tab (a fifth bottom tab for one list).
+- Thread / PR: UI revisions 1, PR 4
+
+## 2026-10-21 — The reader view's address and data (UI revisions 1, item 1)
+- Decision: `/item/{id}` keeps the feed's query string (mode, filters). An item already in the
+  loaded feed opens from memory; otherwise `GET /api/items/{id}` returns it from the reader's own
+  Everything scope (all their follows, whatever the mode), or 404. Opening an item marks it read
+  (as opening a link did, spec F4). The title, or the time on untitled cards, is the keyboard
+  link; a click anywhere else on the card except its links and buttons opens it. Audio and video
+  stay on their source ("plays on {host}"): `<audio>` and `<video>` from other hosts would break
+  the CSP's `default-src 'self'`.
+- Why: a URL per item so Back works (item 1); vercel.json already serves index.html for every path,
+  so no config change. Nothing new is fetched from outside.
+- Alternatives: `/?item={id}` (no vercel.json change either, but a worse link); always calling the
+  API (an extra request per open).
+- Thread / PR: UI revisions 1, PR 3
+
+## 2026-10-21 — Several content types and networks in /api/feed (UI revisions 1, items 2 and 4)
+- Decision: `type` takes a comma-separated list (`type=posts,videos`); a new `network` parameter
+  takes `hubs` (adapter `civic_hub`) and/or `fediverse`. Empty means all. Unknown values are 400
+  (`bad_type`, `bad_network`). "Mark all read" takes the same fields. Sample entries belong to no
+  network, so any network filter hides them.
+- Why: the filters are AND across groups and OR inside one (item 2: none selected means All);
+  samples stand for clubs, families and podcasts, not hubs or the fediverse.
+- Alternatives: repeated `type=` parameters (refused before, kept refused); filtering on the
+  client (breaks paging and "Mark all read").
+- Thread / PR: UI revisions 1, PR 2
 ## 2026-10-21 — Proposed real media seeds, for Adam to pick (M12)
 - Decision: no real third-party video or podcast seed is added (seed rows and `supabase/seed.sql`
   unchanged; the choice of outside sources is Adam's). Candidates, none verified from this

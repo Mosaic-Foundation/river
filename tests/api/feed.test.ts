@@ -165,6 +165,21 @@ describe("filters (check 5)", () => {
     expect(events.every((i) => i.kind === "event")).toBe(true);
   });
 
+  it("several types show any of those kinds; networks show only their adapters (ui-revisions-1)", async () => {
+    const mixed = await allItems({ type: "events,photos" });
+    expect(new Set(mixed.map((i) => i.kind))).toEqual(new Set(["event", "photo"]));
+    const hubs = await allItems({ network: "hubs" });
+    expect(hubs.length).toBeGreaterThan(0);
+    expect(hubs.every((i) => i.space.adapter === "civic_hub")).toBe(true);
+    const fedi = await allItems({ network: "fediverse" });
+    expect(fedi.length).toBeGreaterThan(0);
+    expect(fedi.every((i) => i.space.adapter === "fediverse")).toBe(true);
+    const both = await allItems({ network: "hubs,fediverse" });
+    expect(both.length).toBe(hubs.length + fedi.length);
+    const hubPhotos = await allItems({ network: "hubs", type: "photos" });
+    expect(hubPhotos.every((i) => i.kind === "photo" && i.space.adapter === "civic_hub")).toBe(true);
+  });
+
   it("civic mode shows only civic-category spaces and the Civic circle", async () => {
     const civic = await allItems({ mode: "civic" });
     expect(civic.length).toBeGreaterThan(0);
@@ -172,9 +187,45 @@ describe("filters (check 5)", () => {
   });
 
   it("refuses an unknown mode, circle, type or cursor", async () => {
-    for (const query of ["mode=party", "circle=Bowling", "type=memes", "cursor=nope", "type=a&type=b"]) {
+    for (const query of ["mode=party", "circle=Bowling", "type=memes", "cursor=nope", "type=a&type=b", "network=bluesky"]) {
       const res = await fetch(`${API}/feed?${query}`);
       expect(res.status, query).toBe(400);
+    }
+  });
+});
+
+describe("one item for the reader view (ui-revisions-1 item 1)", () => {
+  it("answers a stored item of the reader's River, the same as the feed shows it", async () => {
+    for (const sample of [everything.find((i) => i.source === "live")!, everything.find((i) => i.source === "sample")!]) {
+      const res = await fetch(`${API}/items/${sample.id}`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      const { item } = (await res.json()) as { item: FeedItem };
+      expect(item).toEqual(sample);
+    }
+  });
+
+  it("404 for an unknown item, 400 for a malformed id", async () => {
+    const missing = await fetch(`${API}/items/00000000-0000-4000-8000-00000000abcd`);
+    expect(missing.status).toBe(404);
+    expect(((await missing.json()) as { error: string }).error).toBe("not_found");
+    const bad = await fetch(`${API}/items/nope`);
+    expect(bad.status).toBe(400);
+    expect(((await bad.json()) as { error: string }).error).toBe("bad_item");
+  });
+
+  it("never shows an item outside the reader's follows", async () => {
+    const db = new pg.Client({ connectionString: ADMIN_URL });
+    await db.connect();
+    try {
+      const followed = [...new Set(everything.map((i) => i.space.id))];
+      const { rows } = await db.query<{ id: string }>(
+        "SELECT id FROM river.items WHERE NOT (space_id = ANY($1::uuid[])) OR hidden LIMIT 5",
+        [followed],
+      );
+      for (const row of rows) expect((await fetch(`${API}/items/${row.id}`)).status, row.id).toBe(404);
+    } finally {
+      await db.end();
     }
   });
 });
