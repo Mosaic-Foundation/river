@@ -226,7 +226,7 @@ test.describe("item 1: the reader view", () => {
     await expect(reader.locator(".reader-content").first()).not.toBeEmpty();
     await expect(reader.getByTestId("reader-author")).toContainText(/^By .+/);
     await expect(sidebar(page)).toBeVisible();
-    await expect(cards(page)).toHaveCount(0);
+    await expect(cards(page).first()).toBeHidden();
 
     // The same item from the API, straight from the address bar (a reload or a shared link).
     await page.reload();
@@ -241,8 +241,17 @@ test.describe("item 1: the reader view", () => {
     await openFeed(page);
     const card = cards(page).nth(8);
     await card.scrollIntoViewIfNeeded();
-    await page.mouse.wheel(0, 300);
-    const y = await page.evaluate(() => window.scrollY);
+    await page.evaluate(() => window.scrollBy({ top: 300, behavior: "instant" }));
+    // Wait until the position settles (late images can still move it), then remember it.
+    let y = -1;
+    await expect
+      .poll(async () => {
+        const now = await page.evaluate(() => window.scrollY);
+        const settled = now === y;
+        y = now;
+        return settled;
+      })
+      .toBe(true);
     expect(y).toBeGreaterThan(200);
     const id = (await card.getAttribute("data-item-id"))!;
 

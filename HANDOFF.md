@@ -28,8 +28,9 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 **What it does.** Everything mode gets a right-hand "Coming up" column: up to five upcoming
 deadlines and event starts across everything followed, soonest first, unaffected by circle,
 type, network or search. On a phone it sits below the feed. Modes gained `pluginReach`; plugins
-get `reach` in their API. Also adds the reader-view test notes from the spec review (author shown,
-query string kept).
+get `reach` in their API. Also from the reader view's review: the feed now stays mounted (hidden)
+while an item is open, so Back restores the exact scroll position even while images load, and
+tests now check the author and the kept query string.
 
 **Keys.** None.
 
