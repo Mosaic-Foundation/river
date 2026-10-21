@@ -20,6 +20,29 @@ import { IDENTITY_CSS, errorPage, homePage } from "./pages.js";
 /** Where `npm run build:identity-client` writes the bundled browser script. */
 const PUBLIC_DIR = path.resolve("identity", "public");
 
+/** Longest error message logged. */
+const MAX_LOGGED_MESSAGE = 300;
+
+/**
+ * The log line for a failed request. An error with a code (a database error's SQLSTATE, or a
+ * driver or system code such as ECONNREFUSED) logs its name and code only: a database error's
+ * message and detail can quote an email address or other stored values. An error without a code
+ * also logs its message, on one line and capped: those are the configuration errors from
+ * src/config/env.ts, src/db/pool.ts and src/identity/config.ts, which name a setting and never
+ * hold personal data or the database URL.
+ */
+export function errorLogLine(method: string, path: string, err: unknown): string {
+  const e = (err && typeof err === "object" ? err : {}) as { name?: unknown; code?: unknown; message?: unknown };
+  const name = typeof e.name === "string" && e.name ? e.name : "Error";
+  const code = typeof e.code === "string" || typeof e.code === "number" ? String(e.code) : "";
+  const head = `identity: ${method} ${path} failed: ${name}`;
+  if (code) return `${head} (${code})`;
+  const message = typeof e.message === "string" ? e.message.replace(/\s+/g, " ").trim() : "";
+  if (!message) return head;
+  const shown = message.length > MAX_LOGGED_MESSAGE ? `${message.slice(0, MAX_LOGGED_MESSAGE - 1)}…` : message;
+  return `${head}: ${shown}`;
+}
+
 export function identityRoutes(): Router {
   const router = Router();
 
@@ -47,11 +70,10 @@ export function identityRoutes(): Router {
     res.status(404).type("html").send(errorPage("Not found", "There is nothing at this address."));
   });
 
-  // Errors: log the kind only (a database error's detail can quote an email address), answer 500.
+  // Errors: one log line (errorLogLine), then 500.
   router.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     void _next;
-    const e = err as { name?: string; code?: string };
-    console.error(`identity: ${req.method} ${req.path} failed: ${e.name ?? "Error"}${e.code ? ` (${e.code})` : ""}`);
+    console.error(errorLogLine(req.method, req.path, err));
     if (res.headersSent) return;
     if (req.accepts(["html", "json"]) === "json" || req.method === "POST") {
       res.status(500).json({ error: "server_error", message: "Something went wrong. Try again." });
