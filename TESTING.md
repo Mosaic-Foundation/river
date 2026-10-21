@@ -19,6 +19,7 @@ npx supabase start                # once per session, for API and e2e tests
 npm run dev & npm run test:api    # API tests, including tests/api/db/ (as river_app, identity_app)
 npm run test:e2e                  # starts the API, the identity host and the UI itself
 npm run test:live                 # @live tests against real hosts; never in check or CI
+npx tsx scripts/perf-feed.ts      # check 34's timing, against the dev server (docs/perf/)
 ```
 
 The dev server for API and e2e runs needs, in `.env`, `FETCH_FIXTURES_DIR=tests/fixtures/http`
@@ -43,7 +44,9 @@ npx tsx scripts/recover-dids.ts --print-public-key --key-file /tmp/recovery-test
 TEST_RECOVERY_KEY_FILE=/tmp/recovery-test.pem npm run test:e2e
 ```
 
-Check 37's e2e test fails with that instruction when `TEST_RECOVERY_KEY_FILE` is unset. The
+Check 37's e2e test fails with that instruction when `TEST_RECOVERY_KEY_FILE` is unset. Its
+`recover-dids` subprocess reads `.env.identity` when the file exists, and otherwise the identity
+settings in the Playwright process's own environment. The
 database tests make their own recovery key pair at test time. Never commit a private key, and
 never use a real recovery key in tests. didwebvh-ts writes each DID log it creates to
 `./test/logs/` when `NODE_ENV=test` (Vitest); the folder is gitignored.
@@ -51,6 +54,24 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 ## Log
 
 Newest first: date, slice, tests added, counts.
+
+- 2026-10-21, M11: unit `riverExport` (spec 3.3's document: exactly its keys, format and version;
+  follows with stream keys, rules and circle names in circle order; circles with color and role;
+  preferences without `seed_pending`; pending seeds exported as follows, deduplicated; a foreign
+  circle id ignored; null DID; nothing email- or key-shaped) and `liveTests` (the @live wiring:
+  default Vitest includes only unit and api, Playwright only e2e, only `test:live` uses the live
+  config, no workflow runs it, every live test named `@live`). API `export` (dev server, members
+  signed in through the real callback with `tests/api/helpers/member.ts`): check 29 (visitor and
+  forged cookie 401; the member's document, headers, DID, seed circles and follows; a new circle,
+  a circle membership, a muted stream and an unfollow show up; another member sees only their
+  own). e2e `export`: check 29 through a real passkey sign-up (the download's file name and JSON,
+  a circle added from the page shows in a fetched export, the sign-up address appears nowhere, a
+  visitor gets 401). `@live` `seeds.live.test.ts` (check 32: the three hubs and @w3c@w3c.social
+  through the adapters and the production guard) typechecks and lints; not run by this thread
+  (real hosts). Its logic was dry-run once against the recordings in a throwaway copy. Perf script
+  `scripts/perf-feed.ts` (check 34; numbers in `docs/perf/feed-report.md`). Check 37's
+  `recover-dids` subprocess now reads `.env.identity` only if present. Unit 452, API 136 (fresh
+  `db reset`), e2e 47 (fresh `db reset`).
 
 - 2026-10-21, M10: unit `plugins` (the manifest: the spec's shape on every River surface, frozen;
   refuses another kind, unknown surface or capability, bad id or version, extra fields; the
