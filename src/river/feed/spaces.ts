@@ -81,10 +81,12 @@ export async function findSpaces(db: Db, inputs: readonly string[]): Promise<Map
     const key = spaceKeyFor(input);
     if (key) keys.set(input, key);
   }
-  const canonical = [...keys.values()].filter((k) => k.by !== "handle").map((k) => k.value);
-  const handles = [...keys.values()].filter((k) => k.by === "handle").map((k) => k.value);
   const found = new Map<string, SpaceRow>();
-  if (keys.size === 0) return found;
+  if (inputs.length === 0) return found;
+  // A name that is itself a stored canonical URL (a URN, an actor id) always matches exactly.
+  const exact = inputs.map((input) => input.trim());
+  const canonical = [...exact, ...[...keys.values()].filter((k) => k.by !== "handle").map((k) => k.value)];
+  const handles = [...keys.values()].filter((k) => k.by === "handle").map((k) => k.value);
 
   const { rows } = await db.query<SpaceRow & { handle: string | null }>(
     `SELECT ${SPACE_COLUMNS}, lower(manifest -> 'actor' ->> 'handle') AS handle
@@ -94,12 +96,17 @@ export async function findSpaces(db: Db, inputs: readonly string[]): Promise<Map
          OR (adapter = 'fediverse' AND lower(manifest -> 'actor' ->> 'handle') = ANY($2::text[]))`,
     [canonical, handles],
   );
-  for (const [input, key] of keys) {
-    const row = rows.find((r) =>
-      key.by === "handle"
-        ? r.adapter === "fediverse" && r.handle === key.value
-        : r.canonical_url === key.value || (key.by === "profile" && r.home_url === key.value),
-    );
+  for (const input of inputs) {
+    const key = keys.get(input);
+    const row =
+      rows.find((r) => r.canonical_url === input.trim()) ??
+      (key === undefined
+        ? undefined
+        : rows.find((r) =>
+            key.by === "handle"
+              ? r.adapter === "fediverse" && r.handle === key.value
+              : r.canonical_url === key.value || (key.by === "profile" && r.home_url === key.value),
+          ));
     if (row) {
       const { handle: _handle, ...space } = row;
       found.set(input, space);

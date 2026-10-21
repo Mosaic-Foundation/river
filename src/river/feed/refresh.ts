@@ -88,6 +88,89 @@ export function clearResolveFailures(): void {
   resolveFailures.clear();
 }
 
+/** Work started by one request, raced against the response budget. */
+class Run {
+  readonly report: RefreshReport = { claimed: [], created: [], finished: [], pending: [], unresolved: [] };
+  private readonly tasks: Array<Promise<void>> = [];
+  private readonly running = new Set<string>();
+
+  constructor(
+    private readonly instanceId: string,
+    private readonly deps: FullDeps,
+  ) {}
+
+  private track(label: string, work: Promise<void>): void {
+    this.running.add(label);
+    this.tasks.push(
+      work
+        .catch((err: unknown) => {
+          console.error(`River refresh: ${err instanceof Error ? err.message : String(err)}`);
+        })
+        .finally(() => {
+          this.running.delete(label);
+        }),
+    );
+  }
+
+  private async fetchClaimed(row: SpaceRow): Promise<void> {
+    await refreshOne(this.instanceId, row, this.deps);
+    this.report.finished.push(row.id);
+  }
+
+  /** Claims the stale ones among stored spaces (one transaction) and starts fetching them. */
+  async addStored(rows: readonly SpaceRow[]): Promise<void> {
+    const unique = [...new Map(rows.map((row) => [row.id, row])).values()].filter(
+      (row) => this.deps.adapterNamed(row.adapter) !== undefined,
+    );
+    for (const row of await claimAll(this.instanceId, unique, this.deps)) {
+      this.report.claimed.push(row.id);
+      this.track(row.id, this.fetchClaimed(row));
+    }
+  }
+
+  /** Resolves a followed name that has no space yet, stores it, then refreshes it. */
+  addMissing(input: string): void {
+    const adapter = this.deps.adapterFor(input);
+    if (!adapter) return; // samples are stored by migration; anything else isn't followable
+    const failedAt = resolveFailures.get(input);
+    if (failedAt !== undefined && Date.now() - failedAt < RESOLVE_RETRY_MS) return;
+    this.track(
+      `resolve ${input}`,
+      (async () => {
+        let row: SpaceRow;
+        try {
+          const preview = await adapter.resolve(input, { guard: this.deps.guard, now: this.deps.now });
+          row = await forInstance(this.instanceId, (db) => upsertSpace(db, preview), this.deps.source);
+        } catch (err) {
+          resolveFailures.set(input, Date.now());
+          this.report.unresolved.push({ input, reason: errorMessage(err) });
+          return;
+        }
+        resolveFailures.delete(input);
+        this.report.created.push(row.id);
+        const [won] = await claimAll(this.instanceId, [row], this.deps);
+        if (won) {
+          this.report.claimed.push(won.id);
+          await this.fetchClaimed(won);
+        }
+      })(),
+    );
+  }
+
+  /** Waits for everything or the budget; what's left continues under waitUntil. */
+  async finish(): Promise<RefreshReport> {
+    if (this.tasks.length === 0) return this.report;
+    const all = Promise.allSettled(this.tasks).then(() => undefined);
+    let budgetOver = false;
+    await Promise.race([all, this.deps.sleep(this.deps.budgetMs).then(() => (budgetOver = true))]);
+    if (budgetOver && this.running.size > 0) {
+      this.report.pending = [...this.running];
+      this.deps.waitUntil(all);
+    }
+    return this.report;
+  }
+}
+
 /**
  * Refreshes the spaces behind `inputs` (followed names: seed follows, later a member's follows),
  * creating the ones that don't exist yet. Resolves when everything is done or the budget ends,
@@ -99,76 +182,22 @@ export async function refreshFollowed(
   options: RefreshDeps = {},
 ): Promise<RefreshReport> {
   const deps = withDefaults(options);
-  const report: RefreshReport = { claimed: [], created: [], finished: [], pending: [], unresolved: [] };
   const existing = await forInstance(instanceId, (db) => findSpaces(db, inputs), deps.source);
+  const run = new Run(instanceId, deps);
+  await run.addStored([...existing.values()]);
+  for (const input of new Set(inputs)) if (!existing.has(input)) run.addMissing(input);
+  return run.finish();
+}
 
-  const tasks: Array<Promise<void>> = [];
-  const pending = new Set<string>();
-  const track = (label: string, work: Promise<void>) => {
-    pending.add(label);
-    tasks.push(
-      work
-        .catch((err: unknown) => {
-          console.error(`River refresh: ${label}: ${err instanceof Error ? err.message : String(err)}`);
-        })
-        .finally(() => {
-          pending.delete(label);
-          if (!label.startsWith("resolve:")) report.finished.push(label);
-        }),
-    );
-  };
-
-  // Stale stored spaces: claim them all in one transaction, then fetch each claimed one.
-  const stored = [...new Map([...existing.values()].map((row) => [row.id, row])).values()].filter(
-    (row) => deps.adapterNamed(row.adapter) !== undefined,
-  );
-  const claimed = await claimAll(instanceId, stored, deps);
-  for (const row of claimed) {
-    report.claimed.push(row.id);
-    track(row.id, refreshOne(instanceId, row, deps));
-  }
-
-  // Followed names with no space yet: resolve, store, then refresh like any other.
-  const now = Date.now();
-  for (const input of inputs) {
-    if (existing.has(input)) continue;
-    const adapter = deps.adapterFor(input);
-    if (!adapter) continue; // samples are stored by migration; anything else isn't followable
-    const failedAt = resolveFailures.get(input);
-    if (failedAt !== undefined && now - failedAt < RESOLVE_RETRY_MS) continue;
-    track(
-      `resolve:${input}`,
-      (async () => {
-        let row: SpaceRow;
-        try {
-          const preview = await adapter.resolve(input, { guard: deps.guard, now: deps.now });
-          row = await forInstance(instanceId, (db) => upsertSpace(db, preview), deps.source);
-        } catch (err) {
-          resolveFailures.set(input, Date.now());
-          report.unresolved.push({ input, reason: errorMessage(err) });
-          return;
-        }
-        resolveFailures.delete(input);
-        report.created.push(row.id);
-        const [won] = await claimAll(instanceId, [row], deps);
-        if (won) {
-          report.claimed.push(won.id);
-          await refreshOne(instanceId, won, deps);
-          report.finished.push(won.id);
-        }
-      })(),
-    );
-  }
-
-  if (tasks.length === 0) return report;
-  const all = Promise.allSettled(tasks).then(() => undefined);
-  let budgetOver = false;
-  await Promise.race([all, deps.sleep(deps.budgetMs).then(() => (budgetOver = true))]);
-  if (budgetOver && pending.size > 0) {
-    report.pending = [...pending];
-    deps.waitUntil(all);
-  }
-  return report;
+/** Refreshes stored spaces (claim, fetch, store) within the budget, as refreshFollowed does. */
+export async function refreshSpaces(
+  instanceId: string,
+  rows: readonly SpaceRow[],
+  options: RefreshDeps = {},
+): Promise<RefreshReport> {
+  const run = new Run(instanceId, withDefaults(options));
+  await run.addStored(rows);
+  return run.finish();
 }
 
 async function claimAll(instanceId: string, rows: readonly SpaceRow[], deps: FullDeps): Promise<SpaceRow[]> {
