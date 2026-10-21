@@ -106,6 +106,7 @@ jobs:
           INSTANCE_HOST_ALIASES=localhost,127.0.0.1
           FETCH_FIXTURES_DIR=tests/fixtures/http
           TEST_ROUTES=1
+          TEST_CLOCK_NOW=2026-10-21T00:00:00.000Z
           EOF
           cat > .env.identity <<EOF
           APP=identity
@@ -137,12 +138,15 @@ jobs:
           done
 
       # Includes tests/api/db/, which connects as river_app and identity_app (never postgres) to
-      # prove row-level security and schema isolation (acceptance check 27).
+      # prove row-level security and schema isolation (acceptance check 27). The local stack's
+      # postgres role is used only to run the daily job (as pg_cron does, in a rolled-back
+      # transaction) and to count rows river_app can't see.
       - name: API tests
         if: steps.db.outputs.present == 'true' && hashFiles('tests/api/**/*.test.ts') != ''
         env:
           TEST_RIVER_DATABASE_URL: postgresql://river_app:local-only@127.0.0.1:54322/postgres
           TEST_IDENTITY_DATABASE_URL: postgresql://identity_app:local-only@127.0.0.1:54322/postgres
+          TEST_ADMIN_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: npm run test:api || (cat /tmp/api.log /tmp/identity.log; exit 1)
 
       # End-to-end against the production UI bundle (vite preview proxies /api like dev).
