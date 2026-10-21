@@ -55,6 +55,10 @@ never use a real recovery key in tests. didwebvh-ts writes each DID log it creat
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, identity error log: unit `identityErrorLog` checks `errorLogLine()`: a coded error
+  (SQLSTATE 23505 with an email in its detail, ECONNREFUSED) logs name and code only; an uncoded
+  configuration error logs its message on one line, capped at 300 characters.
+
 - 2026-10-21, UI revisions 1 (item 7): unit `ui/groups`; e2e `revisions.spec.ts` grouped hub
   cards (one card per hub process on the first page, `data-group-size`, the lead's label, the
   disclosure lists the earlier updates without opening the reader, Enter on one opens it, group
