@@ -34,6 +34,7 @@ import { FollowingList } from "./components/FollowingList";
 import { useFollowing } from "./components/useFollowing";
 import { ReaderView, type ReaderState } from "./components/ReaderView";
 import { itemIdFromPath, itemPath } from "./lib/reader";
+import { groupIds, groupItems } from "./lib/groups";
 import { SignUpPrompt } from "./Following";
 
 /** The phone layout's media query (river.css: below 56rem). */
@@ -373,7 +374,10 @@ export function River() {
 
   const panel = load.status === "ok" ? load.panel : [];
   const items = load.status === "ok" ? load.items : [];
-  const unread = items.filter((i) => !reads.isRead(i.id));
+  // One card per hub process (ui-revisions-1 item 7); a card is unread while any of its items is.
+  const groups = groupItems(items);
+  const groupRead = (ids: string[]) => ids.every((id) => reads.isRead(id));
+  const unread = groups.filter((g) => !groupRead(groupIds(g)));
   const filterProps = {
     circles: shownCircles,
     value: filters,
@@ -485,19 +489,27 @@ export function River() {
 
             {items.length > 0 && (
               <ol className="feed-list" aria-label="Items, newest first">
-                {items.map((item) => (
-                  <li key={item.id}>
-                    <FeedCard
-                      item={item}
-                      read={reads.isRead(item.id)}
-                      now={now}
-                      onMarkRead={(id) => reads.markRead([id])}
-                      onMarkUnread={(id) => reads.markUnread([id])}
-                      onSampleInfo={(trigger) => setSampleTrigger(trigger)}
-                      onOpen={openItem}
-                    />
-                  </li>
-                ))}
+                {groups.map((group) => {
+                  const ids = groupIds(group);
+                  return (
+                    <li key={group.lead.id}>
+                      <FeedCard
+                        item={group.lead}
+                        earlier={group.earlier}
+                        read={groupRead(ids)}
+                        now={now}
+                        onMarkRead={() => reads.markRead(ids)}
+                        onMarkUnread={() => reads.markUnread(ids)}
+                        onSampleInfo={(trigger) => setSampleTrigger(trigger)}
+                        onOpen={(id) => {
+                          // Opening a process's card reads its whole story.
+                          if (ids.length > 1) reads.markRead(ids.filter((other) => other !== id));
+                          openItem(id);
+                        }}
+                      />
+                    </li>
+                  );
+                })}
               </ol>
             )}
 

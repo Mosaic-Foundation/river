@@ -2,7 +2,9 @@
 // sanitized on the server by src/shared/sanitize/, is the only HTML (CLAUDE.md constraint 8).
 // A click anywhere on the card opens the item in the reader view (ui-revisions-1 item 1), except on
 // the card's own links and buttons; from the keyboard, the title (or, without one, the time) is
-// a link to /item/{id}. The footer names the source host only.
+// a link to /item/{id}. The footer names the source host only. Older activities of the same hub
+// process fold into the card under "N earlier updates" (ui-revisions-1 item 7); Mark read then
+// covers them all.
 import type { FeedItem } from "../lib/api";
 import {
   deadlineLabel,
@@ -27,6 +29,8 @@ export interface FeedCardProps {
   onSampleInfo: (trigger: HTMLButtonElement) => void;
   /** Opens the item in the reader view. */
   onOpen: (id: string) => void;
+  /** Older activities of the same hub process, newest first (ui-revisions-1 item 7). */
+  earlier?: FeedItem[];
 }
 
 /** The card's link to the reader view: a plain click stays in the page, a modified one opens a tab. */
@@ -46,7 +50,7 @@ function openLinksInNewTab(el: HTMLDivElement | null): void {
   });
 }
 
-export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, onOpen }: FeedCardProps) {
+export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, onOpen, earlier = [] }: FeedCardProps) {
   const titleId = `item-${item.id}-title`;
   const host = item.source === "live" ? linkHost(item.url) : undefined;
   const actor = item.author?.name || item.space.name;
@@ -68,6 +72,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
       data-source={item.source}
       data-kind={item.kind}
       data-adapter={item.space.adapter}
+      data-group-size={1 + earlier.length}
       onClick={(e) => {
         // The card's own links and buttons keep their behavior; selecting text doesn't open it.
         if ((e.target as Element).closest(CARD_INTERACTIVE)) return;
@@ -179,6 +184,26 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
             </li>
           )}
         </ul>
+      )}
+
+      {earlier.length > 0 && (
+        <details className="card-group" data-testid="card-group">
+          <summary className="card-group-summary">
+            {earlier.length === 1 ? "1 earlier update" : `${earlier.length} earlier updates`}
+          </summary>
+          <ol className="card-group-list" aria-label="Earlier updates, newest first">
+            {earlier.map((e) => (
+              <li key={e.id} className="card-group-item" data-item-id={e.id}>
+                <a href={itemPath(e.id, window.location.search)} onClick={openHandler(e.id, onOpen)}>
+                  {e.civic?.label || e.title || kindLabel(e.kind)}
+                </a>
+                <time dateTime={e.publishedAt} title={fullDateTime(e.publishedAt)}>
+                  {relativeTime(e.publishedAt, now)}
+                </time>
+              </li>
+            ))}
+          </ol>
+        </details>
       )}
 
       <footer className="card-footer">

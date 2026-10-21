@@ -199,7 +199,9 @@ test.describe("read state (visitor)", () => {
     await page.getByRole("button", { name: "Mark all read" }).click();
     await expect(page.getByTestId("unread-dot")).toHaveCount(0);
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("mosaic-river:read") ?? "[]") as string[]);
-    expect(stored.length).toBe(await cards(page).count());
+    // Every loaded item, including those folded into grouped hub cards (ui-revisions-1 item 7).
+    const loaded = await cards(page).evaluateAll((els) => els.reduce((n, el) => n + Number(el.getAttribute("data-group-size")), 0));
+    expect(stored.length).toBe(loaded);
 
     expect(apiCalls.length).toBeGreaterThan(0);
     expect(apiCalls.every((call) => call === "GET /api/feed")).toBe(true);
