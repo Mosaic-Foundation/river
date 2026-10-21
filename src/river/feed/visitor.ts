@@ -29,6 +29,8 @@ export interface ReaderFollow {
 
 export interface ReaderView {
   follows: ReaderFollow[];
+  /** Streams muted inside followed spaces (members only; spec F7). */
+  mutes?: Array<{ spaceId: string; streamKey: string }>;
   circles: ReaderCircle[];
   /** Category of every followed space, for the civic mode's scope. */
   categories: Map<string, string | null>;
@@ -80,11 +82,17 @@ export function scopeFor(view: ReaderView, mode: Mode, circleId: string | undefi
     }
     return true;
   };
-  const scope: FeedScope = { spaceIds: [], streams: [] };
+  const scope: FeedScope = { spaceIds: [], streams: [], mutedStreams: [] };
   for (const follow of view.follows) {
     if (!allowed(follow.spaceId)) continue;
     if (follow.streamKey) scope.streams.push({ spaceId: follow.spaceId, key: follow.streamKey });
     else if (!scope.spaceIds.includes(follow.spaceId)) scope.spaceIds.push(follow.spaceId);
+  }
+  // The most specific rule wins (spec F7): a muted stream stays hidden inside a followed space,
+  // and a followed stream shows even when its space isn't followed (one rule per stream, so a
+  // stream is never both).
+  for (const mute of view.mutes ?? []) {
+    if (scope.spaceIds.includes(mute.spaceId)) scope.mutedStreams!.push({ spaceId: mute.spaceId, key: mute.streamKey });
   }
   return scope;
 }

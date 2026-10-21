@@ -43,10 +43,16 @@ export class FeedInputError extends Error {
   }
 }
 
-/** What the reader may see before filters: whole spaces, and single streams of other spaces. */
+/**
+ * What the reader may see before filters: whole spaces, single streams (of spaces not followed as
+ * a whole), and muted streams, which stay hidden inside the whole spaces (spec F7: the most
+ * specific rule wins).
+ */
 export interface FeedScope {
   spaceIds: string[];
   streams: Array<{ spaceId: string; key: string }>;
+  /** Streams hidden inside `spaceIds` (a member's mutes). */
+  mutedStreams?: Array<{ spaceId: string; key: string }>;
 }
 
 export interface FeedFilter {
@@ -149,12 +155,19 @@ function likePattern(q: string): string {
   return `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 }
 
-/** The scope, kind, search and cursor conditions, shared by the feed and "Mark all read". */
+/**
+ * The scope, kind, search and cursor conditions, shared by the feed and "Mark all read". The
+ * caller's next bind parameter is `$${values.length + 1}`.
+ */
 function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values: unknown[] } {
   const q = filter.q?.trim() ? filter.q.trim().slice(0, 200) : null;
+  const muted = scope.mutedStreams ?? [];
   return {
     sql: `NOT i.hidden
-        AND (i.space_id = ANY($1::uuid[])
+        AND ((i.space_id = ANY($1::uuid[])
+              AND NOT EXISTS (
+                    SELECT 1 FROM unnest($9::uuid[], $10::text[]) AS m(space_id, key)
+                     WHERE m.space_id = i.space_id AND m.key = i.stream_key))
              OR (i.space_id, i.stream_key) IN (
                   SELECT * FROM unnest($2::uuid[], $3::text[])))
         AND ($4::text IS NULL OR i.kind = $4)
@@ -171,6 +184,8 @@ function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values:
       q ? likePattern(q) : null,
       filter.cursor?.at ?? null,
       filter.cursor?.id ?? null,
+      muted.map((m) => m.spaceId),
+      muted.map((m) => m.key),
     ],
   };
 }
@@ -204,7 +219,7 @@ export async function queryFeed(
        LEFT JOIN river.streams st ON st.space_id = i.space_id AND st.key = i.stream_key
       WHERE ${where.sql}
       ORDER BY i.published_at DESC, i.id DESC
-      LIMIT $9`,
+      LIMIT $${where.values.length + 1}`,
     [...where.values, limit + 1],
   );
 
@@ -234,7 +249,7 @@ export async function markViewRead(db: Db, scope: FeedScope, filter: FeedFilter)
        JOIN river.spaces s ON s.id = i.space_id
       WHERE ${where.sql}
       ORDER BY i.published_at DESC, i.id DESC
-      LIMIT $9
+      LIMIT $${where.values.length + 1}
      ON CONFLICT (account_id, item_id) DO NOTHING`,
     [...where.values, MARK_ALL_LIMIT],
   );
