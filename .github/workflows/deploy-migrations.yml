@@ -6,6 +6,9 @@ name: deploy-migrations
 # thread's branch can't read them even if it tries:
 #   secrets.SUPABASE_ACCESS_TOKEN  a Supabase access token scoped to the one dev project
 #   secrets.SUPABASE_DB_PASSWORD   that project's database password
+#   secrets.SUPABASE_DB_URL        that project's session pooler URI (port 5432). GitHub's
+#                                  runners have no IPv6, and the direct database host is
+#                                  IPv6-only, so db push connects through the pooler instead
 #   vars.SUPABASE_PROJECT_REF      that project's ref (a repository variable, not a secret)
 # The CLI version comes from package.json, so it matches threads and CI.
 
@@ -31,6 +34,7 @@ jobs:
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -56,8 +60,8 @@ jobs:
 
       - name: Preview the migrations to apply
         if: steps.init.outputs.ok == 'true'
-        run: npx supabase db push --dry-run
+        run: npx supabase db push --dry-run --db-url "$SUPABASE_DB_URL"
 
       - name: Apply migrations
         if: steps.init.outputs.ok == 'true'
-        run: npx supabase db push
+        run: npx supabase db push --db-url "$SUPABASE_DB_URL"
