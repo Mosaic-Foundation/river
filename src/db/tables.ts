@@ -25,3 +25,18 @@ export type TableKind = (typeof RIVER_TABLES)[RiverTable];
 export function isRiverTable(name: string): name is RiverTable {
   return Object.hasOwn(RIVER_TABLES, name);
 }
+
+// Every table in the identity schema (spec 3.2; migration 20261021140000_identity_tables.sql).
+// `clients` is not a table: the identity host builds it from RIVER_CLIENT_ORIGINS at startup.
+// tests/api/db/catalog.test.ts fails when the database and this list disagree.
+export const IDENTITY_TABLES = [
+  "people",
+  "passkeys",
+  "did_log",
+  "keys",
+  "auth_requests",
+  "audit_log",
+  "recovery_tokens",
+] as const;
+
+export type IdentityTable = (typeof IDENTITY_TABLES)[number];

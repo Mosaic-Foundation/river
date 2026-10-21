@@ -95,6 +95,12 @@ jobs:
           echo "::add-mask::$river_session"
           echo "::add-mask::$identity_session"
           echo "::add-mask::$master_key"
+          # A throwaway recovery key pair for this run only (check 37), outside the checkout. The
+          # identity host gets the public half; the e2e test runs recover-dids with the file.
+          recovery_key="$RUNNER_TEMP/recovery-test.pem"
+          openssl genpkey -algorithm ed25519 -out "$recovery_key"
+          recovery_public=$(npx tsx scripts/recover-dids.ts --print-public-key --key-file "$recovery_key")
+          echo "TEST_RECOVERY_KEY_FILE=$recovery_key" >> "$GITHUB_ENV"
           cat > .env <<EOF
           APP=river
           PORT=3000
@@ -114,6 +120,7 @@ jobs:
           DATABASE_URL=postgresql://identity_app:local-only@127.0.0.1:54322/postgres
           SESSION_SECRET=$identity_session
           IDENTITY_MASTER_KEY=$master_key
+          IDENTITY_RECOVERY_PUBLIC_KEY=$recovery_public
           RP_ID=localhost
           IDENTITY_PUBLIC_ORIGIN=http://localhost:3001
           RIVER_CLIENT_ORIGINS=http://localhost:5173,http://localhost:4173

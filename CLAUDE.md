@@ -38,6 +38,8 @@ carry between the two.
 - `npm run build:identity-client`: bundle the identity host's passkey script
 - `npm run record-fixtures`: re-record real responses from the seed hosts (only when told to)
 - `npm run test:live`: `@live` tests against real hubs and fediverse accounts (on demand, never in `ci`)
+- `npm run recover-dids`: re-key DIDs with the offline recovery key (Adam's machine only; key from
+  a file outside the repo or a prompt, never the repo or an env var)
 
 Use npm 12 for installs and lockfile changes (`npx -y npm@12.2.0 install`). npm 10 fails to
 resolve vitest 4's peer dependencies. Commit both `package-lock.json` and `ui/package-lock.json`.

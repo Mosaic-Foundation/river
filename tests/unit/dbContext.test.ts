@@ -95,10 +95,20 @@ describe("db context", () => {
     expect(released).toEqual([undefined]);
   });
 
-  it("forIdentity opens a transaction with no settings yet", async () => {
+  it("forIdentity with an empty scope sets nothing, so the policies match no row", async () => {
     const { source, calls } = fakeSource();
-    await forIdentity(async () => "done", source);
+    await forIdentity({}, async () => "done", source);
     expect(calls.map((c) => c.text)).toEqual(["BEGIN", "COMMIT"]);
+  });
+
+  it("forIdentity binds the person and request ids it is given", async () => {
+    const { source, calls } = fakeSource();
+    await forIdentity({ personId: ACCT.toUpperCase(), authRequestId: OTHER_ACCT }, async () => "done", source);
+    expect(calls[1]).toEqual({
+      text: "SELECT set_config($1, $2, true), set_config($3, $4, true)",
+      values: ["app.person_id", ACCT, "app.auth_request_id", OTHER_ACCT],
+    });
+    await expect(forIdentity({ personId: "not-a-uuid" }, async () => "x", source)).rejects.toThrow(/uuid/);
   });
 
   it("rolls back and rethrows when the callback throws", async () => {

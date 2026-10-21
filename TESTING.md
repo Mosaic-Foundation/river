@@ -25,9 +25,51 @@ The dev server for API and e2e runs needs, in `.env`, `FETCH_FIXTURES_DIR=tests/
 and `TEST_CLOCK_NOW=2026-10-21T00:00:00.000Z` (the hub recordings' clock), as CI writes them. The
 first `GET /api/feed` resolves and fetches every seed follow from the recordings.
 
+The identity host (`npm run dev:identity`) needs `.env.identity` as CI writes it:
+`EMAIL_TRANSPORT=capture`, `TEST_ROUTES=1` (the capture mailbox, the identity clock and the
+rate-limit reset under `/test/`) and a throwaway recovery key pair made outside the repo:
+
+```bash
+openssl genpkey -algorithm ed25519 -out /tmp/recovery-test.pem      # never inside the checkout
+npx tsx scripts/recover-dids.ts --print-public-key --key-file /tmp/recovery-test.pem
+# put that z6Mk… value in .env.identity as IDENTITY_RECOVERY_PUBLIC_KEY, then:
+TEST_RECOVERY_KEY_FILE=/tmp/recovery-test.pem npm run test:e2e
+```
+
+Check 37's e2e test fails with that instruction when `TEST_RECOVERY_KEY_FILE` is unset. The
+database tests make their own recovery key pair at test time. Never commit a private key, and
+never use a real recovery key in tests. didwebvh-ts writes each DID log it creates to
+`./test/logs/` when `NODE_ENV=test` (Vitest); the folder is gitignored.
+
 ## Log
 
 Newest first: date, slice, tests added, counts.
+
+- 2026-10-21, M7: e2e `identity` with Chromium's virtual WebAuthn authenticator (CDP
+  `WebAuthn.addVirtualAuthenticator`, ctap2, internal, resident keys, user verification): checks
+  9 (sign-up makes a resident credential, a person and a DID; did.jsonl is `text/jsonl`, verifies
+  with didwebvh-ts's `resolveDIDFromLog`, first entry `did:webvh:1.0` and `portable: true`; the
+  note verifies against `#key-1`; the same passkey signs in again), 12 (seven inexact
+  `redirect_uri`/`client_id` variants get 400 and no redirect; an assertion over request A's
+  challenge is refused for B, then accepted for A; B stays unused), 28 (stored ciphertext and
+  wrapped key hold no PKCS#8 header and parse as no private key; no identity response carries
+  key material), 35 (invalid addresses refused, the link verifies once, a link 24 h + 1 min old
+  fails, and a form opened in time but posted late fails), 36 (a new authenticator registers on
+  the same DID through the emailed link and finishes the authorize redirect with the original
+  state and nonce; same user handle; two passkeys; notice email; unknown address gets the same
+  words and no mail; used and 16-minute-old links fail; no `@example.test` address in any river
+  table), 37 (two update keys, the second the run's recovery key; `recover-dids` as a subprocess
+  appends version 2 signed by the recovery key; the log verifies, SCID and DID unchanged; the same
+  passkey signs in and the note verifies with the new key, not the old), change email, and the
+  identity pages under axe, Tab and the CSP. The River's callback is answered in the browser
+  (M8 builds it). API `identity` (:3001; exact client matching, WebAuthn options, rate limits,
+  same-origin POSTs, uniform recovery answer, gone links, no key material). Database
+  `db/identity` (identity_app: catalog, ENABLE + FORCE RLS, identity_app-only policies, column
+  grants, no DELETE; per-person and per-request isolation; append-only did_log; lookups; person
+  creation; recover-dids with a key pair made at test time; river_app denied every identity table
+  and function). `db/dailyJob` now deletes stale `identity.auth_requests`. Unit `identityKeys`,
+  `identityDid`, `identityNote`, `identityHost`; `dbContext` (forIdentity scopes). Unit 344,
+  API 84, e2e 31.
 
 - 2026-10-21, M6: e2e `river` (checks 3, 4, 21, 26 UI part, 30, 31, plus filters and the API's
   empty-state text, search, Load more from the keyboard, boost wording, avatar fallback, the CSP
