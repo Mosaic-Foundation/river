@@ -206,6 +206,11 @@ main.feed:focus {
   align-items: center;
 }
 
+/* "Clear all" just below search (ui-revisions-3 item 5); the sidebar's gap sets the spacing. */
+.sidebar-clear {
+  align-self: flex-start;
+}
+
 .search-icon {
   position: absolute;
   left: var(--space-md);
