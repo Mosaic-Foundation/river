@@ -102,9 +102,11 @@ test.describe("feed cards", () => {
     const boost = page.locator(".card-boost").first();
     await expect(boost).toBeVisible();
     await expect(boost).toHaveText(/^.+ boosted( a post from [a-z0-9.-]+\.[a-z]+)?$/);
-    // Avatars from outside hosts were blocked: the card falls back to initials.
-    const fallback = cards(page).and(page.locator('[data-source="live"]')).first().locator(".source-icon-initials");
-    await expect(fallback).toHaveText(/^[A-Z0-9]{1,2}$/);
+    // Avatars from outside hosts were blocked: the card falls back to initials. Avatars load
+    // lazily, so the card is scrolled into view for its avatar to be requested at all.
+    const live = cards(page).and(page.locator('[data-source="live"]')).first();
+    await live.scrollIntoViewIfNeeded();
+    await expect(live.locator(".source-icon-initials")).toHaveText(/^[A-Z0-9]{1,2}$/);
   });
 
   test("check 21: a card whose image fails to load renders without it, with no broken image", async ({ page }) => {
