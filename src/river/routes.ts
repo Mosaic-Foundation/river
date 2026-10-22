@@ -103,9 +103,10 @@ export function riverRoutes(): Router {
     }
   });
 
-  // Whether an opened item's page can be shown in the embedded view (ui-revisions-2 item 2,
-  // ADR-008): one guarded request for the stored item's own URL, read for its framing headers.
-  // { frame: { url } } frames that URL; { frame: null } opens the reader view. Only items the
+  // Whether an item's page can be shown in the embedded view (ui-revisions-2 item 2,
+  // ui-revisions-3 item 2, ADR-008), asked as its card comes into view: one guarded request for
+  // the stored item's own URL, read for its framing headers. { frame: { url } } frames that URL;
+  // { frame: null } opens the original in a new tab. Only items the
   // reader can see are checked, so this can't be pointed at any other address.
   router.get("/items/:id/frame", requireInstance(), readSession(), async (req, res, next) => {
     try {
