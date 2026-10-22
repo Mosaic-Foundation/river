@@ -20,6 +20,41 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 3, items 1-2: fediverse posts stay in the feed; other items framed or in a new tab — 2026-10-22
+
+- Branch / PR: claude/inspiring-johnson-bzl1yf → PR (needs-adam: ADR-008 amended)
+- Migrations: none.
+
+**What it does.** Mastodon `/embed` pages are no longer framed. Every live card's footer has
+"Open ↗", the original in a new tab (`rel="noopener noreferrer"`); a fediverse card's body opens
+nothing. Other live cards (hubs, feeds) ask `GET /api/items/{id}/frame` as they come into view
+(`ui/src/lib/useFrameAnswers.ts`), so a click already knows: an allowed page opens framed beside
+the River bar at `/item/{id}`; a refused one opens in a new tab inside the click, and the River
+stays on the feed. A click before the answer (or an item's address) shows "Open on {host} ↗"
+beside the bar, which becomes the frame if the answer allows it. No click opens the reader; it
+shows only at a sample's (or a missing item's) address. Cards carry `data-open`
+(`none | pending | frame | tab`).
+
+**Merge rule.** `needs-adam`: ADR-008 points 1 (checks run ahead of time, for cards in view), 3
+(fediverse never framed) and 6 (what a click does) are amended; it is still Proposed.
+
+**Keys.** None.
+
+**Tests.** Unit `ui/embed` rewritten (plan and card open mode). New e2e in `revisions3.spec.ts`
+items 1 and 2 (8 tests: a fediverse body click does nothing; Open ↗ on every live card, none on
+samples, marks read; the check runs once a card is in view and a refused card opens a new tab
+while the River stays; an allowed page frames, with Back, the bar, scroll and filters; a pending
+click shows Open on {host}, refused and allowed endings; addresses; keyboard). No recorded
+non-fediverse page allows framing, so the framed path is driven by a stand-in answer from
+`page.route` (the API test proves the server's real answer). `revisions2.spec.ts` keeps items 1
+and 3 at a sample's address and the CSP; `revisions.spec.ts` item 1 now covers the reader at an
+address; `river`, `signin`, `themes` and `media` specs use Open ↗ where they opened items.
+`npm run check`: 41 files, 581 tests. e2e: 83 passed on the dev server.
+
+### Follow-ups
+- The reader's audio and video players are no longer reached from cards (logged under "Spec
+  questions"); Adam may want players on media cards.
+- The check still matches `RIVER_PUBLIC_ORIGIN`, not the asking instance's host (from #27).
 ## UI revisions 3, item 5: "Clear all" at the top of the filter column — 2026-10-22
 
 - Branch / PR: claude/filter-clear-all → PR (self-merge; not needs-adam)

@@ -178,20 +178,22 @@ test("Civic mode wears the Civic Hub theme on every surface, at AA contrast", as
   await expectAxeAA(page);
   await attachScreenshot(page, "civic-feed-desktop.png");
 
-  // The reader: a large surface (18px) with the item's process edge and pill, and a 10px button.
-  await processCard.locator(".card-title-link, .card-permalink").first().click();
-  const reader = page.getByTestId("reader");
-  await expect(reader).toBeVisible();
-  expect(await reader.getAttribute("data-process")).toBe(process);
-  expect(await style(reader, "border-top-left-radius")).toBe("18px");
-  expect(await style(reader, "border-left-color")).toBe(PROCESS_RGB[process]);
-  expect(await style(reader.locator(".chip-process"), "color")).toBe(PROCESS_RGB[process]);
-  const open = reader.getByRole("link", { name: /Open in new tab/ });
-  await expect(open).toBeVisible();
+  // The card's Open ↗ is a 10px button (ui-revisions-3 item 1).
+  expect(await style(processCard.getByTestId("card-open"), "border-top-left-radius")).toBe("10px");
+
+  // A hub item's own address: the River bar and "Open on {host} ↗" (ui-revisions-3 item 2; the
+  // recordings have no hub page that allows framing), a navy 10px button.
+  const processId = (await processCard.getAttribute("data-item-id"))!;
+  await page.goto(`/item/${processId}?mode=civic`);
+  const elsewhere = page.getByTestId("external-elsewhere");
+  await expect(elsewhere).toContainText("opens in its own tab.", { timeout: 30_000 });
+  const open = elsewhere.getByRole("link", { name: /^Open on / });
   expect(await style(open, "border-top-left-radius")).toBe("10px");
   expect(await style(open, "background-color")).toBe(CIVIC.primary);
+  expect(await style(page.locator(".external-bar"), "background-color")).toBe(CIVIC.primary);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await expectAxeAA(page);
-  await attachScreenshot(page, "civic-reader-desktop.png");
+  await attachScreenshot(page, "civic-open-desktop.png");
 
   // A phone: the same theme, the panel above the feed.
   await page.setViewportSize({ width: 390, height: 844 });

@@ -533,7 +533,12 @@ main.feed:focus {
   cursor: pointer;
 }
 
-.card:hover {
+/* A card that opens nothing when clicked (fediverse posts, samples; ui-revisions-3 item 1). */
+.card[data-open="none"] {
+  cursor: auto;
+}
+
+.card:not([data-open="none"]):hover {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-raised, var(--shadow-card));
 }
@@ -849,6 +854,11 @@ main.feed:focus {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-muted);
+}
+
+/* "Open ↗": the original in a new tab (ui-revisions-3 item 1). */
+.card-open {
+  margin-left: auto;
 }
 
 .card-action {
@@ -1317,6 +1327,34 @@ a.button {
   height: 100%;
   border: 0;
   background: var(--color-surface);
+}
+
+/* No page to frame: the original is one click away (ui-revisions-3 item 2). */
+.external-elsewhere {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-xl) var(--space-md);
+  background: var(--color-page, var(--color-surface-alt));
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.external-elsewhere-title {
+  margin: 0;
+  max-width: var(--layout-feed);
+  font-size: var(--font-size-xl);
+  line-height: var(--line-height-tight);
+}
+
+.external-elsewhere-note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
 }
 
 .external-loading {

@@ -154,13 +154,13 @@ test("check 23: a member's Mark read, Mark unread, opened links and Mark all rea
   await expect(first.getByRole("button", { name: "Mark unread" })).toBeVisible();
   await expect.poll(reads).toEqual([firstId]);
 
-  // Opening a live item marks it read too (ui-revisions-1 item 1); a Mastodon post opens in its
-  // embed (ui-revisions-2 item 2).
+  // Opening a live item marks it read too (ui-revisions-1 item 1), here with Open ↗
+  // (ui-revisions-3 item 1).
   const live = cards(page).and(page.locator('[data-source="live"]')).nth(1);
   const liveId = (await live.getAttribute("data-item-id")) ?? "";
-  await live.locator(".card-source").click();
-  await expect(page.getByTestId("external-view")).toBeVisible();
-  await page.getByRole("button", { name: "Back to the River" }).click();
+  const popup = page.context().waitForEvent("page");
+  await live.getByTestId("card-open").click();
+  await (await popup).close();
   await expect(page.locator(`[data-item-id="${liveId}"]`).getByTestId("unread-dot")).toHaveCount(0);
   await expect.poll(async () => (await reads()).sort()).toEqual([firstId, liveId].sort());
 
