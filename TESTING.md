@@ -64,6 +64,17 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-21, Civic mode retheme (Civic Hub default theme): unit `ui/civicTheme` reads civic.css,
+  checks the hub's values and that every text pair (body, heading, muted, link, danger on page,
+  card and alt; filled buttons; chips and banners; each process pill on its 10% tint) is at least
+  4.5:1, and that every key `processKey` returns has a color; `ui/format` covers `processKey`.
+  e2e `themes.spec.ts`: Civic tokens and shadow updated; new "Civic mode wears the Civic Hub theme
+  on every surface" (page, header, mode switch, sidebar, pills, active chip, cards and their
+  process edge and pill, panel, focus ring, reader, phone; axe wcag2a/wcag2aa on the feed, the
+  reader and a phone) attaches three screenshots to the report (reference copies in
+  `docs/design/screenshots/`); "Everything mode keeps the Mosaic look" proves the fallbacks.
+  `modes.spec.ts` civic primary is now `#2a4e84`. Unit 535, e2e 70.
+
 - 2026-10-21, M12 brought up to date with main (after #17-#24): e2e `media.spec.ts` now checks
   the card's host (`card-host`) instead of the removed "Open on" link, and in the reader view
   "Open original" (href, new tab, noopener) plus the episode's `<audio>` and the PeerTube
