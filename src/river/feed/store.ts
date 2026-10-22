@@ -2,7 +2,14 @@
 // caller's forInstance() transaction as river_app; items, spaces and streams are shared tables, so
 // the instance setting is all their policies need.
 import type { Db } from "../../db/context.js";
-import type { FetchResult, NormalizedItem, SpacePreview, StreamUpdate } from "../../shared/items/index.js";
+import {
+  AdapterError,
+  ADAPTER_MESSAGES,
+  type FetchResult,
+  type NormalizedItem,
+  type SpacePreview,
+  type StreamUpdate,
+} from "../../shared/items/index.js";
 import { toPlainText } from "../../shared/sanitize/index.js";
 import { SPACE_COLUMNS, type SpaceRow } from "./spaces.js";
 
@@ -218,30 +225,46 @@ async function moveFinalResult(db: Db, spaceId: string, key: string, sourceId: s
   );
 }
 
+function isCheckViolation(err: unknown, constraint: string): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const e = err as { code?: unknown; constraint?: unknown };
+  return e.code === "23514" && e.constraint === constraint;
+}
+
 /**
  * Creates the space a follow box (or seed follow) resolved to, or finds it if another request
  * created it first (canonical_url is unique). Returns the stored row.
  */
 export async function upsertSpace(db: Db, preview: SpacePreview): Promise<SpaceRow> {
-  const inserted = await db.query<SpaceRow>(
-    `INSERT INTO river.spaces (adapter, canonical_url, feed_url, actor_id, network, category, name, icon_url,
-                               home_url, manifest)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
-     ON CONFLICT (canonical_url) DO NOTHING
-     RETURNING ${SPACE_COLUMNS}`,
-    [
-      preview.adapter,
-      preview.canonicalUrl,
-      preview.feedUrl ?? null,
-      preview.actorId ?? null,
-      preview.network ?? null,
-      preview.category ?? null,
-      spaceName(preview.name) ?? preview.canonicalUrl,
-      preview.iconUrl ?? null,
-      preview.homeUrl ?? null,
-      JSON.stringify(preview.manifest ?? {}),
-    ],
-  );
+  let inserted;
+  try {
+    inserted = await db.query<SpaceRow>(
+      `INSERT INTO river.spaces (adapter, canonical_url, feed_url, actor_id, network, category, name, icon_url,
+                                 home_url, manifest)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb)
+       ON CONFLICT (canonical_url) DO NOTHING
+       RETURNING ${SPACE_COLUMNS}`,
+      [
+        preview.adapter,
+        preview.canonicalUrl,
+        preview.feedUrl ?? null,
+        preview.actorId ?? null,
+        preview.network ?? null,
+        preview.category ?? null,
+        spaceName(preview.name) ?? preview.canonicalUrl,
+        preview.iconUrl ?? null,
+        preview.homeUrl ?? null,
+        JSON.stringify(preview.manifest ?? {}),
+      ],
+    );
+  } catch (err) {
+    // A database that doesn't know this adapter yet (the M12 migration hasn't run there): the
+    // follow box says the kind isn't supported, instead of failing the request.
+    if (isCheckViolation(err, "spaces_adapter_check")) {
+      throw new AdapterError("not_supported", ADAPTER_MESSAGES.not_supported);
+    }
+    throw err;
+  }
   if (inserted.rows[0]) return inserted.rows[0];
   const { rows } = await db.query<SpaceRow>(
     `SELECT ${SPACE_COLUMNS} FROM river.spaces WHERE canonical_url = $1`,

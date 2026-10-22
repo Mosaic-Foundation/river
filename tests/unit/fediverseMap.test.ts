@@ -173,6 +173,51 @@ describe("other object types (DERIVED from a real note)", () => {
     expect(item?.media).toEqual([{ type: "video", url: "https://w3c.social/static/abc-720.mp4", duration: 125 }]);
   });
 
+  it("M12: a PeerTube Video's duration (PT4M33S), widest icon as thumbnail, HLS file, Markdown as text", () => {
+    const item = mapActivity(
+      derivedNote((o) => {
+        o.type = "Video";
+        o.name = "Ridge";
+        o.duration = "PT4M33S";
+        o.mediaType = "text/markdown";
+        o.content = "Line one <script>alert(1)</script>\n\n**two**";
+        o.icon = [
+          { type: "Image", url: "https://w3c.social/thumbs/a-small.jpg", mediaType: "image/jpeg", width: 280, height: 157 },
+          { type: "Image", url: "https://w3c.social/thumbs/a-large.jpg", mediaType: "image/jpeg", width: 850, height: 480 },
+          { type: "Image", url: "http://w3c.social/thumbs/insecure.jpg", mediaType: "image/jpeg", width: 1920, height: 1080 },
+        ];
+        o.url = [
+          { type: "Link", mediaType: "text/html", href: "https://w3c.social/w/abc" },
+          {
+            type: "Link",
+            mediaType: "application/x-mpegURL",
+            href: "https://w3c.social/hls/master.m3u8",
+            tag: [{ type: "Link", mediaType: "video/mp4", href: "https://w3c.social/hls/abc-720-fragmented.mp4", height: 720 }],
+          },
+        ];
+      }),
+      ctx,
+    );
+    expect(item).toMatchObject({ kind: "video", title: "Ridge", url: "https://w3c.social/w/abc" });
+    expect(item?.media).toEqual([
+      { type: "video", url: "https://w3c.social/hls/abc-720-fragmented.mp4", duration: 273 },
+      { type: "image", url: "https://w3c.social/thumbs/a-large.jpg", width: 850, height: 480 },
+    ]);
+    expect(item?.contentHtml).toBe("<p>Line one &lt;script&gt;alert(1)&lt;/script&gt;</p><p>**two**</p>");
+  });
+
+  it("M12: a Video with a duration but no file keeps the duration on its watch page", () => {
+    const item = mapActivity(
+      derivedNote((o) => {
+        o.type = "Video";
+        o.duration = "PT1H2M3S";
+        o.url = [{ type: "Link", mediaType: "text/html", href: "https://w3c.social/w/xyz" }];
+      }),
+      ctx,
+    );
+    expect(item?.media).toEqual([{ type: "video", url: "https://w3c.social/w/xyz", duration: 3723 }]);
+  });
+
   it("keeps an Update hidden (it marks the place in the outbox but isn't a new post)", () => {
     const update = entries(SWF_PAGE_1).find((a) => a.type === "Update") as Json;
     const item = mapActivity(update, ctx);

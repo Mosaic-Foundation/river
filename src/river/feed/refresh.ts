@@ -17,7 +17,7 @@ import { waitUntil as vercelWaitUntil } from "@vercel/functions";
 import { forInstance, type ClientSource } from "../../db/context.js";
 import { getFetchGuard, type FetchGuard } from "../../shared/fetch/index.js";
 import { AdapterError, ADAPTER_MESSAGES, type Adapter, type NormalizedItem } from "../../shared/items/index.js";
-import { adapterFor, adapterNamed } from "../adapters/index.js";
+import { adapterNamed, adaptersFor, resolveWith } from "../adapters/index.js";
 import { riverNow } from "../clock.js";
 import { findSpaces, type SpaceRow, toSpaceRecord } from "./spaces.js";
 import {
@@ -66,9 +66,14 @@ export interface RefreshReport {
   unresolved: Array<{ input: string; reason: string }>;
 }
 
-type FullDeps = Required<Omit<RefreshDeps, "source">> & { source?: ClientSource };
+type FullDeps = Required<Omit<RefreshDeps, "source" | "adapterFor">> & {
+  source?: ClientSource;
+  /** Adapters that take a followed name, tried in order (one when a test injects adapterFor). */
+  adaptersFor: (input: string) => Adapter[];
+};
 
 function withDefaults(deps: RefreshDeps): FullDeps {
+  const injected = deps.adapterFor;
   return {
     guard: deps.guard ?? getFetchGuard(),
     now: deps.now ?? riverNow(),
@@ -76,7 +81,12 @@ function withDefaults(deps: RefreshDeps): FullDeps {
     sleep: deps.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
     waitUntil: deps.waitUntil ?? ((promise) => vercelWaitUntil(promise)),
     adapterNamed: deps.adapterNamed ?? adapterNamed,
-    adapterFor: deps.adapterFor ?? adapterFor,
+    adaptersFor: injected
+      ? (input) => {
+          const adapter = injected(input);
+          return adapter ? [adapter] : [];
+        }
+      : (input) => adaptersFor(input),
     source: deps.source,
   };
 }
@@ -130,8 +140,8 @@ class Run {
 
   /** Resolves a followed name that has no space yet, stores it, then refreshes it. */
   addMissing(input: string): void {
-    const adapter = this.deps.adapterFor(input);
-    if (!adapter) return; // samples are stored by migration; anything else isn't followable
+    const candidates = this.deps.adaptersFor(input);
+    if (candidates.length === 0) return; // samples are stored by migration; anything else isn't followable
     const failedAt = resolveFailures.get(input);
     if (failedAt !== undefined && Date.now() - failedAt < RESOLVE_RETRY_MS) return;
     this.track(
@@ -139,7 +149,7 @@ class Run {
       (async () => {
         let row: SpaceRow;
         try {
-          const preview = await adapter.resolve(input, { guard: this.deps.guard, now: this.deps.now });
+          const preview = await resolveWith(candidates, input, { guard: this.deps.guard, now: this.deps.now });
           row = await forInstance(this.instanceId, (db) => upsertSpace(db, preview), this.deps.source);
         } catch (err) {
           resolveFailures.set(input, Date.now());

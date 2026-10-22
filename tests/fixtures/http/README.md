@@ -48,3 +48,27 @@ seed host, and Mastodon's REST lookup and statuses for `@eff@mastodon.social`. S
 - Responses the seeds don't give (a 401/403 outbox, a 429, a post with `<script>`) are not in this
   folder. Tests derive them from a recorded response at run time (`tests/unit/helpers/fediverseFixtures.ts`).
 - `fedizen.net` is not recorded: ADR-001 allows it only once Adam approves.
+
+## SYNTHETIC: media sources (M12)
+
+`synthetic-tube.example/` and `synthetic-podcast.example/` are **not recordings**. The M12 thread's
+sandbox could not reach any PeerTube instance or podcast host (its egress proxy refused them and
+their names did not resolve), so rather than guess at a real site's content these responses were
+written by `scripts/synthetic-media-fixtures.ts` to the published formats, on hosts under the
+reserved `.example` TLD (RFC 2606) that can never be real. Every file carries a `note` saying so.
+
+- `synthetic-tube.example`: a PeerTube 7 channel, `@trail_films@synthetic-tube.example`
+  (WebFinger, NodeInfo 2.0 naming `peertube`, the Group actor, its outbox whose items are
+  Announces of the channel's own videos by IRI, and the three Video objects with `duration` as
+  `PT{seconds}S`, thumbnails in `icon`, the watch page, HLS playlist and files in `url`, and a
+  Markdown description).
+- `synthetic-podcast.example`: an RSS 2.0 podcast with Apple's namespace (`feed.xml`: four
+  episodes with `<enclosure>`, `itunes:duration` in three forms, one older than 90 days), the
+  feed's 304 for its own ETag, and a home page that names the feed with
+  `<link rel="alternate" type="application/rss+xml">`.
+- Both answer `/.well-known/civic.json` with 404, as non-hub hosts do (the follow box asks the hub
+  adapter first).
+
+Regenerate with `npx tsx scripts/synthetic-media-fixtures.ts`. Record real sources, once Adam
+picks them (DECISIONS.md, "Proposed real media seeds"), with
+`npm run record-fixtures -- --media <feed URL, page URL or @channel@server>`, then retire these.

@@ -19,6 +19,7 @@ import { ACTIVITY_JSON, PLAIN_JSON, asList, hostOf, httpsUrl, isObject, type AsO
 import { getJson, objectBody, SERVER_ONLY_MESSAGE, statusError } from "./http.js";
 import { isExpired, readManifest, toManifestJson, type FediverseManifest } from "./manifest.js";
 import { mapActivity, mapStatus, type MapContext } from "./map.js";
+import { createOwnVideoBudget, isPeerTube, readChannelVideos } from "./peertube.js";
 import { isMastodon, mastodonLookup, readActor, readNodeInfo } from "./resolve.js";
 
 export const MAX_PAGES = 2;
@@ -192,11 +193,16 @@ export async function fetchNew(space: SpaceRecord, ctx: FetchContext): Promise<F
   if (!outbox) throw new AdapterError("not_a_space", ADAPTER_MESSAGES.not_a_space);
 
   const items: NormalizedItem[] = [];
+  // A PeerTube channel announces its own videos (peertube.ts); other servers are read as before.
+  const channel = isPeerTube(network)
+    ? { guard: ctx.guard, now: ctx.now, actorId, author: mapCtx.author, budget: createOwnVideoBudget() }
+    : undefined;
   let page = await firstPage(ctx.guard, outbox, outboxUrl as string, network);
   for (let n = 1; page && n <= MAX_PAGES; n++) {
     const taken = await takeUntilKnown(entriesOf(page), mapCtx, ctx, mapActivity);
-    items.push(...taken.items);
-    await ctx.onPage?.(taken.items);
+    const pageItems = channel ? await readChannelVideos(taken.items, channel) : taken.items;
+    items.push(...pageItems);
+    await ctx.onPage?.(pageItems);
     if (taken.reachedKnown || n === MAX_PAGES) break;
     const next = httpsUrl(isObject(page.next) ? page.next.id : page.next);
     if (!next) break;

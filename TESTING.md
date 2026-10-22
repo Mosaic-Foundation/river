@@ -51,9 +51,23 @@ database tests make their own recovery key pair at test time. Never commit a pri
 never use a real recovery key in tests. didwebvh-ts writes each DID log it creates to
 `./test/logs/` when `NODE_ENV=test` (Vitest); the folder is gitignored.
 
+**Synthetic fixtures (M12).** The PeerTube channel and the podcast feed the M12 tests follow are
+SYNTHETIC, not recorded: `tests/fixtures/http/synthetic-tube.example/` and
+`synthetic-podcast.example/`, written by `scripts/synthetic-media-fixtures.ts` to the published
+formats (PeerTube's ActivityPub Video object, RSS 2.0 with Apple's podcast namespace) on reserved
+`.example` hosts, because the thread that built M12 could not reach any real PeerTube or podcast
+host. Each file carries a `note` saying so; `tests/fixtures/http/README.md` has the details.
+Tests that use them say SYNTHETIC in their header. Replace them with recordings once real sources
+are chosen (`npm run record-fixtures -- --media <address>`).
+
 ## Log
 
 Newest first: date, slice, tests added, counts.
+
+- 2026-10-21, M12 brought up to date with main (after #17-#24): e2e `media.spec.ts` now checks
+  the card's host (`card-host`) instead of the removed "Open on" link, and in the reader view
+  "Open original" (href, new tab, noopener) plus the episode's `<audio>` and the PeerTube
+  `<video>` (https src, `preload="none"`). Unit 530, API 145 (fresh `db reset`), e2e 68.
 
 - 2026-10-21, identity error log: unit `identityErrorLog` checks `errorLogLine()`: a coded error
   (SQLSTATE 23505 with an email in its detail, ECONNREFUSED) logs name and code only; an uncoded
@@ -100,6 +114,32 @@ Newest first: date, slice, tests added, counts.
 - 2026-10-21, sanitize-html CJS fix: unit `sanitizeCjsLoad` loads sanitize-html in a child Node
   with `--no-experimental-require-module` (what Vercel's function loader does) and sanitizes one
   string. Fails with ERR_REQUIRE_ESM if htmlparser2 12 comes back. Unit 453.
+- 2026-10-21, M12 (stretch, real media): unit `rssFeed` (the XML reader: CDATA, entities, numeric
+  references, canonical namespace prefixes, entity declarations refused, sloppy markup survived,
+  runaway nesting refused; `itunes:duration` in seconds, MM:SS and HH:MM:SS and what it rejects;
+  RSS 2.0 podcast items to `podcast` with duration and image, enclosure type by extension, http
+  media dropped, the media file as URL when there is no link, permalink guids; hostile HTML
+  sanitized; author emails never kept, in the item or its raw copy; Media RSS video with
+  thumbnail; article vs post; undated items; hashed ids; the entry cap; RSS 1.0; Atom with html
+  and xhtml content and enclosures; non-feeds and a truncated feed; autodiscovery and page
+  detection), `mediaAdapters` (SYNTHETIC fixtures through the real guard: the PeerTube channel by
+  handle and URL, its videos with title, duration, thumbnail and watch page, HLS-only files,
+  stop-at-known, another channel's video and an unreadable one kept as boost cards, the 20-video
+  cap, no dereference outside PeerTube; the podcast by feed URL and by home page, episodes newest
+  first in the 90-day window, ETag and 304, undated episodes keep their first time, the F6 error
+  sentences, refused private addresses), `fediverseMap` (+2: a PeerTube Video's PT4M33S, widest
+  icon, HLS file and Markdown as text; a duration without a file), `adapterRegistry` (the feed
+  adapter last; which adapters take which inputs), `followResolve` (+kind labels). API `media`
+  (dev server, a member signed in through the real callback): previews of the feed URL, the
+  podcast's home page, the channel's URL and handle; following each into its own circle shows
+  the episodes as podcasts with durations and the videos with durations and thumbnails; the
+  Podcasts and Videos filters; the Following page's kind. e2e `media`: a member follows the
+  podcast by its home page and the channel by handle from the follow box; the cards show kind,
+  length ("42 min", "4:33") and "Open on {host}" (new tab, noopener); the thumbnail that can't
+  load is gone; axe clean. Unit 516, API 141 (fresh `db reset`), e2e 48 (fresh `db reset`).
+  The run passed the identity host's settings to Playwright's environment for check 37 (no
+  `.env.identity` in the worktree), as M11 describes.
+
 - 2026-10-21, M11: unit `riverExport` (spec 3.3's document: exactly its keys, format and version;
   follows with stream keys, rules and circle names in circle order; circles with color and role;
   preferences without `seed_pending`; pending seeds exported as follows, deduplicated; a foreign

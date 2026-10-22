@@ -31,6 +31,42 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Reading used: ui-revisions-1 wins (Adam, 2026-10-21); Civic's panel is unchanged.
 - Proposed change: 4.7 "everything (all follows, Coming up across all follows, Mosaic theme)".
 - Thread / PR: UI revisions 1, PR 4
+### 2026-10-21 — Section 5 still lists the RSS adapter as out of scope (M12)
+- Question: section 5 says "An RSS or podcast adapter, and real video or podcast seeds (stretch
+  M12)" is out of scope for v1, while section 7's M12 row builds it.
+- Reading: M12 is the stretch that brings it in; Adam approved it. Proposed spec change: move that
+  line from section 5 into 4.1 ("feeds: RSS, Atom and podcasts, ADR-007") and add the `rss`
+  adapter value to 3.1's `spaces.adapter` list.
+
+### 2026-10-21 — A PeerTube channel is a `video` space, not an `organization` (M12)
+- Question: 4.3 maps a Group actor to category `organization`, but 3.1's categories include
+  `video`, and a PeerTube channel is a video channel.
+- Reading: a Group on a server whose NodeInfo says `peertube` gets `video`; every other actor
+  keeps 4.3's mapping. Proposed spec change: in 4.3, "a PeerTube channel (Group) is `video`".
+
+### 2026-10-21 — A thumbnail in `media`, which has no thumbnail field (M12)
+- Question: 3.1's `media` entries hold `type, url, alt, duration, width, height`; a video or
+  episode has both a file (with a length) and a picture.
+- Reading: two entries, the `video` or `audio` file with `duration` first, then an `image` with
+  the thumbnail; no new field, and the UI (which shows image entries and the first duration)
+  needed no change. When a PeerTube video lists no plain file, the `video` entry points at the
+  watch page so its length still shows.
+
+### 2026-10-21 — PeerTube's own videos are fetched at refresh, not "when opened" (M12)
+- Question: 4.3 says a boosted object is fetched only when opened, at most 20 per refresh. A
+  PeerTube channel's outbox announces its own videos by IRI, so read that way every video would
+  be an empty boost card.
+- Reading: for PeerTube spaces only, an Announce of a video on the channel's own host, attributed
+  to the channel, is the channel publishing it: the Video is fetched during the refresh, at most
+  20 per refresh (a budget of its own), and stored as a `video` item. Other boosts are unchanged.
+  Proposed spec change: add that sentence to 4.3 "Map".
+
+### 2026-10-21 — PeerTube's outbox order is assumed newest first (M12)
+- Question: 4.3 reads the outbox's `first` page and stops at the first known item, which needs
+  newest-first pages. PeerTube's outbox code sorts by `-createdAt` as far as this thread could
+  check from memory, but no real outbox could be fetched.
+- Reading: newest first, as Mastodon and WordPress page; the synthetic fixture follows that. Check
+  it on the first real recording (`npm run record-fixtures -- --media @channel@server`).
 
 ### 2026-10-21 — The export's circles carry no members
 - Question: 3.3's `circles` entries hold only `name`, `color` and `role`; a space reaches a circle
@@ -309,6 +345,120 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Alternatives: repeated `type=` parameters (refused before, kept refused); filtering on the
   client (breaks paging and "Mark all read").
 - Thread / PR: UI revisions 1, PR 2
+## 2026-10-21 — Proposed real media seeds, for Adam to pick (M12)
+- Decision: no real third-party video or podcast seed is added (seed rows and `supabase/seed.sql`
+  unchanged; the choice of outside sources is Adam's). Candidates, none verified from this
+  thread's sandbox (every candidate host was refused or didn't resolve):
+  1. **PeerTube channel:** Framasoft's official channel on `framatube.org` (Framasoft develops
+     PeerTube; follow it by the channel's `@name@framatube.org` handle or its
+     `https://framatube.org/c/{name}` URL; confirm the exact channel name on the site).
+     Alternative: the Blender Foundation's instance `video.blender.org`, one of its channels.
+  2. **Podcast:** The Changelog, `https://changelog.com/podcast/feed` (open-source software;
+     RSS 2.0 with Apple's tags).
+  3. **Podcast, alternative:** 99% Invisible (design and civic infrastructure; the feed URL its
+     site names with `<link rel="alternate">`, so following `https://99percentinvisible.org/`
+     finds it).
+- Before adding one: run `npm run record-fixtures -- --media <address>` from a machine that can
+  reach it, check the recording (the channel's outbox is public and newest first; the feed is
+  under the guard's 2 MB cap, which long-running podcasts can exceed), add its host to ADR-001's
+  seed hosts (ADR-007 item 6), then add the seed follow and the circle membership by migration.
+- Thread / PR: M12
+
+## 2026-10-21 — The feed adapter: one `rss` adapter for RSS, Atom and podcasts (M12)
+- Decision: `src/river/adapters/rss/`, adapter value `rss` (ADR-007), last in the registry since
+  it takes any https URL (no handles, bare hosts or http). Resolve GETs the URL with a feed-first
+  Accept: a feed is the space; an HTML page is searched for at most three
+  `<link rel="alternate" type="application/rss+xml|application/atom+xml">` (https, resolved
+  against the page) and the first that reads as a feed wins (`manifest.discoveredFrom`).
+  canonical_url and feed_url are the feed's URL after redirects; home_url the site it names;
+  name its title; icon `itunes:image`, RSS `image/url` or Atom logo/icon (https); `network` the
+  format (`rss`, `atom`); category `podcast` with any audio enclosure, else `video` with any video
+  enclosure, else `publication`. Fetch sends If-None-Match only for the stored ETag of the same
+  URL (a 304 keeps what is stored, as the hub does), keeps the newest 50 entries from the last 90
+  days in one page (retention removes older ones anyway), and counts every entry for
+  newest_item_at so Quiet works. A 404 or 410 is "isn't a Space" on resolve and an error on
+  refresh; a 429 is reported, never retried. It returns no manifest from fetch, so the stored
+  name and icon stay as resolved.
+- Why: spec section 7 M12, F6, 4.5; ADR-001 and ADR-007.
+- Alternatives: one adapter per format; JSON Feed (no podcast tags, rare; left out).
+- Thread / PR: M12
+
+## 2026-10-21 — Feed entries to items (M12)
+- Decision: audio enclosure (type `audio/*`, Media RSS `medium="audio"`, or an audio extension when
+  untyped) → `podcast`; else video → `video`; else titled → `article`, untitled → `post`. The
+  media file (https only) carries `itunes:duration` (seconds, `MM:SS` with up to four minute
+  digits, `H:MM:SS`; fractions rounded) or Media RSS `duration`; then one `image`: the episode's
+  `itunes:image`, a Media RSS thumbnail, an image enclosure, or for podcasts with Apple's tags the
+  show's cover. Item URL: link (relative ones resolved against the site), else a permalink guid,
+  else the media file. source_id: guid or Atom id (first 1000 characters), else the link, else
+  `urn:sha256:` of title, date, enclosure and content. Content: `content:encoded`, else
+  `description` (RSS), else Atom content or summary (`text` escaped, `xhtml` written back from
+  its div), always through `sanitize()`; titles and itunes summaries through `toPlainText()`.
+  Author: `dc:creator`, `itunes:author` or `<author>`, keeping only the name (an RSS `<author>`
+  is an email address with an optional name in parentheses; constraint 7), in the item and in its
+  `raw` copy. Undated entries take now once; when already stored they're skipped on refresh, so
+  they don't jump to the top. Nothing is hidden (feeds are public).
+- Why: spec 3.1, 4.8 (https only), Appendix B, CLAUDE.md constraints 7 and 8.
+- Thread / PR: M12
+
+## 2026-10-21 — An in-repo XML reader, no XML dependency (M12)
+- Decision: `src/river/adapters/rss/xml.ts`, a lenient non-validating reader: CDATA, comments,
+  processing instructions, the five XML entities and numeric references; a stray `&` or `<`, an
+  unclosed or unmatched tag are tolerated as feed readers do. A DOCTYPE that declares any entity
+  makes the document unreadable (no expansion, no external entities, no DTD fetch); at most 100
+  levels and 50,000 elements. Namespaced names are canonical (`itunes:`, `content:`, `media:`,
+  `atom:`, `dc:`, `rdf:`, `podcast:` whatever prefix the feed used; RSS 1.0's namespace reads as
+  bare names).
+- Why: a security-sensitive input path with a small, well-specified need; feeds in the wild are
+  often not well-formed. ADR-007 records it.
+- Alternatives: `fast-xml-parser` 5.x (six transitive packages, strict, entity handling to
+  configure).
+- Thread / PR: M12
+
+## 2026-10-21 — The follow box tries every adapter that takes an address (M12)
+- Decision: `resolveWith()` in `src/river/adapters/index.ts` (used by the follow box and by seed
+  resolve in the refresh) tries the adapters that accept the input in registry order; "isn't a
+  Space" passes it on. Once an earlier adapter reached the address and said "isn't a Space", a
+  later adapter's "couldn't reach" is reported as "isn't a Space" (so a hub process the hub
+  doesn't serve still reads that way); "can't be followed" (the guard) always wins. Seed resolve
+  used only the first adapter before; now an rss seed would resolve too.
+- Why: spec F6; the feed adapter takes any URL, so it must come last and not mask the others.
+- Thread / PR: M12
+
+## 2026-10-21 — PeerTube channels in the fediverse adapter (M12)
+- Decision: `src/river/adapters/fediverse/peertube.ts`. For spaces whose network is `peertube`,
+  each shown Announce of an object on the actor's own host, without embedded content, is
+  dereferenced (Accept activity+json, served from its id's host, at most `OWN_VIDEO_LIMIT` = 20
+  per fetch, in parallel under the guard's per-host limit); if the object lists the channel in
+  `attributedTo`, is public, and maps to `video` or `podcast`, it replaces the boost card, keeping
+  the Announce's source_id (stop-at-known still works), the channel as author and both objects
+  in `raw`. Anything else stays a boost card. Video and Audio objects (all servers) also get:
+  the file from a top-level `url` Link or, failing that, from a Link's `tag` (PeerTube's HLS
+  playlist); the length on the watch page when there is no file; the widest `icon` (else `image`)
+  as an `image` entry, alt from its `name` or decorative; a `text/markdown` description shown as
+  escaped paragraphs. Kind label "PeerTube channel"; category `video` for a PeerTube Group.
+- Why: spec 4.3 and section 7 M12; ADR-007.
+- Alternatives: a `peertube` adapter; dereferencing on open (cards would be empty).
+- Thread / PR: M12
+
+## 2026-10-21 — Synthetic fixtures for M12, and a media recorder (M12)
+- Decision: the sandbox's egress refused every PeerTube and podcast host tried (framatube.org,
+  video.blender.org, changelog.com, feeds.simplecast.com, tilvids.com, example.com), so M12's
+  fixtures are SYNTHETIC: `scripts/synthetic-media-fixtures.ts` writes
+  `tests/fixtures/http/synthetic-tube.example/` and `synthetic-podcast.example/` to the published
+  formats on reserved `.example` hosts, each file with a `note`. `npm run record-fixtures --
+  --media <address>` (`scripts/recorders/media.ts`) records real sources through the follow box's
+  resolve and the adapter's fetch, with the feed's own 304, and leaves the seed recordings alone.
+- Why: the brief (never guess at a real site's content; label synthetic fixtures); spec 6.
+- Thread / PR: M12
+
+## 2026-10-21 — The rss adapter against the previous schema (M12)
+- Decision: the CHECK on `spaces.adapter` gains `rss` in a new migration
+  (`20261021200000_rss_adapter.sql`, drop and re-add `spaces_adapter_check`). Until it lands,
+  `upsertSpace()` turns that constraint's violation into "That kind of Space isn't supported yet"
+  (422), so the River keeps working while Vercel and `deploy-migrations` race.
+- Why: CLAUDE.md "Database" (code must keep working against the previous schema).
+- Thread / PR: M12
 
 ## 2026-10-21 — The export's shape and route (M11)
 - Decision: `GET /api/me/export` (members; visitors 401 `sign_in_required`) returns spec 3.3's

@@ -1,0 +1,9 @@
+{
+  "url": "https://synthetic-tube.example/.well-known/nodeinfo",
+  "status": 200,
+  "headers": {
+    "content-type": "application/json; charset=utf-8"
+  },
+  "body": "{\"links\":[{\"rel\":\"http://nodeinfo.diaspora.software/ns/schema/2.0\",\"href\":\"https://synthetic-tube.example/nodeinfo/2.0.json\"}]}",
+  "note": "SYNTHETIC: written by scripts/synthetic-media-fixtures.ts to the published format; not a recording."
+}

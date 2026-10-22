@@ -319,7 +319,7 @@ export async function followingPage(db: Db, now: Date): Promise<FollowingPage> {
       iconUrl: row.icon_url,
       adapter: row.adapter,
       category: row.category,
-      kind: kindLabel(row.adapter, row.network),
+      kind: kindLabel(row.adapter, row.network, row.category),
       address,
       following: Boolean(whole),
       ruleId: whole?.id ?? null,

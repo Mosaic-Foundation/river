@@ -1,0 +1,9 @@
+{
+  "url": "https://synthetic-podcast.example/",
+  "status": 200,
+  "headers": {
+    "content-type": "text/html; charset=utf-8"
+  },
+  "body": "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Synthetic Commons Radio</title>\n  <link rel=\"stylesheet\" href=\"/style.css\">\n  <link rel=\"alternate\" type=\"application/rss+xml\" title=\"Synthetic Commons Radio (podcast feed)\" href=\"/feed.xml\">\n</head>\n<body>\n  <h1>Synthetic Commons Radio</h1>\n  <p>A synthetic test podcast. Subscribe with the <a href=\"/feed.xml\">podcast feed</a>.</p>\n</body>\n</html>\n",
+  "note": "SYNTHETIC: written by scripts/synthetic-media-fixtures.ts to the published format; not a recording."
+}

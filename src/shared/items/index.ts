@@ -8,7 +8,8 @@ import type { FetchGuard } from "../fetch/index.js";
 export const ITEM_KINDS = ["post", "article", "podcast", "video", "photo", "event", "civic"] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
 
-export const ADAPTERS = ["civic_hub", "fediverse", "sample", "rep_space_v01", "atproto"] as const;
+/** spaces.adapter. `rss` (RSS, Atom and podcast feeds) arrived in M12 (ADR-007). */
+export const ADAPTERS = ["civic_hub", "fediverse", "sample", "rep_space_v01", "atproto", "rss"] as const;
 export type AdapterName = (typeof ADAPTERS)[number];
 
 export const SPACE_CATEGORIES = [
