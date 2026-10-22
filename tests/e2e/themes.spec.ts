@@ -136,6 +136,8 @@ test("Civic mode wears the Civic Hub theme on every surface, at AA contrast", as
   const pills = page.locator(".sidebar .pill");
   await expect(pills.first()).toBeVisible();
   expect(await style(pills.first(), "border-top-left-radius")).toBe("9999px");
+  expect(await style(pills.first(), "background-color")).toBe(CIVIC.card);
+  expect(await style(pills.first(), "border-top-color")).toBe(CIVIC.border);
   await pills.first().click();
   await expect(pills.first()).toHaveAttribute("aria-pressed", "true");
   expect(await style(pills.first(), "background-color")).toBe(CIVIC.primary);
@@ -185,10 +187,9 @@ test("Civic mode wears the Civic Hub theme on every surface, at AA contrast", as
   expect(await style(reader, "border-left-color")).toBe(PROCESS_RGB[process]);
   expect(await style(reader.locator(".chip-process"), "color")).toBe(PROCESS_RGB[process]);
   const open = reader.getByRole("link", { name: /Open original/ });
-  if (await open.count()) {
-    expect(await style(open, "border-top-left-radius")).toBe("10px");
-    expect(await style(open, "background-color")).toBe(CIVIC.primary);
-  }
+  await expect(open).toBeVisible();
+  expect(await style(open, "border-top-left-radius")).toBe("10px");
+  expect(await style(open, "background-color")).toBe(CIVIC.primary);
   await expectAxeAA(page);
   await attachScreenshot(page, "civic-reader-desktop.png");
 
