@@ -132,7 +132,7 @@ describe("a PeerTube channel through the fediverse adapter (SYNTHETIC fixtures)"
     expect(replay.calls.slice(before).filter((c) => c.includes("/videos/watch/"))).toEqual([`GET ${RIDGE}`]);
   });
 
-  it("keeps a boost card for a video that isn't the channel's own (DERIVED: other attributedTo)", async () => {
+  it("reads a video that isn't the channel's own as a boost of it (DERIVED: other attributedTo)", async () => {
     const video = recordedJson<Json>(RIDGE);
     const other = derived(RIDGE, {
       body: { ...video, attributedTo: [{ type: "Group", id: `${TUBE}/video-channels/someone_else` }] },
@@ -140,7 +140,11 @@ describe("a PeerTube channel through the fediverse adapter (SYNTHETIC fixtures)"
     const replay = replayGuard([other]);
     const preview = await fediverseAdapter.resolve("@trail_films@synthetic-tube.example", { guard: replay.guard, now: NOW });
     const result = await fediverseAdapter.fetchNew(spaceFrom(preview), ctx(replay));
-    expect(result.items[0]).toMatchObject({ kind: "post", boostOf: { objectId: RIDGE, host: "synthetic-tube.example" } });
+    expect(result.items[0]).toMatchObject({
+      kind: "video",
+      title: "Ridge line at dawn",
+      boostOf: { objectId: RIDGE, host: "synthetic-tube.example", author: { url: `${TUBE}/video-channels/someone_else` } },
+    });
     expect(result.items[1]).toMatchObject({ kind: "video", title: "Creek crossing after the storm" });
   });
 
@@ -165,13 +169,12 @@ describe("a PeerTube channel through the fediverse adapter (SYNTHETIC fixtures)"
     expect(replay.calls.slice(before).filter((c) => c.includes("/videos/watch/"))).toHaveLength(OWN_VIDEO_LIMIT);
   });
 
-  it("leaves other servers' Announces alone: no dereference outside PeerTube", async () => {
+  it("outside PeerTube, a channel's shares are boosts: filled with the video, still boosts", async () => {
     const replay = replayGuard();
     const preview = await fediverseAdapter.resolve("@trail_films@synthetic-tube.example", { guard: replay.guard, now: NOW });
-    const before = replay.calls.length;
     const result = await fediverseAdapter.fetchNew(spaceFrom(preview, { network: "mastodon" }), ctx(replay));
     expect(result.items.every((i) => i.boostOf !== undefined)).toBe(true);
-    expect(replay.calls.slice(before).filter((c) => c.includes("/videos/watch/"))).toEqual([]);
+    expect(result.items[0]).toMatchObject({ kind: "video", title: "Ridge line at dawn", boostOf: { objectId: RIDGE } });
   });
 });
 

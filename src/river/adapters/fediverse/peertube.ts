@@ -3,25 +3,21 @@
 // Video instead, which map.ts already reads). Read as a plain boost, every video would be an empty
 // "boosted a post" card. So, for a PeerTube space only, an Announce of a video on the channel's
 // own host and attributed to the channel itself is read as the channel publishing it: the Video
-// is fetched (through the guard, at most OWN_VIDEO_LIMIT per refresh) and becomes a `video` item,
-// keyed by the Announce's id so stop-at-known still works. Anything else stays a boost card, and
-// nothing changes for other servers.
+// is fetched (through the guard, from the refresh's budget of 20 dereferences that boosts share)
+// and becomes a `video` item, keyed by the Announce's id so stop-at-known still works. Anything
+// else is a boost, filled like any other (boostContent.ts).
 import type { FetchGuard } from "../../../shared/fetch/index.js";
 import type { ItemAuthor, NormalizedItem } from "../../../shared/items/index.js";
 import { ACTIVITY_JSON, asList, hostOf, idOf, isObject } from "./activitypub.js";
-import { createBoostBudget, type BoostBudget } from "./boosts.js";
+import { BOOST_DEREFERENCE_LIMIT, type BoostBudget } from "./boosts.js";
 import { getJson } from "./http.js";
 import { mapObject } from "./map.js";
 
-/** Videos a channel's refresh may fetch (the same cap as boosts, spec 4.3). */
-export const OWN_VIDEO_LIMIT = 20;
+/** Videos a channel's refresh may fetch: the budget it shares with boosts (spec 4.3). */
+export const OWN_VIDEO_LIMIT = BOOST_DEREFERENCE_LIMIT;
 
 export function isPeerTube(network: string | null | undefined): boolean {
   return network?.toLowerCase() === "peertube";
-}
-
-export function createOwnVideoBudget(): BoostBudget {
-  return createBoostBudget(OWN_VIDEO_LIMIT);
 }
 
 export interface ChannelContext {

@@ -39,7 +39,16 @@ cookies and connection headers.
 Recorded on 2026-10-21 by `scripts/recorders/fediverse.ts`, which runs the adapter itself through
 a saving guard, so each file is a request the adapter really sends: WebFinger, the actor, NodeInfo
 (well-known and document), the outbox, its first two pages, one boosted object where it lives on a
-seed host, and Mastodon's REST lookup and statuses for `@eff@mastodon.social`. Seeds:
+seed host, and Mastodon's REST lookup and statuses for `@eff@mastodon.social`.
+
+Boost content (2026-10-22): `fetchNew` now fills boosts with the posts they boost (spec 4.3), so a
+refresh of `@w3c@w3c.social` also reads boosted posts and their authors. The ones on seed hosts were
+recorded then, by running the adapter through a guard that replayed everything already here and
+fetched only the missing seed-host requests: eight more `w3c.social` statuses and the actors
+`w3cdevs`, `caribou`, `p20n` and `tink`; on `mastodon.social`, PhilA's status, the 401 its actor
+returns, and its `/api/v1/accounts/lookup` answer. Boosts on other hosts (mas.to, indieweb.social,
+mamot.fr, front-end.social, piaille.fr, sigmoid.social) are not recorded and fail in replay, which
+is the "can't be fetched, keep the plain card" case. Seeds:
 `@w3c@w3c.social`, `@wearenew_public@mastodon.social`, `@eff@mastodon.social`,
 `@internetarchive@mastodon.archive.org`, `@wikipedia@wikis.world`, `@swf@socialwebfoundation.org`.
 

@@ -3,6 +3,11 @@
 // number). When the unsigned outbox read is refused (401/403): Mastodon's REST API if NodeInfo
 // says Mastodon, otherwise the space is `blocked` (server-only).
 //
+// Boosts the outbox names only by IRI are then filled with the posts they boost (boostContent.ts),
+// within one budget of 20 dereferences per refresh (spec 4.3) that a PeerTube channel's own videos
+// share. Each page is stored as it arrives; the filled boosts are passed to onPage again after the
+// last page, so a slow boosted post never holds up the feed.
+//
 // The 120 s minimum between refreshes of one space is the refresh's job (M5, spec 4.5), not this
 // module's. A 429 is reported as an error; the guard keeps the host's Retry-After.
 import type { FetchGuard } from "../../../shared/fetch/index.js";
@@ -16,10 +21,12 @@ import {
   type SpaceRecord,
 } from "../../../shared/items/index.js";
 import { ACTIVITY_JSON, PLAIN_JSON, asList, hostOf, httpsUrl, isObject, type AsObject } from "./activitypub.js";
+import { fillBoosts } from "./boostContent.js";
+import { createBoostBudget } from "./boosts.js";
 import { getJson, objectBody, SERVER_ONLY_MESSAGE, statusError } from "./http.js";
 import { isExpired, readManifest, toManifestJson, type FediverseManifest } from "./manifest.js";
 import { mapActivity, mapStatus, type MapContext } from "./map.js";
-import { createOwnVideoBudget, isPeerTube, readChannelVideos } from "./peertube.js";
+import { isPeerTube, readChannelVideos } from "./peertube.js";
 import { isMastodon, mastodonLookup, readActor, readNodeInfo } from "./resolve.js";
 
 export const MAX_PAGES = 2;
@@ -193,9 +200,10 @@ export async function fetchNew(space: SpaceRecord, ctx: FetchContext): Promise<F
   if (!outbox) throw new AdapterError("not_a_space", ADAPTER_MESSAGES.not_a_space);
 
   const items: NormalizedItem[] = [];
+  const budget = createBoostBudget();
   // A PeerTube channel announces its own videos (peertube.ts); other servers are read as before.
   const channel = isPeerTube(network)
-    ? { guard: ctx.guard, now: ctx.now, actorId, author: mapCtx.author, budget: createOwnVideoBudget() }
+    ? { guard: ctx.guard, now: ctx.now, actorId, author: mapCtx.author, budget }
     : undefined;
   let page = await firstPage(ctx.guard, outbox, outboxUrl as string, network);
   for (let n = 1; page && n <= MAX_PAGES; n++) {
@@ -207,6 +215,12 @@ export async function fetchNew(space: SpaceRecord, ctx: FetchContext): Promise<F
     const next = httpsUrl(isObject(page.next) ? page.next.id : page.next);
     if (!next) break;
     page = objectBody(await pageOrThrow(ctx.guard, next));
+  }
+  const filled = await fillBoosts(items, { guard: ctx.guard, now: ctx.now, budget });
+  if (filled.length > 0) {
+    const bySourceId = new Map(filled.map((item) => [item.sourceId, item]));
+    items.splice(0, items.length, ...items.map((item) => bySourceId.get(item.sourceId) ?? item));
+    await ctx.onPage?.(filled);
   }
   return result(items, space, fullManifest(), "ok", null);
 }

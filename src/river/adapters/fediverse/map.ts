@@ -6,7 +6,7 @@
 //   attachments are link previews, not attachments in this sense); Article, Page -> article;
 //   Video -> video; Audio -> podcast; Event -> event.
 // - Announce -> a boost item carrying what the Announce itself carries; the boosted object is
-//   never fetched here (boosts.ts dereferences on open).
+//   never fetched here (fetchNew fills boosts afterwards, boostContent.ts).
 // - HTML goes through sanitize(); titles, summaries and alt text through toPlainText().
 import { sanitize, toPlainText } from "../../../shared/sanitize/index.js";
 import { plainTextAsHtml } from "../text.js";
@@ -282,7 +282,7 @@ export function mapActivity(entry: unknown, ctx: MapContext): NormalizedItem | u
   });
 }
 
-/** A dereferenced object (a boost opened by a reader) to an item keyed by the object's own id. */
+/** A dereferenced object (a boosted post) to an item keyed by the object's own id. */
 export function mapObject(object: unknown, ctx: MapContext): NormalizedItem | undefined {
   if (!isObject(object)) return undefined;
   const sourceId = httpsUrl(object.id);

@@ -81,7 +81,7 @@ export function isMastodon(software: Software | string | null | undefined): bool
 }
 
 /** An actor document: an id on the host it was served from, and an outbox. */
-function asActor(body: unknown, servedFrom: string): AsObject | undefined {
+export function asActor(body: unknown, servedFrom: string): AsObject | undefined {
   if (!isObject(body)) return undefined;
   const id = httpsUrl(body.id);
   if (!id || !httpsUrl(body.outbox)) return undefined;
@@ -90,7 +90,7 @@ function asActor(body: unknown, servedFrom: string): AsObject | undefined {
   return body;
 }
 
-function cachedFromActor(actor: AsObject, handle: string | undefined, now: Date): CachedActor {
+export function cachedFromActor(actor: AsObject, handle: string | undefined, now: Date): CachedActor {
   const icon = asList(actor.icon).find(isObject);
   return {
     id: actor.id as string,
@@ -144,7 +144,7 @@ export async function mastodonLookup(guard: FetchGuard, host: string, acct: stri
   return account;
 }
 
-function cachedFromAccount(account: MastodonAccount, handle: string | undefined, now: Date): CachedActor {
+export function cachedFromAccount(account: MastodonAccount, handle: string | undefined, now: Date): CachedActor {
   return {
     id: account.uri,
     // Mastodon's REST API has no actor type; group and bot accounts are Group and Service actors.
@@ -162,7 +162,7 @@ function cachedFromAccount(account: MastodonAccount, handle: string | undefined,
 }
 
 /** The account name in an actor or profile URL (`/@name`, `/users/name`), if there is one. */
-function nameFromUrl(url: string): string | undefined {
+export function nameFromUrl(url: string): string | undefined {
   try {
     return /^\/(?:@|users\/)([a-z0-9_][a-z0-9_.-]*)\/?$/i.exec(new URL(url).pathname)?.[1];
   } catch {

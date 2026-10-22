@@ -1,6 +1,7 @@
 // The fediverse adapter end to end on recorded responses from the seed accounts (spec 4.3),
 // replayed through the real fetch guard: acceptance check 15 (adapter part), paging, the REST
-// fallback, server-only spaces, guard refusals, 429 and boost dereferencing. No network.
+// fallback, server-only spaces, guard refusals, 429 and boost dereferencing (boost content during
+// the refresh is in boostContent.test.ts). No network.
 // Responses marked DERIVED are test-only variants of a recorded one (see helpers/).
 import { describe, expect, it } from "vitest";
 import {
@@ -167,7 +168,7 @@ describe("every seed account resolves and reads", () => {
 });
 
 describe("fetchNew paging", () => {
-  it("reads at most 2 pages and calls onPage once per page", async () => {
+  it("reads at most 2 pages, calls onPage once per page, then once with the filled boosts", async () => {
     const { space, replay } = await follow("@w3c@w3c.social");
     replay.calls.length = 0;
     const pages: NormalizedItem[][] = [];
@@ -177,9 +178,24 @@ describe("fetchNew paging", () => {
       isKnown: () => false,
       onPage: (items) => void pages.push(items),
     });
-    expect(replay.calls).toEqual([`GET ${W3C_OUTBOX}`, `GET ${W3C_PAGE_1}`, `GET ${W3C_PAGE_2}`]);
-    expect(pages.map((p) => p.length)).toEqual([orderedItems(W3C_PAGE_1).length, orderedItems(W3C_PAGE_2).length]);
-    expect(result.items).toEqual(pages.flat());
+    expect(replay.calls.filter((c) => c.startsWith(`GET ${W3C_OUTBOX}`))).toEqual([
+      `GET ${W3C_OUTBOX}`,
+      `GET ${W3C_PAGE_1}`,
+      `GET ${W3C_PAGE_2}`,
+    ]);
+    expect(pages).toHaveLength(3);
+    expect(pages.slice(0, 2).map((p) => p.length)).toEqual([
+      orderedItems(W3C_PAGE_1).length,
+      orderedItems(W3C_PAGE_2).length,
+    ]);
+    // The pages go out as read; the boosts filled afterwards replace their plain versions.
+    expect(result.items.map((i) => i.sourceId)).toEqual(pages.slice(0, 2).flat().map((i) => i.sourceId));
+    const filled = pages[2] ?? [];
+    expect(filled.length).toBeGreaterThan(0);
+    for (const item of filled) {
+      expect(item.boostOf).toBeDefined();
+      expect(result.items.find((i) => i.sourceId === item.sourceId)).toEqual(item);
+    }
   });
 
   it("stops at the first already-known source id", async () => {
@@ -194,7 +210,8 @@ describe("fetchNew paging", () => {
       onPage: (items) => void pages.push(items),
     });
     expect(result.items.map((i) => i.sourceId)).toEqual(orderedItems(W3C_PAGE_1).slice(0, 4).map((a) => a.id));
-    expect(pages).toHaveLength(1);
+    expect(pages[0]?.map((i) => i.sourceId)).toEqual(result.items.map((i) => i.sourceId));
+    expect(pages.flat().every((i) => result.items.some((r) => r.sourceId === i.sourceId))).toBe(true);
     expect(replay.calls).not.toContain(`GET ${W3C_PAGE_2}`);
   });
 
@@ -209,7 +226,11 @@ describe("fetchNew paging", () => {
     const { space, replay } = await follow("@swf@socialwebfoundation.org");
     replay.calls.length = 0;
     await fediverseAdapter.fetchNew(space, { guard: replay.guard, now: NOW });
-    expect(replay.calls).toEqual([`GET ${SWF_OUTBOX}`, `GET ${SWF_OUTBOX}?page=1`, `GET ${SWF_OUTBOX}?page=2`]);
+    expect(replay.calls.filter((c) => c.startsWith(`GET ${SWF_OUTBOX}`))).toEqual([
+      `GET ${SWF_OUTBOX}`,
+      `GET ${SWF_OUTBOX}?page=1`,
+      `GET ${SWF_OUTBOX}?page=2`,
+    ]);
   });
 
   it("does not re-read a cached actor, and refreshes it once expired", async () => {
@@ -344,7 +365,7 @@ describe("errors", () => {
   });
 });
 
-describe("dereferenceBoost: fetched only when opened, at most 20 per refresh", () => {
+describe("dereferenceBoost: one boosted post, at most 20 per refresh", () => {
   async function w3cBoost() {
     const { space, replay } = await follow("@w3c@w3c.social");
     const result = await fediverseAdapter.fetchNew(space, { guard: replay.guard, now: NOW });
@@ -353,14 +374,6 @@ describe("dereferenceBoost: fetched only when opened, at most 20 per refresh", (
     replay.calls.length = 0;
     return { boost: boost.boostOf, replay };
   }
-
-  it("fetches no boosted object while reading the outbox", async () => {
-    const { space, replay } = await follow("@w3c@w3c.social");
-    replay.calls.length = 0;
-    await fediverseAdapter.fetchNew(space, { guard: replay.guard, now: NOW });
-    expect(replay.calls.length).toBeGreaterThan(0);
-    expect(replay.calls.every((c) => c.startsWith(`GET ${W3C_OUTBOX}`))).toBe(true);
-  });
 
   it("reads the boosted post (real recorded object) as an item keyed by its own id", async () => {
     const { boost, replay } = await w3cBoost();

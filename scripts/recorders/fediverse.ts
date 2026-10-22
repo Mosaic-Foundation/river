@@ -2,19 +2,14 @@
 // through a guard that saves every response, so the fixtures hold exactly the requests the
 // adapter sends (same URLs, same Accept headers): WebFinger, the actor, NodeInfo (well-known and
 // the document), the outbox and its pages, and, where the server needs it, Mastodon's REST API.
-// It also records one boosted object per account for dereferenceBoost(), when that object lives
-// on a seed host.
+// fetchNew also fills boosts (spec 4.3), so the boosted posts and their authors that live on a
+// seed host are recorded too; boosts elsewhere are refused by this guard and keep their plain card.
 //
 // Only the seed hosts ADR-001 names are fetched. fedizen.net waits for Adam's approval (ADR-001
 // item 2), so it is not here.
 import { createFetchGuard, fixtureFromResponse, saveFixture, type FetchGuard } from "../../src/shared/fetch/index.js";
 import type { SpaceRecord } from "../../src/shared/items/index.js";
-import {
-  createBoostBudget,
-  dereferenceBoost,
-  fediverseAdapter,
-  readManifest,
-} from "../../src/river/adapters/fediverse/index.js";
+import { fediverseAdapter, readManifest } from "../../src/river/adapters/fediverse/index.js";
 
 export const FEDIVERSE_SEEDS = [
   "@w3c@w3c.social",
@@ -63,17 +58,12 @@ async function recordAccount(handle: string, outDir: string): Promise<string[]> 
     manifest: preview.manifest,
   };
   const result = await fediverseAdapter.fetchNew(space, { guard, now, isKnown: () => false });
+  const boosts = result.items.filter((i) => i.boostOf);
   console.log(
     `  ${handle}: ${preview.name} (${preview.network ?? "no NodeInfo"}, via ${String(readManifest(preview.manifest).via)}), ` +
-      `${result.items.length} items, status ${result.space.fetchStatus ?? "?"}`,
+      `${result.items.length} items, ${boosts.filter((i) => i.contentHtml).length}/${boosts.length} boosts filled, ` +
+      `status ${result.space.fetchStatus ?? "?"}`,
   );
-
-  // One boosted object on a seed host, for the "fetched only when opened" path.
-  const boost = result.items.find((i) => i.boostOf && SEED_HOSTS.has(i.boostOf.host) && !i.contentHtml);
-  if (boost?.boostOf) {
-    const deref = await dereferenceBoost(boost.boostOf, { guard, budget: createBoostBudget(1), now });
-    console.log(`  boost ${boost.boostOf.objectId}: ${deref.ok ? "read" : deref.reason}`);
-  }
   return written;
 }
 
