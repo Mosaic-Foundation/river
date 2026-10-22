@@ -1,9 +1,10 @@
-// Boosted objects are fetched only when a reader opens a boost card, and at most 20 times per
-// refresh (spec 4.3). The caller makes one BoostBudget per refresh and passes it to every
-// dereferenceBoost() call in it. Nothing is retried, and nothing is fetched past the budget.
+// Boosted objects are fetched during a fediverse refresh, at most 20 dereferences per source per
+// refresh (spec 4.3; boostContent.ts does the filling). fetchNew makes one BoostBudget per refresh
+// and passes it to every dereference in it, PeerTube's own videos included. Nothing is retried,
+// and nothing is fetched past the budget.
 import type { FetchGuard } from "../../../shared/fetch/index.js";
 import { AdapterError, type BoostRef, type NormalizedItem } from "../../../shared/items/index.js";
-import { ACTIVITY_JSON, hostOf, httpsUrl } from "./activitypub.js";
+import { ACTIVITY_JSON, addressedToPublic, hostOf, httpsUrl, isObject } from "./activitypub.js";
 import { getJson } from "./http.js";
 import { mapObject } from "./map.js";
 
@@ -33,7 +34,8 @@ export type DereferenceResult =
       ok: false;
       /**
        * budget: this refresh already used its dereferences (nothing was fetched).
-       * not_public: the object isn't addressed to the public, or is a reply.
+       * not_public: the object isn't addressed to the public. (A public reply is read: the
+       *   booster chose to share it, so it isn't hidden the way an account's own replies are.)
        * unreadable: the server refused an unsigned read, or the answer wasn't a post from that host.
        * refused / unreachable: the fetch guard's answer, as in AdapterError.
        */
@@ -63,6 +65,6 @@ export async function dereferenceBoost(
   if (hostOf(res.url) !== hostOf(objectId)) return { ok: false, reason: "unreadable" };
   const item = mapObject(res.body, { now: ctx.now ?? new Date() });
   if (!item || hostOf(item.sourceId) !== hostOf(objectId)) return { ok: false, reason: "unreadable" };
-  if (item.hidden) return { ok: false, reason: "not_public" };
-  return { ok: true, item };
+  if (!isObject(res.body) || !addressedToPublic(res.body.to)) return { ok: false, reason: "not_public" };
+  return { ok: true, item: { ...item, hidden: false } };
 }

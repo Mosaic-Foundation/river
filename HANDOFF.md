@@ -20,6 +20,53 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Boost cards: the boosted post, its author and avatar, fetched at refresh — 2026-10-22
+
+- Branch / PR: claude/boost-cards-original-content-04hthy → #26 (self-merge at Adam's direct
+  request; see below)
+- Migrations: none (`boost_of` is jsonb; `author` inside it is new data, not a new column).
+
+**What it does.** Boosts no longer show the empty "The boosted post opens where it lives" card.
+During a fediverse refresh, `fetchNew` fills each bare Announce through the fetch guard:
+the boosted object, then its author (actor document, or Mastodon's account lookup when the actor
+answers 401/403), at most 20 requests per source per refresh, a budget PeerTube's own videos now
+share (`src/river/adapters/fediverse/boostContent.ts`). The item keeps the Announce's id, time
+and booster; it takes the post's kind, text, media and URL, and `boost_of.author` holds the
+original author. Cards and the reader view show the original author's name and avatar under a
+small "{booster} boosted" line; the reader's title is "Post from {author}" (or the post's own
+title). A post the Announce embeds is re-read from its own host too; only a boost read that way
+gets `boost_of.fetched` and the original-author layout, so a server can't put words under
+someone else's name. A boost that isn't fetched keeps today's card. No boost starts more than 8 s
+into the fill (the refresh's claim is 20 s). Spec 4.3 "Map" says so now.
+
+**Merge rule.** CLAUDE.md asks for `needs-adam` when a PR adds an outbound call. These requests
+were already allowed by ADR-001 item 1 (hosts sources point to for actors and boosted objects),
+and Adam asked for exactly this change and to merge it himself once `ci` was green, so it was
+self-merged with that noted on the PR.
+
+**Keys.** None.
+
+**Tests.** New unit `boostContent` (real recorded boosts: text, image with alt, a mastodon.social
+author through the lookup after a 401, a Mastodon self-boost, @swf's embedded posts re-read where
+they live, an embedded post that can't be re-read, an unreachable host keeping the plain card,
+exactly 20 requests on the real w3c refresh; DERIVED: past the budget, past the deadline, not
+public, served from another host, a public reply, `<script>` sanitized, forged embedded text
+replaced or left unattributed, an author on another host, an actor or Mastodon lookup naming
+someone else) and `ui/boost`; paging and PeerTube tests updated for the fill. New fixtures: 28
+real responses from w3c.social, mastodon.social and socialwebfoundation.org
+(`tests/fixtures/http/README.md`). e2e: `river.spec.ts` checks a filled boost card and its
+reader view. Counts are in `TESTING.md`.
+
+### Follow-ups
+- A boost left plain (budget spent, or a host down at that moment) is never retried: the next
+  refresh stops at it as already known. A later pass could re-fill stored plain boosts with
+  leftover budget.
+- Mastodon REST-fallback reblogs are not re-read from their host, so they keep the booster's
+  card (with the text the REST API gave). Filling them would cost one request each from the
+  same budget.
+- On a PeerTube channel, a share that turns out not to be the channel's own video is fetched twice
+  (once by the PeerTube path, once by the fill). Rare and within the budget; left as is.
+
 ## Civic mode retheme: the Civic Hub's default theme — 2026-10-21
 
 - Branch / PR: claude/civic-mode-theme-redesign-c1vu1d → PR (self-merge; not needs-adam)

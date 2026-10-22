@@ -19,6 +19,7 @@ export {
   type BoostBudget,
   type DereferenceResult,
 } from "./boosts.js";
+export { BOOST_FILL_CONCURRENCY, fillBoosts, type BoostFillContext } from "./boostContent.js";
 export { MAX_PAGES, REST_LIMIT } from "./fetch.js";
 export { SERVER_ONLY_MESSAGE, RATE_LIMITED_MESSAGE } from "./http.js";
 export { formatHandle, parseInput, type FediverseInput } from "./input.js";

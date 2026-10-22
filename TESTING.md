@@ -64,6 +64,16 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-22, boost content: unit `boostContent` replays real recorded boosts from @w3c, @eff
+  and @swf (posts, actors, a 401 actor plus Mastodon's lookup, embedded posts re-read where they
+  live) and DERIVED variants (budget, deadline, not public, wrong host, reply, script, forged
+  embedded text, foreign author, impostor actor or lookup); `ui/boost` covers `boostedPost()`
+  (only `fetched` boosts show the original author). `fediverseAdapter` paging tests now expect one more `onPage` with the filled
+  boosts; `mediaAdapters` PeerTube tests read a non-own share as a filled boost. e2e
+  `river.spec.ts` checks a filled boost card and the reader (title, byline, boost line, Open
+  original, axe); `following.spec.ts` sees both the filled and the plain boost line. Unit 558,
+  API 145 (fresh `db reset`), e2e 71 (with main through #25). Locally the e2e ran on the preinstalled Chromium 1194 headless shell (mapped
+  through `PLAYWRIGHT_BROWSERS_PATH`), since the sandbox can't download Playwright's own.
 - 2026-10-21, Civic mode retheme (Civic Hub default theme): unit `ui/civicTheme` reads civic.css,
   checks the hub's values and that every text pair (body, heading, muted, link, danger on page,
   card and alt; filled buttons; chips and banners; each process pill on its 10% tint) is at least

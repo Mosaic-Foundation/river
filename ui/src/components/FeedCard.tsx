@@ -4,8 +4,11 @@
 // the card's own links and buttons; from the keyboard, the title (or, without one, the time) is
 // a link to /item/{id}. The footer names the source host only. Older activities of the same hub
 // process fold into the card under "N earlier updates" (ui-revisions-1 item 7); Mark read then
-// covers them all.
+// covers them all. A boost whose post the refresh fetched shows that post under its original
+// author's name and avatar, with "{booster} boosted" above (spec 4.3); otherwise it keeps the
+// plain "{booster} boosted a post from {host}" card.
 import type { FeedItem } from "../lib/api";
+import { boostedPost, boosterName } from "../lib/boost";
 import {
   deadlineLabel,
   eventDate,
@@ -54,7 +57,9 @@ function openLinksInNewTab(el: HTMLDivElement | null): void {
 export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, onOpen, earlier = [] }: FeedCardProps) {
   const titleId = `item-${item.id}-title`;
   const host = item.source === "live" ? linkHost(item.url) : undefined;
-  const actor = item.author?.name || item.space.name;
+  const boosted = boostedPost(item);
+  const sourceName = boosted ? boosted.name : item.space.name;
+  const sourceIcon = boosted ? (boosted.author?.iconUrl ?? null) : item.space.iconUrl;
   const duration = formatDuration(item.media.find((m) => m.duration)?.duration, item.kind);
   const event = eventDate(item.event?.startTime);
   const deadline = deadlineLabel(item.civic?.deadline);
@@ -68,7 +73,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
     <article
       className={read ? "card" : "card card-unread"}
       aria-labelledby={item.title ? titleId : undefined}
-      aria-label={item.title ? undefined : `${kindLabel(item.kind)} from ${item.space.name}`}
+      aria-label={item.title ? undefined : `${kindLabel(item.kind)} from ${sourceName}`}
       data-testid="feed-card"
       data-item-id={item.id}
       data-source={item.source}
@@ -83,10 +88,17 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
         onOpen(item.id);
       }}
     >
+      {boosted && (
+        <p className="card-boost" data-testid="boost-line">
+          <BoostIcon />
+          {boosted.booster} boosted
+        </p>
+      )}
+
       <header className="card-header">
-        <SourceIcon name={item.space.name} iconUrl={item.space.iconUrl} />
+        <SourceIcon name={sourceName} iconUrl={sourceIcon} />
         <div className="card-byline">
-          <span className="card-source">{item.space.name}</span>
+          <span className="card-source">{sourceName}</span>
           <span className="card-meta">
             <span className="card-kind">{kindLabel(item.kind)}</span>
             <span aria-hidden="true"> · </span>
@@ -99,7 +111,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
                 className="card-permalink"
                 href={href}
                 onClick={open}
-                aria-label={`Read ${kindLabel(item.kind).toLowerCase()} from ${item.space.name}, ${relativeTime(item.publishedAt, now)}`}
+                aria-label={`Read ${kindLabel(item.kind).toLowerCase()} from ${sourceName}, ${relativeTime(item.publishedAt, now)}`}
               >
                 <time dateTime={item.publishedAt} title={fullDateTime(item.publishedAt)}>
                   {relativeTime(item.publishedAt, now)}
@@ -129,10 +141,10 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
         </div>
       </header>
 
-      {item.boostOf && (
+      {item.boostOf && !boosted && (
         <p className="card-boost">
           <BoostIcon />
-          {actor} boosted a post from {item.boostOf.host}
+          {boosterName(item)} boosted a post from {item.boostOf.host}
         </p>
       )}
 
@@ -156,7 +168,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
         />
       )}
       {text && <p className="card-text">{text}</p>}
-      {item.boostOf && !item.contentHtml && !text && (
+      {item.boostOf && !boosted && !item.contentHtml && !text && (
         <p className="card-text card-muted">The boosted post opens where it lives.</p>
       )}
 
