@@ -2,22 +2,15 @@
 // types AND networks (toggle pills, several at once, none means all), plus search. Desktop:
 // everything in the left column, each section collapsible. Phone: a chip row (content types,
 // networks, then circles); search sits behind the header's search button. Above the feed, a chip
-// per active filter with its own ✕, and "Clear all".
-import { useId, useState } from "react";
+// per active filter with its own ✕, and "Clear all"; on a desktop "Clear all" also sits at the top
+// of the filter column, below search (ui-revisions-3 item 5).
+import { useId, useRef, useState } from "react";
 import type { FeedCircle } from "../lib/api";
+import { CLEARED, hasActiveFilter, type FilterState } from "../lib/filters";
 import { circleColor, CONTENT_TYPES, NETWORKS } from "../lib/format";
 import { CheckIcon, ChevronIcon, CloseIcon, SearchIcon } from "./Icons";
 
-export interface FilterState {
-  /** The mode (spec F9): "" for the instance's default. Set by the header's switch, not here. */
-  mode: string;
-  circle: string;
-  /** Content-type values (CONTENT_TYPES); empty for All. */
-  types: string[];
-  /** Network values (NETWORKS); empty for every network. */
-  networks: string[];
-  q: string;
-}
+export type { FilterState };
 
 export interface FiltersProps {
   circles: FeedCircle[];
@@ -111,10 +104,33 @@ function allCircles(circles: FeedCircle[]): Array<Pick<FeedCircle, "id" | "name"
   return [{ id: "All", name: "All", color: null }, ...circles];
 }
 
-export function FilterSidebar({ circles, value, onCircle, onType, onNetwork, onSearch }: FiltersProps) {
+export function FilterSidebar({
+  circles,
+  value,
+  onCircle,
+  onType,
+  onNetwork,
+  onSearch,
+  onClearAll,
+}: FiltersProps & { onClearAll: () => void }) {
+  const asideRef = useRef<HTMLElement>(null);
   return (
-    <aside className="sidebar" aria-label="Filters">
+    <aside className="sidebar" aria-label="Filters" ref={asideRef}>
       <SearchField id="search-desktop" value={value.q} onSearch={onSearch} />
+      {hasActiveFilter(value) && (
+        <button
+          type="button"
+          className="button button-quiet sidebar-clear"
+          data-testid="sidebar-clear"
+          onClick={() => {
+            onClearAll();
+            // The button goes away with the filters; focus moves to the search field.
+            window.setTimeout(() => asideRef.current?.querySelector<HTMLInputElement>("input[type=search]")?.focus(), 0);
+          }}
+        >
+          Clear all
+        </button>
+      )}
 
       <FilterSection title="Circles">
         <ul className="filter-list">
@@ -244,7 +260,7 @@ export function ActiveFilters({ circles, value, onChange }: ActiveFiltersProps) 
       <button
         type="button"
         className="button button-quiet active-filters-clear"
-        onClick={() => onChange({ circle: "All", types: [], networks: [], q: "" })}
+        onClick={() => onChange(CLEARED)}
       >
         Clear all
       </button>
