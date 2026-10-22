@@ -20,6 +20,27 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 3, item 3: a narrower River bar, the mark centered — 2026-10-22
+
+- Branch / PR: claude/river-bar-narrow → PR (self-merge; not needs-adam)
+- Migrations: none.
+
+**What it does.** Writes Adam's UI revisions 3 into `docs/spec/ui-revisions-3.md` (items 1-2
+follow in a `needs-adam` PR, items 4 and 5 in their own PRs). The embedded view's bar is
+narrower (3.25rem desktop, 2.75rem phone; tokens in `theme.css`). The back button is a
+three-row grid, so the Mosaic mark sits in the bar's exact vertical center with "River" below
+it, and the mark fills 85% of its white tile. The "Open in new tab" link is pinned to the bar's
+foot, so it doesn't push the mark off center.
+
+**Keys.** None.
+
+**Tests.** New e2e `revisions3.spec.ts` item 3 (desktop and phone: bar width, mark centered within
+2 px, mark at least 75% of its tile, label and link inside the bar). `npm run check`: 41 files,
+580 tests, UI build OK. e2e `revisions2` and `revisions3`: 13 passed.
+
+### Follow-ups
+- None.
+
 ## UI revisions 2: items open where they live, in an embedded view; the reader is wide — 2026-10-22
 
 - Branch / PR: claude/inspiring-johnson-bzl1yf → PR (needs-adam: `vercel.json` CSP, ADR-008, a

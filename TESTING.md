@@ -64,6 +64,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-22, UI revisions 3 item 3 (River bar): new e2e `revisions3.spec.ts` measures the
+  embedded view's bar on desktop and phone (width, the mark's tile centered vertically and
+  horizontally, the mark filling at least 75% of it, label and link inside). e2e 84.
 - 2026-10-22, UI revisions 2 (embedded view, wide reader, fixed filter column): unit
   `frameCheck` (X-Frame-Options and CSP frame-ancestors as browsers read them, CSP3 source
   matching against the River's origin, both recorded pages, and through the real guard: one GET,
