@@ -165,7 +165,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
         />
       )}
       {text && <p className="card-text">{text}</p>}
-      {item.boostOf && !boosted && (
+      {item.boostOf && !boosted && !item.contentHtml && !text && (
         <p className="card-text card-muted">The boosted post opens where it lives.</p>
       )}
 

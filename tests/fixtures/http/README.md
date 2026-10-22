@@ -44,9 +44,13 @@ seed host, and Mastodon's REST lookup and statuses for `@eff@mastodon.social`.
 Boost content (2026-10-22): `fetchNew` now fills boosts with the posts they boost (spec 4.3), so a
 refresh of `@w3c@w3c.social` also reads boosted posts and their authors. The ones on seed hosts were
 recorded then, by running the adapter through a guard that replayed everything already here and
-fetched only the missing seed-host requests: eight more `w3c.social` statuses and the actors
+fetched only the missing seed-host requests: seven more `w3c.social` statuses and the actors
 `w3cdevs`, `caribou`, `p20n` and `tink`; on `mastodon.social`, PhilA's status, the 401 its actor
-returns, and its `/api/v1/accounts/lookup` answer. Boosts on other hosts (mas.to, indieweb.social,
+returns, and its `/api/v1/accounts/lookup` answer. `@swf@socialwebfoundation.org` embeds the posts
+it announces; the fill re-reads them where they live, so thirteen `socialwebfoundation.org` posts
+(`/?p=…`) and the author `/author/evanprodromou/` were recorded the same way. The live run hit
+the fill's 8 s limit before the older ones, which stay unrecorded (the "embedded, not re-read"
+case in replay). Boosts on other hosts (mas.to, indieweb.social,
 mamot.fr, front-end.social, piaille.fr, sigmoid.social) are not recorded and fail in replay, which
 is the "can't be fetched, keep the plain card" case. Seeds:
 `@w3c@w3c.social`, `@wearenew_public@mastodon.social`, `@eff@mastodon.social`,

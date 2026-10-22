@@ -45,6 +45,12 @@ export interface BoostRef {
   host: string;
   url?: string;
   author?: ItemAuthor;
+  /**
+   * True once the refresh read the post (and so its text, media and author) from the post's own
+   * host (spec 4.3). Only then is the item shown under its original author: text an Announce
+   * embeds, or a REST reblog carries, came from the booster's server.
+   */
+  fetched?: boolean;
 }
 
 /** items.civic. */

@@ -5,7 +5,9 @@
 import { describe, expect, it } from "vitest";
 import {
   BOOST_DEREFERENCE_LIMIT,
+  createBoostBudget,
   fediverseAdapter,
+  fillBoosts,
   mapActivity,
 } from "../../src/river/adapters/fediverse/index.js";
 import type { FetchGuard } from "../../src/shared/fetch/index.js";
@@ -27,6 +29,12 @@ const PHILA = "https://mastodon.social/users/PhilA";
 /** A real boost of a post on a host that isn't recorded: it can't be fetched in replay. */
 const UNREACHABLE_POST = "https://mas.to/users/sphcow/statuses/117451397579521952";
 const EFF_POST = "https://mastodon.social/users/eff/statuses/117474778224215675";
+const PHILA_LOOKUP = "https://mastodon.social/api/v1/accounts/lookup?acct=PhilA";
+/** @swf's outbox embeds the posts it announces (WordPress); these were re-read where they live. */
+const SWF_POST = "https://socialwebfoundation.org/?p=207118";
+const SWF_AUTHOR = "https://socialwebfoundation.org/author/evanprodromou/";
+/** An embedded @swf post that wasn't recorded where it lives: it can't be re-read in replay. */
+const SWF_UNREAD_POST = "https://socialwebfoundation.org/?p=141616";
 
 async function followed(handle: string, replay: ReplayGuard): Promise<SpaceRecord> {
   const preview = await fediverseAdapter.resolve(handle, { guard: replay.guard, now: NOW });
@@ -173,6 +181,34 @@ describe("boost cards carry the boosted post (real recorded boosts)", () => {
   });
 });
 
+describe("an Announce that embeds its post (real recorded @swf boosts)", () => {
+  async function refreshSwf() {
+    const replay = replayGuard();
+    const space = await followed("@swf@socialwebfoundation.org", replay);
+    replay.calls.length = 0;
+    const result = await fediverseAdapter.fetchNew(space, { guard: replay.guard, now: NOW, isKnown: () => false });
+    return { result, calls: replay.calls };
+  }
+
+  it("re-reads the post where it lives, and only then names its author", async () => {
+    const { result, calls } = await refreshSwf();
+    const item = boostOf(result, SWF_POST);
+    const post = recordedJson<Json>(SWF_POST);
+    const author = recordedJson<Json>(SWF_AUTHOR);
+    expect(calls).toContain(`GET ${SWF_POST}`);
+    expect(item).toMatchObject({ kind: "article", title: post.name, boostOf: { fetched: true, author: { name: author.name } } });
+  });
+
+  it("keeps the embedded text under the booster, with no author name, when the post can't be re-read", async () => {
+    const { result } = await refreshSwf();
+    const item = boostOf(result, SWF_UNREAD_POST);
+    expect(item.contentHtml).toBeTruthy();
+    expect(item.boostOf?.fetched).toBeUndefined();
+    expect(item.boostOf?.author?.name).toBeUndefined();
+    expect(item).toEqual(plainCard(item));
+  });
+});
+
 describe("boost content: what is refused (DERIVED from real recorded responses)", () => {
   const real = () => recordedJson<Json>(TEXT_POST);
 
@@ -222,6 +258,45 @@ describe("boost content: what is refused (DERIVED from real recorded responses)"
     expect(item.contentHtml).toContain("Want to trigger CSS animations");
     expect(item.boostOf?.author).toBeUndefined();
     expect(urls).not.toContain("https://mastodon.social/users/eff");
+  });
+
+  it("replaces what an Announce embeds with the post its host serves", async () => {
+    const forged = { ...real(), content: "<p>Words W3C Developers never wrote</p>" };
+    const announce = { ...announceOf(TEXT_POST), object: forged };
+    const { result } = await refreshW3c([onlyPage([announce])]);
+    const item = boostOf(result, TEXT_POST);
+    expect(item.contentHtml).toContain("Want to trigger CSS animations");
+    expect(item.contentHtml).not.toContain("never wrote");
+    expect(item.boostOf).toMatchObject({ fetched: true, author: { name: "W3C Developers" } });
+  });
+
+  it("never puts the real author's name over embedded text it couldn't check", async () => {
+    const forged = { ...real(), content: "<p>Words W3C Developers never wrote</p>" };
+    const announce = { ...announceOf(TEXT_POST), object: forged };
+    const { result, urls } = await refreshW3c([onlyPage([announce]), derived(TEXT_POST, { status: 404, body: "" })]);
+    const item = boostOf(result, TEXT_POST);
+    expect(item.contentHtml).toContain("never wrote");
+    expect(item.boostOf?.fetched).toBeUndefined();
+    expect(item.boostOf?.author?.name).toBeUndefined();
+    expect(urls).not.toContain(W3CDEVS);
+  });
+
+  it("drops a Mastodon lookup that answers for another account", async () => {
+    const lookup = recordedJson<Json>(PHILA_LOOKUP);
+    const other = derived(PHILA_LOOKUP, { body: { ...lookup, uri: "https://mastodon.social/users/someone_else" } });
+    const { result } = await refreshW3c([onlyPage([announceOf(PHILA_POST)]), other]);
+    expect(boostOf(result, PHILA_POST).boostOf).toMatchObject({ fetched: true, author: { url: PHILA } });
+    expect(boostOf(result, PHILA_POST).boostOf?.author?.name).toBeUndefined();
+  });
+
+  it("starts no boost after the fill's deadline", async () => {
+    const replay = replayGuard();
+    const counted = counting(replay.guard);
+    const plain = mapActivity(announceOf(TEXT_POST), { now: NOW });
+    if (!plain) throw new Error("recorded Announce didn't map");
+    const filled = await fillBoosts([plain], { guard: counted.guard, now: NOW, budget: createBoostBudget(), deadline: 0 });
+    expect(filled).toEqual([]);
+    expect(counted.urls).toEqual([]);
   });
 
   it("drops an author whose actor document names someone else", async () => {

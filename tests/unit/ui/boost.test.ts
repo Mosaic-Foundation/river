@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { FeedItem } from "../../../ui/src/lib/api";
 import { boostedPost, boosterName } from "../../../ui/src/lib/boost";
 
-// Spec 4.3: a boost the refresh filled reads as the original post, under "{booster} boosted".
+// Spec 4.3: a boost whose post the refresh read from the post's own host reads as the original
+// post, under "{booster} boosted". Text that only the booster's server vouches for never does.
 function boost(patch: Partial<FeedItem> = {}): FeedItem {
   return {
     id: "00000000-0000-4000-8000-000000000001",
@@ -37,20 +38,21 @@ describe("boostedPost", () => {
     expect(boostedPost(boost({ boostOf: null, contentHtml: "<p>Own post</p>" }))).toBeUndefined();
   });
 
-  it("names the original author and the booster when the boost carries the post", () => {
-    const item = boost({ contentHtml: "<p>Hello</p>", boostOf: { ...boost().boostOf!, author: AUTHOR } });
+  it("is undefined when the text came only from the booster's server (embedded, or a REST reblog)", () => {
+    const embedded = boost({ contentHtml: "<p>Said to be by W3C Developers</p>", boostOf: { ...boost().boostOf!, author: AUTHOR } });
+    expect(boostedPost(embedded)).toBeUndefined();
+  });
+
+  it("names the original author and the booster when the post was read from its host", () => {
+    const item = boost({ contentHtml: "<p>Hello</p>", boostOf: { ...boost().boostOf!, author: AUTHOR, fetched: true } });
     expect(boostedPost(item)).toEqual({ booster: "W3C", name: "W3C Developers", author: AUTHOR });
   });
 
-  it("counts media alone as carrying the post", () => {
-    const item = boost({ kind: "photo", media: [{ type: "image", url: "https://w3c.social/a.png", alt: "A chart" }] });
-    expect(boostedPost(item)?.name).toBe("w3c.social");
-  });
-
   it("falls back to the author's handle, then the post's host", () => {
-    const withHandle = boost({ contentHtml: "<p>Hi</p>", boostOf: { ...boost().boostOf!, author: { handle: "@x@w3c.social" } } });
+    const fetched = { ...boost().boostOf!, fetched: true };
+    const withHandle = boost({ contentHtml: "<p>Hi</p>", boostOf: { ...fetched, author: { handle: "@x@w3c.social" } } });
     expect(boostedPost(withHandle)?.name).toBe("@x@w3c.social");
-    const anonymous = boost({ contentHtml: "<p>Hi</p>", boostOf: { ...boost().boostOf!, author: { url: "https://w3c.social/users/x" } } });
+    const anonymous = boost({ kind: "photo", media: [{ type: "image", url: "https://w3c.social/a.png" }], boostOf: { ...fetched, author: { url: "https://w3c.social/users/x" } } });
     expect(boostedPost(anonymous)?.name).toBe("w3c.social");
   });
 });

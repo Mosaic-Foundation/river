@@ -31,6 +31,8 @@ export interface BoostRef {
   host: string;
   url?: string;
   author?: ItemAuthor;
+  /** True when the refresh read the post from its own host (spec 4.3). */
+  fetched?: boolean;
 }
 
 export interface CivicDetails {

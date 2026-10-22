@@ -4,10 +4,15 @@
 // author (the actor document, or, when a Mastodon server refuses unsigned actor reads, its account
 // lookup) gives the card the original author's name, handle and avatar.
 //
+// A post is read from its own host even when the Announce embeds it: embedded text came from the
+// booster's server, and putting a real author's name and avatar over it would let that server
+// speak for them. Only a boost read this way is marked `fetched`, and only its author is read.
+//
 // Every request takes one dereference from the refresh's budget (20 per source per refresh, shared
-// with a PeerTube channel's own videos). Boosts are taken newest first. A boost whose object can't
-// be read (deleted, private, refused, unreachable, or past the budget) stays as it was. Nothing
-// here throws.
+// with a PeerTube channel's own videos). Boosts are taken newest first, and none is started after
+// BOOST_FILL_TIME_MS, so the refresh ends inside its claim (spec 4.5). A boost whose object can't
+// be read (deleted, private, refused, unreachable, past the budget or the time) stays as it was.
+// Nothing here throws.
 //
 // The item keeps the Announce's id, time and booster (`author`), so stop-at-known and the feed's
 // order don't change; the original author goes in `boostOf.author`.
@@ -24,10 +29,18 @@ import { asActor, cachedFromAccount, cachedFromActor, mastodonLookup, nameFromUr
 /** Boosts filled at once. The guard still allows at most 2 requests per host. */
 export const BOOST_FILL_CONCURRENCY = 4;
 
+/**
+ * No boost is started later than this into the fill. With the guard's 6 s timeout, the fill ends
+ * within about 14 s, inside the refresh's 20 s claim (spec 4.5).
+ */
+export const BOOST_FILL_TIME_MS = 8_000;
+
 export interface BoostFillContext {
   guard: FetchGuard;
   now: Date;
   budget: BoostBudget;
+  /** Epoch ms after which no boost is started. Default: BOOST_FILL_TIME_MS from the call. */
+  deadline?: number;
 }
 
 type Boost = NormalizedItem & { boostOf: BoostRef };
@@ -36,12 +49,12 @@ function isBoost(item: NormalizedItem): item is Boost {
   return item.boostOf !== undefined && !item.hidden;
 }
 
-/** A boost that carries nothing of the boosted post (the Announce named it by IRI). */
+/** A boost whose post hasn't been read from its own host yet (named by IRI, or embedded). */
 function needsObject(item: Boost): boolean {
-  return !item.contentHtml && !item.summary && !item.title && item.media.length === 0;
+  return item.boostOf.fetched !== true;
 }
 
-/** The boosted post's author to read, when the post is known but its author has no name yet. */
+/** The boosted post's author to read, once the post came from its host and its author has no name. */
 function authorToRead(item: Boost): string | undefined {
   if (needsObject(item) || item.boostOf.author?.name) return undefined;
   const url = item.boostOf.author?.url;
@@ -91,17 +104,20 @@ async function readAuthor(actorUrl: string, ctx: BoostFillContext): Promise<Item
   }
 }
 
-/** The boost item with the boosted post's kind, text, media and link. */
+/** The boost item with the boosted post's kind, text, media and link, as its host serves them. */
 function withObject(item: Boost, post: NormalizedItem): Boost {
   const object = isObject(post.raw) ? post.raw : {};
   const authorUrl = asList(object.attributedTo)
     .map(idOf)
     .find((id) => id !== undefined && hostOf(id) === item.boostOf.host);
   const url = post.url ?? item.boostOf.url;
+  // Whatever the Announce said about the author is replaced by what the post's host says.
   const boostOf: BoostRef = {
-    ...item.boostOf,
+    objectId: item.boostOf.objectId,
+    host: item.boostOf.host,
     ...(url ? { url } : {}),
     ...(authorUrl ? { author: { url: authorUrl } } : {}),
+    fetched: true,
   };
   const filled: Boost = {
     ...item,
@@ -152,9 +168,10 @@ export async function fillBoosts(items: readonly NormalizedItem[], ctx: BoostFil
   const queue = items.filter(isBoost).filter((item) => needsObject(item) || authorToRead(item) !== undefined);
   const filled = new Map<string, NormalizedItem>();
   const authors = new Map<string, Promise<ItemAuthor | undefined>>();
+  const deadline = ctx.deadline ?? Date.now() + BOOST_FILL_TIME_MS;
   let next = 0;
   const worker = async () => {
-    while (next < queue.length && ctx.budget.remaining() > 0) {
+    while (next < queue.length && ctx.budget.remaining() > 0 && Date.now() < deadline) {
       const item = queue[next++] as Boost;
       const result = await fillOne(item, ctx, authors);
       if (result) filled.set(item.sourceId, result);
