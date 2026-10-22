@@ -1,6 +1,7 @@
 // The reader view (ui-revisions-1 item 1): one stored item inside the River, at /item/{id}, with
 // the left sidebar still beside it, across the feed's and Coming up's columns (ui-revisions-2
-// item 3). Items open here when they have no live page to frame or their page refuses framing.
+// item 3). Since ui-revisions-3 item 2 no click opens it: it shows only at the address of an item
+// without a live page (a sample) or one that isn't there.
 // Full sanitized content (src/shared/sanitize/, the only HTML; CLAUDE.md constraint 8), every
 // image, the author and the source. "Back to River" returns to the feed where it was; "Open in
 // new tab" opens the item where it lives. Nothing is fetched from outside: the item comes from
@@ -28,8 +29,6 @@ import { SourceIcon } from "./SourceIcon";
 
 export type ReaderState =
   | { status: "loading" }
-  /** The River is asking whether the item's page can be framed (ui-revisions-2 item 2). */
-  | { status: "opening"; host: string }
   | { status: "not_found" }
   | { status: "error" }
   | { status: "ok"; item: FeedItem };
@@ -71,9 +70,8 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
     return (
       <section className="reader" aria-label="Reader" data-testid="reader">
         <BackButton onBack={onBack} />
-        <p className="feed-status" role={state.status === "loading" || state.status === "opening" ? "status" : "alert"}>
+        <p className="feed-status" role={state.status === "loading" ? "status" : "alert"}>
           {state.status === "loading" && "Loading this item…"}
-          {state.status === "opening" && `Opening ${state.host}…`}
           {state.status === "not_found" && "This item isn't in your River. It may have been removed."}
           {state.status === "error" && "This item couldn't load right now. Try again in a moment."}
         </p>

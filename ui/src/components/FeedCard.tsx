@@ -1,8 +1,11 @@
 // One feed card (spec F1, F4, 4.8). Text is rendered as text; the item's contentHtml, already
 // sanitized on the server by src/shared/sanitize/, is the only HTML (CLAUDE.md constraint 8).
-// A click anywhere on the card opens the item in the reader view (ui-revisions-1 item 1), except on
-// the card's own links and buttons; from the keyboard, the title (or, without one, the time) is
-// a link to /item/{id}. The footer names the source host only. Older activities of the same hub
+// Every live card's footer has "Open ↗", the original in a new tab (ui-revisions-3 item 1). A
+// click elsewhere on the card (not on its own links and buttons) does what `open` says
+// (ui-revisions-3 item 2): nothing for fediverse posts and samples; the embedded view at
+// /item/{id} when the page can be framed or its check is pending; the original in a new tab when
+// the page refuses framing. From the keyboard the title (or, without one, the time) is the same
+// link. The footer names the source host. Older activities of the same hub
 // process fold into the card under "N earlier updates" (ui-revisions-1 item 7); Mark read then
 // covers them all. A boost whose post the refresh fetched shows that post under its original
 // author's name and avatar, with "{booster} boosted" above (spec 4.3); otherwise it keeps the
@@ -20,6 +23,7 @@ import {
   relativeTime,
 } from "../lib/format";
 import { CardMedia } from "./CardMedia";
+import { type CardOpen, isHttpsUrl, openInNewTab } from "../lib/embed";
 import { CARD_INTERACTIVE, isNewTabClick, itemPath } from "../lib/reader";
 import { BoostIcon } from "./Icons";
 import { SourceIcon } from "./SourceIcon";
@@ -31,13 +35,15 @@ export interface FeedCardProps {
   onMarkRead: (id: string) => void;
   onMarkUnread: (id: string) => void;
   onSampleInfo: (trigger: HTMLButtonElement) => void;
-  /** Opens the item in the reader view. */
+  /** What a click on the card does (ui-revisions-3 item 2). */
+  open: CardOpen;
+  /** Opens the item in the embedded view, at /item/{id}. */
   onOpen: (id: string) => void;
   /** Older activities of the same hub process, newest first (ui-revisions-1 item 7). */
   earlier?: FeedItem[];
 }
 
-/** The card's link to the reader view: a plain click stays in the page, a modified one opens a tab. */
+/** The card's link to the embedded view: a plain click stays in the page, a modified one opens a tab. */
 function openHandler(id: string, onOpen: (id: string) => void) {
   return (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (isNewTabClick(e)) return;
@@ -54,7 +60,12 @@ function openLinksInNewTab(el: HTMLDivElement | null): void {
   });
 }
 
-export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, onOpen, earlier = [] }: FeedCardProps) {
+/** A link to the original, in a new tab (spec F4: rel="noopener noreferrer"). */
+function originalLink(url: string) {
+  return { href: url, target: "_blank", rel: "noopener noreferrer" } as const;
+}
+
+export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, open: opens, onOpen, earlier = [] }: FeedCardProps) {
   const titleId = `item-${item.id}-title`;
   const host = item.source === "live" ? linkHost(item.url) : undefined;
   const boosted = boostedPost(item);
@@ -68,6 +79,14 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
   const text = item.contentHtml ? undefined : item.summary;
   const href = itemPath(item.id, window.location.search);
   const open = openHandler(item.id, onOpen);
+  const original = item.source === "live" && isHttpsUrl(item.url) ? item.url : undefined;
+  // The title (or time) link does what a click on the card does; fediverse posts and samples have none.
+  const cardLink =
+    opens === "none"
+      ? undefined
+      : opens === "tab" && original
+        ? { ...originalLink(original), onClick: () => onMarkRead(item.id) }
+        : { href, onClick: open };
 
   return (
     <article
@@ -81,10 +100,18 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
       data-adapter={item.space.adapter}
       data-process={process}
       data-group-size={1 + earlier.length}
+      data-open={opens}
+      data-frame-check={opens === "pending" ? "" : undefined}
       onClick={(e) => {
         // The card's own links and buttons keep their behavior; selecting text doesn't open it.
+        if (opens === "none") return;
         if ((e.target as Element).closest(CARD_INTERACTIVE)) return;
         if (window.getSelection()?.toString()) return;
+        if (opens === "tab" && original) {
+          openInNewTab(original);
+          onMarkRead(item.id);
+          return;
+        }
         onOpen(item.id);
       }}
     >
@@ -102,16 +129,15 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
           <span className="card-meta">
             <span className="card-kind">{kindLabel(item.kind)}</span>
             <span aria-hidden="true"> · </span>
-            {item.title ? (
+            {item.title || !cardLink ? (
               <time dateTime={item.publishedAt} title={fullDateTime(item.publishedAt)}>
                 {relativeTime(item.publishedAt, now)}
               </time>
             ) : (
               <a
                 className="card-permalink"
-                href={href}
-                onClick={open}
-                aria-label={`Read ${kindLabel(item.kind).toLowerCase()} from ${sourceName}, ${relativeTime(item.publishedAt, now)}`}
+                {...cardLink}
+                aria-label={`Open ${kindLabel(item.kind).toLowerCase()} from ${sourceName}, ${relativeTime(item.publishedAt, now)}${opens === "tab" ? ` (on ${host}, new tab)` : ""}`}
               >
                 <time dateTime={item.publishedAt} title={fullDateTime(item.publishedAt)}>
                   {relativeTime(item.publishedAt, now)}
@@ -150,9 +176,13 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
 
       {item.title && (
         <h2 className="card-title" id={titleId}>
-          <a className="card-title-link" href={href} onClick={open}>
-            {item.title}
-          </a>
+          {cardLink ? (
+            <a className="card-title-link" {...cardLink}>
+              {item.title}
+            </a>
+          ) : (
+            item.title
+          )}
         </h2>
       )}
 
@@ -226,6 +256,17 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
           <span className="card-host" data-testid="card-host">
             {host}
           </span>
+        )}
+        {original && (
+          <a
+            className="button button-secondary card-open"
+            data-testid="card-open"
+            {...originalLink(original)}
+            onClick={() => onMarkRead(item.id)}
+          >
+            Open<span aria-hidden="true"> ↗</span>
+            <span className="visually-hidden"> on {host} (opens in a new tab)</span>
+          </a>
         )}
         <button
           type="button"

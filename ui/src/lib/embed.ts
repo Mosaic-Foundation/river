@@ -1,36 +1,35 @@
-// How an opened item shows (ui-revisions-2 item 2): framed in the embedded view, or in the reader.
-// A Mastodon post frames its own /embed page at once; any other live https page is framed only
-// after the server's framing check (GET /api/items/{id}/frame, ADR-008) says its headers allow
-// it; samples and items without a live https URL open in the reader.
+// How an item opens (ui-revisions-3 items 1 and 2, revising ui-revisions-2 item 2). Fediverse
+// posts stay in the feed: their card opens nothing, and "Open ↗" opens the original in a new tab.
+// Any other live https page is framed in the embedded view when the server's framing check
+// (GET /api/items/{id}/frame, ADR-008) allows it, and opens in a new tab when it refuses. Samples
+// and items without a live https URL have no original; only their own address shows the reader.
 import type { FeedItem } from "./api";
 
-/** Mastodon status pages: /@name/{id} and the ActivityPub id form /users/{name}/statuses/{id}. */
-const MASTODON_STATUS = /^\/(?:@[^/]+|users\/[^/]+\/statuses)\/\d+\/?$/;
+type Openable = Pick<FeedItem, "url" | "source" | "space">;
 
-/** A fediverse post's Mastodon embed URL ({status url}/embed), or null for anything else. */
-export function mastodonEmbedUrl(item: Pick<FeedItem, "url" | "source" | "space">): string | null {
-  if (item.source !== "live" || item.space.adapter !== "fediverse" || !item.url) return null;
-  let url: URL;
-  try {
-    url = new URL(item.url);
-  } catch {
-    return null;
-  }
-  if (url.protocol !== "https:" || url.search || url.hash || !MASTODON_STATUS.test(url.pathname)) return null;
-  return `${url.origin}${url.pathname.replace(/\/$/, "")}/embed`;
+export type FramePlan = { kind: "none" } | { kind: "check" } | { kind: "reader" };
+
+/** What opening `item` can do: nothing in the River (fediverse), a framing check, or the reader. */
+export function framePlan(item: Openable): FramePlan {
+  if (item.source !== "live" || !isHttpsUrl(item.url)) return { kind: "reader" };
+  if (item.space.adapter === "fediverse") return { kind: "none" };
+  return { kind: "check" };
 }
 
-export type FramePlan = { kind: "frame"; src: string } | { kind: "check" } | { kind: "reader" };
+/**
+ * What a click on a card does: nothing; open the embedded view (its check still pending, or
+ * allowed); or open the original in a new tab (the check refused).
+ */
+export type CardOpen = "none" | "pending" | "frame" | "tab";
 
-/** What opening `item` does before any check: frame it now, ask the server, or read it here. */
-export function framePlan(item: Pick<FeedItem, "url" | "source" | "space">): FramePlan {
-  const embed = mastodonEmbedUrl(item);
-  if (embed) return { kind: "frame", src: embed };
-  if (item.source === "live" && isHttpsUrl(item.url)) return { kind: "check" };
-  return { kind: "reader" };
+/** `answer` is the framing check's: undefined while unknown, the URL to frame, or null. */
+export function cardOpen(item: Openable, answer: string | null | undefined): CardOpen {
+  if (framePlan(item).kind !== "check") return "none";
+  if (answer === undefined) return "pending";
+  return isHttpsUrl(answer) ? "frame" : "tab";
 }
 
-/** Only https pages are ever framed (CSP frame-src https:). */
+/** Only https pages are ever framed (CSP frame-src https:) or offered in a new tab. */
 export function isHttpsUrl(raw: string | null | undefined): raw is string {
   if (!raw) return false;
   try {
@@ -38,4 +37,9 @@ export function isHttpsUrl(raw: string | null | undefined): raw is string {
   } catch {
     return false;
   }
+}
+
+/** Opens the original in a new tab, in the click itself, so popup blockers allow it. */
+export function openInNewTab(url: string): void {
+  window.open(url, "_blank", "noopener,noreferrer");
 }

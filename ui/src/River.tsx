@@ -7,7 +7,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   loadFeed,
-  loadFrame,
   loadItem,
   saveAllRead,
   saveReadState,
@@ -36,7 +35,8 @@ import { useFollowing } from "./components/useFollowing";
 import { ReaderView, type ReaderState } from "./components/ReaderView";
 import { ExternalView } from "./components/ExternalView";
 import { boostedPost } from "./lib/boost";
-import { framePlan, isHttpsUrl } from "./lib/embed";
+import { cardOpen, framePlan, isHttpsUrl } from "./lib/embed";
+import { useFrameAnswers, useVisibleFrameChecks } from "./lib/useFrameAnswers";
 import { itemIdFromPath, itemPath } from "./lib/reader";
 import { groupIds, groupItems } from "./lib/groups";
 import { SignUpPrompt } from "./Following";
@@ -173,10 +173,8 @@ export function River() {
   // The reader view (ui-revisions-1 item 1): the item in the address bar, and where the feed was.
   const [readerId, setReaderId] = useState<string | null>(() => itemIdFromPath(window.location.pathname));
   const [fetchedItem, setFetchedItem] = useState<{ id: string; state: ReaderState } | null>(null);
-  // The framing check's answers this visit (ui-revisions-2 item 2): the URL to frame, or null.
-  const [frameAnswers, setFrameAnswers] = useState<Record<string, string | null>>({});
-  // Items whose check failed (not refused): they read in the reader now and are asked again when reopened.
-  const frameFailed = useRef(new Set<string>());
+  // The framing check's answers this visit (ui-revisions-3 item 2): the URL to frame, or null.
+  const frames = useFrameAnswers();
   const feedScroll = useRef<{ y: number; id: string } | null>(null);
   const browserReads = useBrowserReadState();
   const serverReads = useServerReadState(load.status === "ok" ? load.items : []);
@@ -223,30 +221,21 @@ export function River() {
     if (!reads.isRead(readerItem.id)) reads.markRead([readerItem.id]);
   }, [readerItem, viewerKnown, reads]);
 
-  // How the opened item shows (ui-revisions-2 item 2): a Mastodon post frames its /embed page;
-  // another live page frames once the server's check allows it; anything else, or a page that
-  // refuses framing, opens in the reader inside the River.
+  // How the opened item shows (ui-revisions-3 item 2): framed beside the River bar when the
+  // server's check allows it; otherwise the same bar with "Open on {host} ↗" (a fediverse post, a
+  // page that refuses framing, or one still being checked). Only an item without a live page (a
+  // sample, from its own address) shows the reader.
   const plan = readerItem ? framePlan(readerItem) : null;
-  const checked = readerItem ? frameAnswers[readerItem.id] : undefined;
-  const checkId = plan?.kind === "check" && checked === undefined ? readerItem!.id : null;
+  const checked = readerItem ? frames.answers[readerItem.id] : undefined;
+  const checking = plan?.kind === "check" && checked === undefined;
+  const requestFrame = frames.request;
   useEffect(() => {
-    if (!checkId) return;
-    const controller = new AbortController();
-    loadFrame(checkId, controller.signal)
-      .then((result) => {
-        if (result.status !== "ok") frameFailed.current.add(checkId);
-        setFrameAnswers((current) => ({ ...current, [checkId]: result.status === "ok" ? result.url : null }));
-      })
-      .catch(() => {
-        // Aborted: the reader went back or opened another item.
-      });
-    return () => controller.abort();
-  }, [checkId]);
-  const frameSrc =
-    plan?.kind === "frame" ? plan.src : plan?.kind === "check" && isHttpsUrl(checked) ? checked : null;
+    if (checking && readerItem) requestFrame(readerItem.id, true);
+  }, [checking, readerItem, requestFrame]);
+  const external = Boolean(plan && plan.kind !== "reader");
+  const frameSrc = plan?.kind === "check" && isHttpsUrl(checked) ? checked : undefined;
   const readerHost = readerItem ? linkHost(readerItem.url) : undefined;
-  const shownReaderState: ReaderState | null =
-    checkId && readerHost ? { status: "opening", host: readerHost } : readerState;
+  const shownReaderState: ReaderState | null = external ? null : readerState;
 
   // Back on the feed: the same scroll position, and focus on the card that was opened.
   useLayoutEffect(() => {
@@ -264,13 +253,6 @@ export function River() {
   }, [readerId]);
 
   const openItem = (id: string) => {
-    if (frameFailed.current.delete(id)) {
-      setFrameAnswers((current) => {
-        const next = { ...current };
-        delete next[id];
-        return next;
-      });
-    }
     feedScroll.current = { y: window.scrollY, id };
     markedId.current = null;
     setTab("feed");
@@ -410,6 +392,9 @@ export function River() {
     void signOut().then(() => window.location.assign("/"));
   };
 
+  // Cards whose page might be framed ask the server as they come into view (ui-revisions-3 item 2).
+  useVisibleFrameChecks(frames.request, load.status === "ok" ? load.items : null);
+
   if (load.status === "unknown_host") return <NotFound message={load.message} homeLink={false} />;
 
   const panel = load.status === "ok" ? load.panel : [];
@@ -429,18 +414,21 @@ export function River() {
 
   return (
     <>
-      {readerItem && frameSrc && (
+      {readerItem && external && (
         <ExternalView
           key={readerItem.id}
+          itemId={readerItem.id}
           src={frameSrc}
-          pageUrl={readerItem.url ?? frameSrc}
-          title={`${readerItem.title || `${kindLabel(readerItem.kind)} from ${boostedPost(readerItem)?.name ?? readerItem.space.name}`} on ${readerHost ?? linkHost(frameSrc)}`}
-          host={readerHost ?? linkHost(frameSrc) ?? ""}
+          checking={checking}
+          onOpened={() => reads.markRead([readerItem.id])}
+          pageUrl={readerItem.url!}
+          title={readerItem.title || `${kindLabel(readerItem.kind)} from ${boostedPost(readerItem)?.name ?? readerItem.space.name}`}
+          host={readerHost ?? ""}
           onBack={closeReader}
         />
       )}
     {/* Framed, the embedded view replaces the River; the River stays mounted so Back finds it as it was. */}
-    <div className="page" hidden={Boolean(readerItem && frameSrc)}>
+    <div className="page" hidden={Boolean(readerItem && external)}>
       <a className="skip-link" href="#feed">
         Skip to the feed
       </a>
@@ -486,7 +474,7 @@ export function River() {
         </div>
 
         <main className={tab === "feed" ? "feed" : "feed hidden-phone"} id="feed" tabIndex={-1}>
-          {shownReaderState && !frameSrc && (
+          {shownReaderState && (
             <ReaderView
               state={shownReaderState}
               read={readerItem ? reads.isRead(readerItem.id) : false}
@@ -549,6 +537,7 @@ export function River() {
                       <FeedCard
                         item={group.lead}
                         earlier={group.earlier}
+                        open={cardOpen(group.lead, frames.answers[group.lead.id])}
                         read={groupRead(ids)}
                         now={now}
                         onMarkRead={() => reads.markRead(ids)}

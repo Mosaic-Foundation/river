@@ -209,71 +209,39 @@ test.describe("item 4: networks, and collapsible sections", () => {
   });
 });
 
-test.describe("item 1: the reader view", () => {
-  test("a click on a card opens /item/{id} with the content, author and source beside the sidebar", async ({ page }) => {
-    // A sample has no live page, so it opens in the reader (live items: revisions2.spec.ts).
-    await openFeed(page);
-    const card = cards(page).and(page.locator('[data-source="sample"]')).first();
-    const id = (await card.getAttribute("data-item-id"))!;
-    const source = (await card.locator(".card-source").textContent())!;
-    await card.locator(".card-text").first().click({ position: { x: 2, y: 2 } });
+test.describe("item 1: the reader view (since ui-revisions-3, only at an item's own address)", () => {
+  // No click opens the reader any more (ui-revisions-3 item 2; revisions3.spec.ts checks the
+  // clicks). It shows at the address of an item without a live page: a sample, or a missing one.
+  async function sampleId(page: Page): Promise<string> {
+    const body = (await (await page.request.get("/api/feed")).json()) as { items: Array<{ id: string; source: string }> };
+    return body.items.find((i) => i.source === "sample")!.id;
+  }
 
-    await expect(page).toHaveURL(new RegExp(`/item/${id}$`));
+  test("a sample's /item/{id} shows its content, author and source beside the sidebar; Back to River goes to the feed", async ({ page }) => {
+    await openFeed(page);
+    const id = await sampleId(page);
+    const card = page.locator(`[data-testid="feed-card"][data-item-id="${id}"]`);
+    const source = (await card.locator(".card-source").textContent())!;
+    await page.goto(`/item/${id}`);
+
     const reader = page.getByTestId("reader");
-    await expect(reader).toBeVisible();
-    await expect(reader).toHaveAttribute("data-item-id", id);
+    await expect(reader).toHaveAttribute("data-item-id", id, { timeout: 30_000 });
     await expect(reader.getByTestId("reader-source")).toHaveText(source);
     await expect(reader.getByRole("heading", { level: 1 })).toBeFocused();
     await expect(reader.locator(".reader-content").first()).not.toBeEmpty();
     await expect(reader.getByTestId("reader-author")).toContainText(/^By .+/);
+    await expect(reader.getByRole("link", { name: /^Open in new tab/ })).toHaveCount(0);
     await expect(sidebar(page)).toBeVisible();
     await expect(cards(page).first()).toBeHidden();
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id)).toEqual([]);
 
-    // The same item from the API, straight from the address bar (a reload or a shared link).
-    await page.reload();
-    await expect(page.getByTestId("reader")).toHaveAttribute("data-item-id", id, { timeout: 30_000 });
-    await expect(page.getByTestId("reader-source")).toHaveText(source);
     await page.getByRole("button", { name: "Back to River" }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(cards(page).first()).toBeVisible();
   });
 
-  test("Back to River and the browser's Back return to the same scroll position", async ({ page }) => {
-    await openFeed(page);
-    const card = cards(page).and(page.locator('[data-source="sample"]')).last();
-    // Centered, so the click below doesn't have to scroll to reach it.
-    await card.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "instant" }));
-    // Wait until the position settles (late images can still move it), then remember it.
-    let y = -1;
-    await expect
-      .poll(async () => {
-        const now = await page.evaluate(() => window.scrollY);
-        const settled = now === y;
-        y = now;
-        return settled;
-      })
-      .toBe(true);
-    expect(y).toBeGreaterThan(200);
-    const id = (await card.getAttribute("data-item-id"))!;
-
-    await card.locator(".card-source").click();
-    await expect(page.getByTestId("reader")).toBeVisible();
-    await page.getByRole("button", { name: "Back to River" }).click();
-    await expect(page.getByTestId("reader")).toHaveCount(0);
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(y);
-    await expect(page).not.toHaveURL(/\/item\//);
-
-    await page.locator(`[data-item-id="${id}"] .card-source`).click();
-    await expect(page).toHaveURL(new RegExp(`/item/${id}`));
-    await page.goBack();
-    await expect(page.getByTestId("reader")).toHaveCount(0);
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(y);
-    // Forward reopens it.
-    await page.goForward();
-    await expect(page.getByTestId("reader")).toHaveAttribute("data-item-id", id);
-  });
-
-  test("Mark read, links and the Sample label inside a card keep their own behavior", async ({ page }) => {
+  test("Mark read, links and the Sample label inside a card keep their own behavior; clicking a sample opens nothing", async ({ page }) => {
     await openFeed(page);
     const first = cards(page).first();
     await first.getByRole("button", { name: /^Mark (read|unread)$/ }).click();
@@ -282,9 +250,11 @@ test.describe("item 1: the reader view", () => {
     await sample.getByRole("button", { name: "Sample", exact: true }).click();
     await expect(page.getByRole("dialog", { name: "Sample entry" })).toBeVisible();
     await page.keyboard.press("Escape");
+    await sample.locator(".card-text").first().click({ position: { x: 2, y: 2 } });
+    await expect(page).toHaveURL(/\/$/);
     await expect(page.getByTestId("reader")).toHaveCount(0);
 
-    // A link inside a card's text opens where it points (a new tab), not the reader.
+    // A link inside a card's text opens where it points (a new tab).
     const withLink = cards(page).filter({ has: page.locator(".card-html a[href]") }).first();
     const link = withLink.locator(".card-html a[href]").first();
     await expect(link).toHaveAttribute("target", "_blank");
@@ -294,31 +264,12 @@ test.describe("item 1: the reader view", () => {
     await expect(page.getByTestId("reader")).toHaveCount(0);
   });
 
-  test("from the keyboard: the card's title or time link opens the reader; the reader's controls are labelled", async ({ page }) => {
+  test("an unknown item's address says so; the reader marks a sample read", async ({ page }) => {
     await openFeed(page);
-    const titled = cards(page).filter({ has: page.locator(".card-title-link") }).first();
-    const id = (await titled.getAttribute("data-item-id"))!;
-    await titled.locator(".card-title-link").focus();
-    await page.keyboard.press("Enter");
-    await expect(page.getByTestId("reader")).toHaveAttribute("data-item-id", id);
-    await page.getByRole("button", { name: "Back to River" }).press("Enter");
-    // Focus comes back to the card that was opened.
-    await expect(page.locator(`[data-item-id="${id}"] .card-title-link`)).toBeFocused();
-
-    const untitled = cards(page).filter({ has: page.locator(".card-permalink") }).first();
-    await expect(untitled.locator(".card-permalink")).toHaveAccessibleName(/^Read .+ from .+/);
-    await untitled.locator(".card-permalink").press("Enter");
-    await expect(page.getByTestId("reader")).toBeVisible();
-    const results = await new AxeBuilder({ page }).analyze();
-    expect(results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id)).toEqual([]);
-  });
-
-  test("opening an item marks it read; an unknown item says so", async ({ page }) => {
-    await openFeed(page);
-    const unread = cards(page).filter({ has: page.getByTestId("unread-dot") }).first();
-    const id = (await unread.getAttribute("data-item-id"))!;
-    await unread.locator(".card-source").click();
-    await expect(page.getByTestId("reader").getByRole("button", { name: "Mark unread" })).toBeVisible();
+    const id = await sampleId(page);
+    await expect(page.locator(`[data-item-id="${id}"]`).getByTestId("unread-dot")).toBeVisible();
+    await page.goto(`/item/${id}`);
+    await expect(page.getByTestId("reader").getByRole("button", { name: "Mark unread" })).toBeVisible({ timeout: 30_000 });
     await page.getByRole("button", { name: "Back to River" }).click();
     await expect(page.locator(`[data-item-id="${id}"]`).getByTestId("unread-dot")).toHaveCount(0);
 
@@ -332,22 +283,18 @@ test.describe("item 1: the reader view", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
     await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
-    await cards(page).first().locator(".card-source").click();
-    await expect(page.getByTestId("reader")).toBeVisible();
+    await page.goto(`/item/${await sampleId(page)}`);
+    await expect(page.getByTestId("reader")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("button", { name: "Back to River" })).toBeInViewport();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
   });
-});
 
-test.describe("item 1: the reader keeps the feed's filters", () => {
   test("the query string survives the round trip", async ({ page }) => {
     await openFeed(page, "/?mode=civic&type=civic");
-    const card = cards(page).first();
-    const id = (await card.getAttribute("data-item-id"))!;
-    await card.locator(".card-source").click();
-    await expect(page).toHaveURL(new RegExp(`/item/${id}\\?mode=civic&type=civic$`));
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "civic");
+    const id = await sampleId(page);
+    await page.goto(`/item/${id}?mode=civic&type=civic`);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "civic", { timeout: 30_000 });
     await page.getByRole("button", { name: "Back to River" }).click();
     await expect(page).toHaveURL(/\/\?mode=civic&type=civic$/);
   });
@@ -417,7 +364,7 @@ test.describe("item 7: related hub cards are grouped", () => {
     await expect(card).toHaveAttribute("data-group-size", String(1 + siblings.length));
     if (lead.civic?.label) await expect(card.locator(".card-chips")).toContainText(lead.civic.label);
 
-    // The earlier updates are listed when expanded, without opening the reader.
+    // The earlier updates are listed when expanded, without opening anything.
     const summary = card.getByText(siblings.length === 1 ? "1 earlier update" : `${siblings.length} earlier updates`);
     const list = card.getByRole("list", { name: "Earlier updates, newest first" });
     await expect(list).toBeHidden();
@@ -427,9 +374,9 @@ test.describe("item 7: related hub cards are grouped", () => {
     for (const sibling of siblings) {
       await expect(list.locator(`[data-item-id="${sibling.id}"]`)).toContainText(sibling.civic?.label ?? "");
     }
-    // From the keyboard too: an earlier update opens in the reader.
+    // From the keyboard too: an earlier update opens in the embedded view (ui-revisions-3 item 2).
     await list.getByRole("link").first().press("Enter");
-    await expect(page.getByTestId("reader")).toHaveAttribute("data-item-id", siblings[0]!.id);
+    await expect(page.getByTestId("external-view")).toHaveAttribute("data-item-id", siblings[0]!.id);
   });
 
   test("Mark read on a group marks every item in it", async ({ page }) => {
@@ -452,10 +399,9 @@ test.describe("item 7: related hub cards are grouped", () => {
 });
 
 test.describe("reader view: audio and video from https sources (Adam, 2026-10-21)", () => {
-  // Every recorded fediverse video is a Mastodon post, which now opens in its embed
-  // (ui-revisions-2 item 2), so the reader's players are proven here by forcing the reader: the
-  // stored item comes back without its live URL. media.spec.ts plays PeerTube and podcast media
-  // in the reader the way they really open.
+  // The reader shows only at the address of an item without a live page (ui-revisions-3 item 2),
+  // so its players are proven here by forcing the reader: the recorded fediverse video post comes
+  // back without its live URL.
   test("a live video plays in the reader from its https source, loading nothing until played", async ({ page }) => {
     const media: string[] = [];
     page.on("request", (req) => {

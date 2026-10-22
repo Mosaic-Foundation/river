@@ -2,13 +2,21 @@
 // BackSidebar: a narrow full-height bar with the Mosaic mark and "River" that returns to the
 // River, and the rest of the window showing the item where it lives, in a sandboxed iframe. The
 // frame may run its own scripts in its own origin, submit its forms and open links in new tabs,
-// but never navigate the River's page (no allow-top-navigation); it gets no referrer.
+// but never navigate the River's page (no allow-top-navigation); it gets no referrer. With no
+// page to frame (a fediverse post, a page that refuses framing, or one still being checked), the
+// space beside the bar holds one button, "Open on {host} ↗", the original in a new tab
+// (ui-revisions-3 item 2); if a pending check then allows framing, the frame replaces it.
 import { useEffect, useRef, useState } from "react";
 import { ExternalIcon } from "./Icons";
 
 export interface ExternalViewProps {
-  /** What the iframe loads: a Mastodon /embed page or a page the framing check allowed. */
-  src: string;
+  itemId: string;
+  /** What the iframe loads: a page the framing check allowed. None: the "Open on {host}" screen. */
+  src?: string;
+  /** The framing check is still running. */
+  checking?: boolean;
+  /** Called when the original is opened in a new tab (it then counts as read). */
+  onOpened?: () => void;
   /** The item's own page, for "Open in new tab". */
   pageUrl: string;
   /** Names the frame for screen readers, e.g. "Post from EFF on mastodon.social". */
@@ -19,7 +27,7 @@ export interface ExternalViewProps {
 
 export const FRAME_SANDBOX = "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox";
 
-export function ExternalView({ src, pageUrl, title, host, onBack }: ExternalViewProps) {
+export function ExternalView({ itemId, src, checking = false, onOpened, pageUrl, title, host, onBack }: ExternalViewProps) {
   const [loading, setLoading] = useState(true);
   const backRef = useRef<HTMLButtonElement>(null);
 
@@ -34,7 +42,7 @@ export function ExternalView({ src, pageUrl, title, host, onBack }: ExternalView
   }, []);
 
   return (
-    <div className="external" data-testid="external-view">
+    <div className="external" data-testid="external-view" data-item-id={itemId}>
       <nav className="external-bar" aria-label="River">
         <button type="button" className="external-back" ref={backRef} onClick={onBack} data-testid="external-back">
           <span className="external-mark">
@@ -49,22 +57,45 @@ export function ExternalView({ src, pageUrl, title, host, onBack }: ExternalView
           <span className="visually-hidden">Open in new tab (on {host})</span>
         </a>
       </nav>
-      <div className="external-frame">
-        {loading && (
-          <p className="external-loading" role="status">
-            Loading {host}…
+      {src ? (
+        <div className="external-frame">
+          {loading && (
+            <p className="external-loading" role="status">
+              Loading {host}…
+            </p>
+          )}
+          <iframe
+            src={src}
+            title={title}
+            sandbox={FRAME_SANDBOX}
+            referrerPolicy="no-referrer"
+            allow=""
+            onLoad={() => setLoading(false)}
+            data-testid="external-frame"
+          />
+        </div>
+      ) : (
+        <section className="external-elsewhere" aria-labelledby="external-elsewhere-title" data-testid="external-elsewhere">
+          <h1 className="external-elsewhere-title" id="external-elsewhere-title">
+            {title}
+          </h1>
+          <a
+            className="button button-primary"
+            href={pageUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onOpened}
+            data-testid="external-elsewhere-open"
+          >
+            Open on {host}
+            <span aria-hidden="true"> ↗</span>
+            <span className="visually-hidden"> (opens in a new tab)</span>
+          </a>
+          <p className="external-elsewhere-note" role="status">
+            {checking ? `Checking whether ${host} can be shown here…` : `${host} opens in its own tab.`}
           </p>
-        )}
-        <iframe
-          src={src}
-          title={title}
-          sandbox={FRAME_SANDBOX}
-          referrerPolicy="no-referrer"
-          allow=""
-          onLoad={() => setLoading(false)}
-          data-testid="external-frame"
-        />
-      </div>
+        </section>
+      )}
     </div>
   );
 }
