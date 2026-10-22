@@ -53,7 +53,7 @@ test.describe("feed cards", () => {
     await expect(label).toBeFocused();
   });
 
-  test("check 4 (as revised by ui-revisions-1 item 1): cards name their host; the reader's Open original opens it in a new tab", async ({ page }) => {
+  test("check 4 (as revised by ui-revisions-1 item 1): cards name their host; the reader's Open in new tab opens it in a new tab", async ({ page }) => {
     await openFeed(page);
     const live = cards(page).and(page.locator('[data-source="live"]'));
     const sample = cards(page).and(page.locator('[data-source="sample"]'));
@@ -72,23 +72,25 @@ test.describe("feed cards", () => {
       await expect(card.getByTestId("card-host")).toHaveCount(0);
     }
 
-    // The reader's Open original: the item URL, https, a new tab, noopener noreferrer.
+    // Open in new tab, in the embedded view's bar or the reader (ui-revisions-2 item 2): the item
+    // URL, https, a new tab, noopener noreferrer.
     for (const card of (await live.all()).slice(0, 3)) {
       const host = (await card.getByTestId("card-host").textContent())!;
       await card.locator(".card-source").click();
-      const open = page.getByTestId("reader").getByRole("link", { name: /^Open original/ });
+      const open = page.getByTestId("external-view").or(page.getByTestId("reader")).getByRole("link", { name: /^Open in new tab/ });
       await expect(open).toBeVisible();
       const href = (await open.getAttribute("href"))!;
       expect(new URL(href).protocol).toBe("https:");
       expect(new URL(href).host).toBe(host);
       await expect(open).toHaveAttribute("target", "_blank");
       expect((await open.getAttribute("rel"))!.split(/\s+/)).toEqual(expect.arrayContaining(["noopener", "noreferrer"]));
-      await page.getByRole("button", { name: "Back to River" }).click();
+      await page.getByRole("button", { name: /^Back to (the )?River$/ }).click();
       await expect(page.getByTestId("reader")).toHaveCount(0);
+      await expect(page.getByTestId("external-view")).toHaveCount(0);
     }
     await sample.first().locator(".card-source").click();
     await expect(page.getByTestId("reader")).toBeVisible();
-    await expect(page.getByRole("link", { name: /^Open original/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /^Open in new tab/ })).toHaveCount(0);
   });
 
   test("cards show source, kind, relative time; boosts say who boosted from where", async ({ page }) => {
@@ -165,7 +167,7 @@ test.describe("filters and empty state", () => {
     await expect(cards(page)).toHaveCount(0);
   });
 
-  test("spec 4.3: a boost shows the boosted post under its original author, below '{booster} boosted'; so does the reader", async ({ page }) => {
+  test("spec 4.3: a boost shows the boosted post under its original author, below '{booster} boosted'; it opens in that post's embed", async ({ page }) => {
     // @w3c boosted this @w3cdevs post (recorded); the refresh fetched the post and its author.
     await openFeed(page);
     const search = page.getByRole("searchbox", { name: "Search your River" });
@@ -181,18 +183,16 @@ test.describe("filters and empty state", () => {
     await expect(card).not.toContainText("boosted a post from");
     await expect(card).not.toContainText("The boosted post opens where it lives.");
 
+    await expectNoSeriousAxeIssues(page);
+    // A Mastodon post opens in its own embed (ui-revisions-2 item 2), named for its original author.
     await card.locator(".card-text").first().click({ position: { x: 2, y: 2 } });
-    const reader = page.getByTestId("reader");
-    await expect(reader.getByRole("heading", { level: 1 })).toHaveText("Post from W3C Developers");
-    await expect(reader.getByTestId("boost-line")).toHaveText("World Wide Web Consortium boosted");
-    await expect(reader.getByTestId("reader-source")).toHaveText("W3C Developers");
-    await expect(reader.getByTestId("reader-author")).toHaveText("By W3C Developers @w3cdevs@w3c.social");
-    await expect(reader.locator(".reader-content").first()).toContainText("Want to trigger CSS animations");
-    await expect(reader.getByRole("link", { name: /^Open original/ })).toHaveAttribute(
+    const frame = page.getByTestId("external-frame");
+    await expect(frame).toHaveAttribute("src", "https://w3c.social/@w3cdevs/117471856565477515/embed");
+    await expect(frame).toHaveAttribute("title", "Post from W3C Developers on w3c.social");
+    await expect(page.getByTestId("external-view").getByRole("link", { name: /^Open in new tab/ })).toHaveAttribute(
       "href",
       "https://w3c.social/@w3cdevs/117471856565477515",
     );
-    await expectNoSeriousAxeIssues(page);
   });
 
   test("search narrows the feed to matching items", async ({ page }) => {
@@ -218,12 +218,12 @@ test.describe("read state (visitor)", () => {
     await expect(first.getByTestId("unread-dot")).toHaveCount(0);
     await expect(first.getByRole("button", { name: "Mark unread" })).toBeVisible();
 
-    // Opening a live item in the reader marks it read.
+    // Opening a live item (here a Mastodon post, in its embed) marks it read.
     const live = cards(page).and(page.locator('[data-source="live"]')).nth(1);
     const liveId = (await live.getAttribute("data-item-id"))!;
     await live.locator(".card-source").click();
-    await expect(page.getByTestId("reader")).toBeVisible();
-    await page.getByRole("button", { name: "Back to River" }).click();
+    await expect(page.getByTestId("external-view")).toBeVisible();
+    await page.getByRole("button", { name: "Back to the River" }).click();
     await expect(page.locator(`[data-item-id="${liveId}"]`).getByTestId("unread-dot")).toHaveCount(0);
 
     await page.reload();
@@ -238,6 +238,7 @@ test.describe("read state (visitor)", () => {
     expect(stored.length).toBe(loaded);
 
     expect(apiCalls.length).toBeGreaterThan(0);
+    // Reads only: the feed (a Mastodon post needs no framing check, ui-revisions-2 item 2).
     expect(apiCalls.every((call) => call === "GET /api/feed")).toBe(true);
   });
 });
@@ -276,6 +277,8 @@ test.describe("hosts and pages", () => {
     expect(csp).toMatch(/(^|; )script-src 'self'( 'nonce-[^']+')?(;|$)/);
     expect(csp).toMatch(/(^|; )img-src 'self' https:(;|$)/);
     expect(csp).toMatch(/(^|; )media-src 'self' https:(;|$)/);
+    // Opened items frame their https source (ui-revisions-2 item 2); nothing else may be framed.
+    expect(csp).toMatch(/(^|; )frame-src https:(;|$)/);
     expect(csp).toMatch(/(^|; )connect-src 'self'(;|$)/);
     expect(csp).not.toContain("unsafe-inline");
     await expect(page.getByTestId("feed-card").first()).toBeVisible({ timeout: 30_000 });

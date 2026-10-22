@@ -244,6 +244,24 @@ export async function signOut(): Promise<boolean> {
 
 export type ItemResult = { status: "ok"; item: FeedItem } | { status: "not_found" } | { status: "error" };
 
+/** The framing check's answer for an opened item: the URL to frame, or null for the reader. */
+export type FrameResult = { status: "ok"; url: string | null } | { status: "error" };
+
+/** Whether an item's page can be framed (GET /api/items/{id}/frame, ui-revisions-2 item 2). */
+export async function loadFrame(id: string, signal?: AbortSignal): Promise<FrameResult> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/items/${encodeURIComponent(id)}/frame`, { signal, headers: { Accept: "application/json" } });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    return { status: "error" };
+  }
+  const body = (await res.json().catch(() => undefined)) as { frame?: { url?: unknown } | null } | undefined;
+  if (!res.ok || !body || body.frame === undefined) return { status: "error" };
+  const url = body.frame && typeof body.frame.url === "string" ? body.frame.url : null;
+  return { status: "ok", url };
+}
+
 /** One stored item for the reader view (ui-revisions-1 item 1); the API fetches nothing new. */
 export async function loadItem(id: string, signal?: AbortSignal): Promise<ItemResult> {
   let res: Response;

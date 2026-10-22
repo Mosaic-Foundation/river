@@ -225,3 +225,16 @@
     top: calc(var(--size-control) + var(--space-lg) * 1.5);
   }
 }
+
+/* The reader view takes the feed's and Coming up's columns; the grid itself doesn't change, so
+   the filter column stays where it was (ui-revisions-2 items 1 and 3). */
+@media (min-width: 56rem) {
+  .layout-reading > .desktop-only {
+    grid-row: 1;
+  }
+
+  .layout-reading > main.feed {
+    grid-column: 2 / -1;
+    grid-row: 1;
+  }
+}

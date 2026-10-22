@@ -1,11 +1,13 @@
 // The reader view (ui-revisions-1 item 1): one stored item inside the River, at /item/{id}, with
-// the left sidebar still beside it. Full sanitized content (src/shared/sanitize/, the only HTML;
-// CLAUDE.md constraint 8), every image, the author and the source. "Back to River" returns to
-// the feed where it was; "Open original" opens the item where it lives, in a new tab. Nothing is
-// fetched from outside: the item comes from the loaded feed or GET /api/items/{id}. Audio and
-// video from https sources play here, straight from the source, and load only when played
-// (preload="none"; CSP media-src 'self' https:). A boost whose post the refresh fetched reads as
-// that post: its original author's name, avatar and title, under "{booster} boosted" (spec 4.3).
+// the left sidebar still beside it, across the feed's and Coming up's columns (ui-revisions-2
+// item 3). Items open here when they have no live page to frame or their page refuses framing.
+// Full sanitized content (src/shared/sanitize/, the only HTML; CLAUDE.md constraint 8), every
+// image, the author and the source. "Back to River" returns to the feed where it was; "Open in
+// new tab" opens the item where it lives. Nothing is fetched from outside: the item comes from
+// the loaded feed or GET /api/items/{id}. Audio and video from https sources play here, straight
+// from the source, and load only when played (preload="none"; CSP media-src 'self' https:). A
+// boost whose post the refresh fetched reads as that post: its original author's name, avatar
+// and title, under "{booster} boosted" (spec 4.3).
 import { useEffect, useRef } from "react";
 import type { FeedItem } from "../lib/api";
 import { boostedPost, boosterName } from "../lib/boost";
@@ -24,7 +26,13 @@ import { CardMedia } from "./CardMedia";
 import { BoostIcon, ExternalIcon } from "./Icons";
 import { SourceIcon } from "./SourceIcon";
 
-export type ReaderState = { status: "loading" } | { status: "not_found" } | { status: "error" } | { status: "ok"; item: FeedItem };
+export type ReaderState =
+  | { status: "loading" }
+  /** The River is asking whether the item's page can be framed (ui-revisions-2 item 2). */
+  | { status: "opening"; host: string }
+  | { status: "not_found" }
+  | { status: "error" }
+  | { status: "ok"; item: FeedItem };
 
 export interface ReaderViewProps {
   state: ReaderState;
@@ -63,8 +71,9 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
     return (
       <section className="reader" aria-label="Reader" data-testid="reader">
         <BackButton onBack={onBack} />
-        <p className="feed-status" role={state.status === "loading" ? "status" : "alert"}>
+        <p className="feed-status" role={state.status === "loading" || state.status === "opening" ? "status" : "alert"}>
           {state.status === "loading" && "Loading this item…"}
+          {state.status === "opening" && `Opening ${state.host}…`}
           {state.status === "not_found" && "This item isn't in your River. It may have been removed."}
           {state.status === "error" && "This item couldn't load right now. Try again in a moment."}
         </p>
@@ -229,9 +238,9 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
       <footer className="reader-footer">
         {host && item.url && (
           <a className="button button-primary" href={item.url} target="_blank" rel="noopener noreferrer">
-            Open original
+            Open in new tab
             <ExternalIcon />
-            <span className="visually-hidden"> on {host} (opens in a new tab)</span>
+            <span className="visually-hidden"> (on {host})</span>
           </a>
         )}
         <button
