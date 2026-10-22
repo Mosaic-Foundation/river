@@ -16,6 +16,23 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-22 — "Every card gets that Open ↗ button" and samples (UI revisions 3)
+- Question: item 1 gives every card "Open ↗", the original in a new tab; sample entries have no
+  original (no URL).
+- Reading used: every live card has it; samples don't, and their card opens nothing. A sample's
+  own address still shows the reader.
+- Proposed change: item 1 says "every live card".
+- Thread / PR: UI revisions 3, items 1-2
+
+### 2026-10-22 — The reader's players after UI revisions 3
+- Question: retiring the reader from the click flow (item 2) means the reader's https audio and
+  video players (Adam, 2026-10-21) are no longer reached from any card: a podcast episode or a
+  PeerTube video opens its page (framed or in a new tab) or, for fediverse posts, nothing.
+- Reading used: as written; the players stay in the reader for an item without a live page, and
+  play there. Adam may want a player on cards, or the reader kept for media items.
+- Proposed change: none until Adam decides.
+- Thread / PR: UI revisions 3, items 1-2
+
 ### 2026-10-22 — Where the reader view goes when a page refuses framing (UI revisions 2)
 - Question: item (b) says a page that refuses framing shows the reader view "in that space" (the
   window beside the embedded view's bar), while (a) and (c) put the reader in the River's layout:
@@ -306,6 +323,25 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-22 — How a card opens, in detail (UI revisions 3, items 1 and 2)
+- Decision: "fediverse posts" are items of the fediverse adapter (Mastodon, WordPress, PeerTube
+  alike); they are never framed or checked, and their title and time aren't links. Other live
+  https items are checked as their card comes within 200 px of the window (an
+  IntersectionObserver), at most 3 checks at a time, each once per page visit; a check that fails
+  counts as a refusal, so the original opens in a new tab (always safe). A refused card's title
+  link points at the original with `target="_blank"`, and a click elsewhere on the card calls
+  `window.open(url, "_blank", "noopener,noreferrer")` inside the click. A card clicked before its
+  answer, a grouped hub card's earlier update (not checked ahead), or an item's address opens the
+  embedded view with "Open on {host} ↗" and a status line ("Checking whether {host} can be shown
+  here…", then "{host} opens in its own tab."); an allowing answer replaces it with the frame.
+  "Open ↗" and "Open on {host} ↗" mark the item read, like opening it.
+- Why: item 2 names the ahead-of-time check and the one-click screen as the two ways to open the
+  tab without a popup blocker; both are used, the check for cards in view and the screen for
+  everything else.
+- Alternatives: a batch endpoint for checks (fewer requests from the page, same outbound count);
+  checking every loaded card, seen or not (more outbound requests for pages nobody scrolls to).
+- Thread / PR: UI revisions 3, items 1-2
 
 ## 2026-10-22 — The embedded view's details (UI revisions 2, item 2)
 - Decision: "fediverse posts" are fediverse items whose URL is a Mastodon status
