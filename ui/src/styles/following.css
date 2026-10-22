@@ -65,7 +65,7 @@
   padding: var(--space-lg);
   background: var(--color-surface);
   border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl, var(--radius-lg));
   box-shadow: var(--shadow-card);
 }
 
@@ -161,7 +161,7 @@
   margin: 0;
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-md);
-  background: var(--color-accent-soft);
+  background: var(--color-danger-soft, var(--color-accent-soft));
   color: var(--color-danger);
   font-weight: var(--font-weight-semibold);
 }

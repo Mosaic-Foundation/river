@@ -79,6 +79,11 @@ a {
   border-radius: var(--radius-sm);
 }
 
+/* Civic's soft focus ring around controls (civic.css --shadow-focus), inside the outline. */
+:is(a, button, input, select, textarea, summary):focus-visible {
+  box-shadow: var(--shadow-focus, none);
+}
+
 ::selection {
   background: var(--color-selection);
 }

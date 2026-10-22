@@ -1,11 +1,18 @@
 /*
- * Civic theme: used by Civic mode and civic web addresses (decisions log row 19). The green
- * American Landscape palette, Libre Franklin headings and Inter body, from Civic.Social's
- * canonical tokens.css (docs/reuse/design-system/tokens-american-landscape.css). Fonts are
- * self-hosted through Fontsource (OFL), so the browser makes no font requests to Google.
+ * Civic theme: used by Civic mode and civic web addresses (decisions log row 19). Matches the
+ * Civic Hub's default theme: navy primary, terracotta accent, ink neutrals on warm paper,
+ * Libre Franklin headings and Inter body. Values come from Civic-Social-Mono
+ * civic-hub/ui/src/styles/design-system/tokens.css and civic-hub/src/shared/theme.ts
+ * (DEFAULT_THEME_COLORS), as Adam copied them on 2026-10-21 (DECISIONS.md "Civic mode wears the
+ * Civic Hub's default theme"). Fonts are self-hosted through Fontsource (OFL), so the browser
+ * makes no font requests to Google. No Newsreader in Civic mode.
  *
  * Redefines the semantic tokens from mosaic.css; active with data-theme="civic" on <html>.
- * Imported after mosaic.css, so it wins at equal specificity.
+ * Imported after mosaic.css, so it wins at equal specificity. It also sets a few tokens that only
+ * this theme has (--color-page, --color-surface-pressed, the status and process colors,
+ * --radius-control, --radius-chip, --radius-xl, --shadow-raised, --shadow-overlay, --shadow-focus,
+ * --border-process); components read those with a fallback to a Mosaic token, so Everything mode
+ * looks as it did.
  */
 @import "@fontsource/libre-franklin/400.css";
 @import "@fontsource/libre-franklin/600.css";
@@ -16,46 +23,110 @@
 @import "@fontsource/inter/700.css";
 
 [data-theme="civic"] {
-  /* Palette: American Landscape primitives and their washes */
-  --civic-green: #386759;
-  --civic-green-hover: #2e564a;
-  --civic-green-wash: #e3ebe8;
-  --civic-teal: #294b52;
-  --civic-rust: #c37b51;
-  --civic-rust-wash: #f4e1d2;
-  --civic-yellow: #edc572;
-  --civic-yellow-wash: #faf0db;
-  --civic-cream: #f0ebe1;
-  --civic-cream-raise: #ffffff;
-  --civic-cream-sink: #e8e2d4;
+  /* Primary: navy */
+  --civic-primary-950: #0e1e36;
+  --civic-primary-800: #15294c;
+  --civic-primary-700: #1f3a66;
+  --civic-primary-600: #2a4e84;
+  --civic-primary-500: #3e66a0;
+  --civic-primary-400: #5b82b8;
+  --civic-primary-300: #8faace;
+  --civic-primary-200: #b9cade;
+  --civic-primary-100: #dce5f2;
+  --civic-primary-50: #ecf1fa;
+
+  /* Accent: terracotta */
+  --civic-accent-800: #8c4a2b;
+  --civic-accent-700: #a85d38;
+  --civic-accent-600: #c37b51;
+  --civic-accent-500: #d69a75;
+  --civic-accent-100: #f4e1d2;
+  --civic-accent-50: #faf0e7;
+
+  /* Ink: text and neutrals */
+  --civic-ink-950: #0c1726;
+  --civic-ink-900: #16243a;
+  --civic-ink-700: #2c3e5c;
+  --civic-ink-500: #5e6e88;
+  --civic-ink-400: #7a8aa3;
+  --civic-ink-300: #a5afc2;
+  --civic-ink-200: #c8cfdb;
+  --civic-ink-100: #e2e6ee;
+  --civic-ink-50: #f1f3f8;
+
+  /* Paper: surfaces */
+  --civic-paper-page: #f8f6f3;
+  --civic-paper-card: #ffffff;
+  --civic-paper-alt: #f4f1ea;
+  --civic-paper-pressed: #e8e2d4;
+
+  /* Status */
+  --civic-success: #2a7340;
+  --civic-success-wash: #dceedf;
+  --civic-warning: #946c18;
+  --civic-warning-bright: #f4c443;
+  --civic-warning-wash: #fdf4d6;
+  --civic-danger: #9c2e22;
+  --civic-danger-wash: #fbe0da;
 
   /* Semantic tokens */
-  --color-bg: var(--civic-cream);
-  --color-surface: var(--civic-cream-raise);
-  --color-surface-alt: var(--civic-cream-sink);
-  --color-text: var(--civic-teal);
-  --color-text-muted: #526366; /* 4.9:1 on cream-sink, the page background (M10) */
-  --color-heading: var(--civic-teal);
-  --color-primary: var(--civic-green);
-  --color-primary-hover: var(--civic-green-hover);
-  --color-on-primary: var(--civic-cream-raise);
-  --color-link: var(--civic-green);
-  --color-accent: var(--civic-rust);
-  --color-accent-soft: var(--civic-rust-wash);
-  --color-info-soft: var(--civic-green-wash);
-  --color-danger: #a03a2a;
-  --color-border: var(--civic-cream-sink);
-  --color-focus: var(--civic-teal);
-  --color-selection: var(--civic-yellow-wash);
+  --color-bg: var(--civic-paper-page);
+  --color-page: var(--civic-paper-page);
+  --color-surface: var(--civic-paper-card);
+  --color-surface-alt: var(--civic-paper-alt);
+  --color-surface-pressed: var(--civic-paper-pressed);
+  --color-text: var(--civic-ink-900);
+  --color-text-muted: var(--civic-ink-500); /* 4.6:1 on paper-alt, the darkest surface it sits on */
+  --color-heading: var(--civic-ink-950);
+  --color-primary: var(--civic-primary-600);
+  --color-primary-hover: var(--civic-primary-700);
+  --color-on-primary: var(--civic-paper-card);
+  --color-link: var(--civic-primary-600);
+  --color-accent: var(--civic-accent-600);
+  --color-accent-soft: var(--civic-accent-100);
+  --color-info-soft: var(--civic-primary-100);
+  --color-danger: var(--civic-danger);
+  --color-danger-soft: var(--civic-danger-wash);
+  --color-success: var(--civic-success);
+  --color-success-soft: var(--civic-success-wash);
+  /* #946c18 on its wash is 4.3:1, under AA for small text: the warning hue marks the edge, ink is the text. */
+  --color-warning: var(--civic-warning-bright);
+  --color-warning-soft: var(--civic-warning-wash);
+  --color-border: var(--civic-ink-200);
+  --color-focus: var(--civic-primary-500);
+  --color-selection: var(--civic-primary-100);
+
+  /*
+   * Process-type colors (the hub's ActivityColor keys) for civic cards' left edges and pills.
+   * Each pill is the hue as text on a light tint of it, as the hub does; every pair is at least
+   * 5:1. FeedCard and ReaderView set data-process from the item's civic:processType.
+   */
+  --color-process-vote: #15294c;
+  --color-process-proposal: #5f4b8b;
+  --color-process-conversation: #0f5e66;
+  --color-process-project: #1565c0;
+  --color-process-announcement: #8c4a2b;
+  --color-process-meeting: #2a7340;
+  --color-process-brief: #8c4a2b;
+  --color-process-wordcloud: #5c6b2a;
+  --process-tint: 10%;
+  --border-process: 4px;
 
   --font-heading: "Libre Franklin", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-weight-heading: 600;
 
   --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --shadow-card: 0 1px 2px rgba(41, 75, 82, 0.06);
+  --radius-md: 10px;
+  --radius-control: 10px; /* inputs and buttons */
+  --radius-lg: 14px; /* cards */
+  --radius-xl: 18px; /* large surfaces: sidebar, reader, dialogs */
+  --radius-pill: 9999px;
+  --radius-chip: var(--radius-pill); /* detail chips and process pills */
+  --shadow-card: 0 1px 2px rgba(15, 27, 45, 0.06);
+  --shadow-raised: 0 4px 12px rgba(15, 27, 45, 0.08);
+  --shadow-overlay: 0 12px 32px rgba(15, 27, 45, 0.1);
+  --shadow-focus: 0 0 0 3px rgba(62, 102, 160, 0.3);
 
   --font-size-base: 1rem;
   --font-size-lg: 1.125rem;

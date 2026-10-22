@@ -8,6 +8,7 @@ import {
   NETWORKS,
   parseList,
   playableMedia,
+  processKey,
   safeMediaUrl,
   toggleValue,
   eventDate,
@@ -144,6 +145,20 @@ describe("card helpers", () => {
     expect(eventDate("nope")).toBeUndefined();
     expect(deadlineLabel("2026-10-28T12:00:00Z")).toMatch(/^Open until Oct 2[78]$/);
     expect(deadlineLabel(undefined)).toBeUndefined();
+  });
+
+  it("maps a civic item's process type to the hub's color key", () => {
+    expect(processKey({ processType: "civic.vote" })).toBe("vote");
+    expect(processKey({ processType: "civic.polis_deliberation" })).toBe("conversation");
+    expect(processKey({ processType: "civic.meeting_summary" })).toBe("meeting");
+    expect(processKey({ processType: "civic.brief" })).toBe("brief");
+    expect(processKey({ processType: "civic.wordcloud" })).toBe("wordcloud");
+    // Without a processType, the object names the process; the processType wins when both do.
+    expect(processKey({ objectType: "hub:Project" })).toBe("project");
+    expect(processKey({ objectType: "civic:Proposal" })).toBe("proposal");
+    expect(processKey({ processType: "civic.vote", objectType: "civic:Proposal" })).toBe("vote");
+    expect(processKey({ processType: "civic.unknown", objectType: "civic:Process" })).toBeUndefined();
+    expect(processKey(null)).toBeUndefined();
   });
 
   it("passes only hex circle colors into CSS", () => {
