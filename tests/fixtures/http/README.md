@@ -62,6 +62,21 @@ is the "can't be fetched, keep the plain card" case. Seeds:
   folder. Tests derive them from a recorded response at run time (`tests/unit/helpers/fediverseFixtures.ts`).
 - `fedizen.net` is not recorded: ADR-001 allows it only once Adam approves.
 
+## Framing check (UI revisions 2)
+
+Recorded on 2026-10-22 by `npm run record-fixtures -- --frames` (`scripts/recorders/frames.ts`),
+which runs the River's framing check itself (`src/river/frame/check.ts`) through a saving guard:
+one GET of each page with `Accept: text/html,application/xhtml+xml`. Only the headers matter to
+the check; the bodies are kept as recorded.
+
+- `socialwebfoundation.org/…/fosdem-2027-dev-room-application-is-in/`: the @swf seed's own
+  article; no `X-Frame-Options`, no CSP, so it can be framed.
+- `longmont.civic.social/meeting-summary/proc_4ebb11759c4c40ce`: a Civic Hub page; `X-Frame-Options:
+  DENY` and `frame-ancestors 'none'`, so it opens in the reader.
+
+Mastodon posts are framed through their `/embed` page and never checked, so nothing is recorded for
+them; mastodon.social and w3c.social served `/embed` with neither header on 2026-10-22 (ADR-008).
+
 ## SYNTHETIC: media sources (M12)
 
 `synthetic-tube.example/` and `synthetic-podcast.example/` are **not recordings**. The M12 thread's

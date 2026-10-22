@@ -64,6 +64,23 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-22, UI revisions 2 (embedded view, wide reader, fixed filter column): unit
+  `frameCheck` (X-Frame-Options and CSP frame-ancestors as browsers read them, CSP3 source
+  matching against the River's origin, both recorded pages, and through the real guard: one GET,
+  redirects followed, 404, non-HTML, download, unrecorded host, private address never asked, the
+  10-minute and 1-minute caches; DERIVED variants of the recorded article); `ui/embed` (which
+  URLs are Mastodon statuses, the plan for each item); `ui/csp` asserts `frame-src https:`. API
+  `feed.test.ts`: `GET /items/{id}/frame` frames the recorded article, not the hub page, a sample
+  or an unrecorded host; 404 and 400. New e2e `revisions2.spec.ts` (11 tests): the Mastodon embed
+  (src, sandbox, referrerpolicy, title, bar, focus, frame size, axe), the bar and Back/Forward with
+  scroll and filters, direct `/item/{id}`, a checked page framed (and not rechecked), a refusing
+  page in the reader, a sample with no check, CSP with no violation while framing, phone; the
+  filter column's box unchanged through the reader and "Opening…"; the reader spanning the feed
+  and Coming up columns. Framed documents get a stand-in page via `page.route`, so nothing leaves
+  loopback. Existing specs: "Open original" is "Open in new tab"; tests that opened Mastodon
+  cards in the reader now expect the embedded view or use samples; the reader's video test serves
+  its stored item without a URL so it opens in the reader; the scroll tests center the card
+  first (Playwright's click had scrolled it). Unit 580, API 148 (fresh `db reset`), e2e 82.
 - 2026-10-22, boost content: unit `boostContent` replays real recorded boosts from @w3c, @eff
   and @swf (posts, actors, a 401 actor plus Mastodon's lookup, embedded posts re-read where they
   live) and DERIVED variants (budget, deadline, not public, wrong host, reply, script, forged
