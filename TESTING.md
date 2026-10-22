@@ -64,6 +64,16 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-22, boost content: unit `boostContent` replays real recorded boosts from @w3c and
+  @eff (posts, actors, a 401 actor plus Mastodon's lookup) and DERIVED variants (budget, not
+  public, wrong host, reply, script, foreign author, impostor actor); `ui/boost` covers
+  `boostedPost()`. `fediverseAdapter` paging tests now expect one more `onPage` with the filled
+  boosts; `mediaAdapters` PeerTube tests read a non-own share as a filled boost. e2e
+  `river.spec.ts` checks a filled boost card and the reader (title, byline, boost line, Open
+  original, axe); `following.spec.ts` sees both the filled and the plain boost line. Unit 547,
+  API 145, e2e 69. Locally the e2e ran on the preinstalled Chromium 1194 headless shell (mapped
+  through `PLAYWRIGHT_BROWSERS_PATH`), since the sandbox can't download Playwright's own.
+
 - 2026-10-21, M12 brought up to date with main (after #17-#24): e2e `media.spec.ts` now checks
   the card's host (`card-host`) instead of the removed "Open on" link, and in the reader view
   "Open original" (href, new tab, noopener) plus the episode's `<audio>` and the PeerTube

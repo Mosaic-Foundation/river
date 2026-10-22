@@ -60,6 +60,8 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   to the channel, is the channel publishing it: the Video is fetched during the refresh, at most
   20 per refresh (a budget of its own), and stored as a `video` item. Other boosts are unchanged.
   Proposed spec change: add that sentence to 4.3 "Map".
+- Resolved 2026-10-22: 4.3 now fetches every boosted object at refresh (boost content), and the
+  channel's own videos share the boosts' 20 per refresh instead of having a budget of their own.
 
 ### 2026-10-21 — PeerTube's outbox order is assumed newest first (M12)
 - Question: 4.3 reads the outbox's `first` page and stops at the first known item, which needs
@@ -283,6 +285,24 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-22 — Boost cards carry the boosted post, fetched at refresh (spec 4.3)
+- Decision: `fetchNew` fills each bare boost after the last page: the object, then its author
+  (actor document; on 401/403 the Mastodon account lookup, accepted only when its `uri` is the
+  actor). One budget of 20 requests per refresh covers both, and PeerTube's own videos; authors
+  are read once per refresh. Four boosts are filled at a time (the guard still allows 2 per host).
+  Pages are stored as they arrive and the filled boosts are written by one more `onPage` call,
+  so a slow boosted post never delays the feed. The boost keeps its Announce id, time and booster
+  in `author`; the original author goes in `boost_of.author`, the object in `raw.object`. A
+  boosted public reply is shown (the booster shared it); a non-public object, one served from
+  another host, or an author on another host than the post is not used.
+- Why: Adam asked for boosts to show the original post (2026-10-22); 4.3's "20 dereferences per
+  refresh" is the cap. ADR-001 already covers boosted objects' and actors' hosts. The lookup
+  matters because mastodon.social answers unsigned actor reads with 401 but serves posts.
+- Alternatives: fetch when opened (the old wording: every card in the feed stayed empty);
+  objects first, authors with what's left (most cards would get text but no name or avatar);
+  sequential fetching (up to 20 × 6 s inside a 60 s function).
+- Thread / PR: claude/boost-cards-original-content-04hthy
 
 ## 2026-10-21 — The reader plays https audio and video (supersedes "plays on {host}")
 - Decision: the reader view renders `<video>` and `<audio>` with `controls` and

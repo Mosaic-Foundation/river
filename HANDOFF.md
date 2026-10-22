@@ -20,6 +20,39 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Boost cards: the boosted post, its author and avatar, fetched at refresh — 2026-10-22
+
+- Branch / PR: claude/boost-cards-original-content-04hthy → PR (self-merge; not needs-adam)
+- Migrations: none (`boost_of` is jsonb; `author` inside it is new data, not a new column).
+
+**What it does.** Boosts no longer show the empty "The boosted post opens where it lives" card.
+During a fediverse refresh, `fetchNew` fills each bare Announce through the fetch guard:
+the boosted object, then its author (actor document, or Mastodon's account lookup when the actor
+answers 401/403), at most 20 requests per source per refresh, a budget PeerTube's own videos now
+share (`src/river/adapters/fediverse/boostContent.ts`). The item keeps the Announce's id, time
+and booster; it takes the post's kind, text, media and URL, and `boost_of.author` holds the
+original author. Cards and the reader view show the original author's name and avatar under a
+small "{booster} boosted" line; the reader's title is "Post from {author}" (or the post's own
+title). A boost whose post can't be fetched keeps today's card. Spec 4.3 "Map" says so now.
+
+**Keys.** None.
+
+**Tests.** New unit `boostContent` (real recorded boosts: text, image with alt, a mastodon.social
+author through the lookup after a 401, a Mastodon self-boost, an unreachable host keeping the
+plain card, exactly 20 requests on the real w3c refresh; DERIVED: past the budget, not public,
+served from another host, a public reply, `<script>` sanitized, an author on another host, an
+actor naming someone else) and `ui/boost`; paging and PeerTube tests updated for the fill. New
+fixtures: 14 real responses from w3c.social and mastodon.social (`tests/fixtures/http/README.md`).
+e2e: `river.spec.ts` checks a filled boost card and its reader view. `npm run check`: 547 passed;
+API 145 passed; e2e 69 passed.
+
+### Follow-ups
+- A boost left plain (budget spent, or a host down at that moment) is never retried: the next
+  refresh stops at it as already known. A later pass could re-fill stored plain boosts with
+  leftover budget.
+- On a PeerTube channel, a share that turns out not to be the channel's own video is fetched twice
+  (once by the PeerTube path, once by the fill). Rare and within the budget; left as is.
+
 ## Identity host: configuration errors say what failed in the log — 2026-10-21
 
 - Branch / PR: claude/identity-error-message → PR (self-merge; not needs-adam)
