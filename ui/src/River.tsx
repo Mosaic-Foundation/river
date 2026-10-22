@@ -26,6 +26,7 @@ import { Header, TabBar, YouPanel } from "./components/Chrome";
 import { TAB_PLACEHOLDERS, type Tab } from "./lib/tabs";
 import { FeedCard } from "./components/FeedCard";
 import { ActiveFilters, FilterChips, FilterSidebar, SearchField, type FilterState } from "./components/Filters";
+import { CLEARED } from "./lib/filters";
 import { InfoDialog } from "./components/InfoDialog";
 import { NotFound } from "./components/NotFound";
 import { CirclesPanel } from "./components/CirclesPanel";
@@ -470,7 +471,7 @@ export function River() {
       {/* The columns stay the same while reading, so the filter column never moves (ui-revisions-2 item 1). */}
       <div className={["layout", panel.length > 0 ? "layout-panel" : "", readerState ? "layout-reading" : ""].filter(Boolean).join(" ")}>
         <div className="desktop-only filter-column">
-          <FilterSidebar {...filterProps} />
+          <FilterSidebar {...filterProps} onClearAll={() => setFilter(CLEARED)} />
         </div>
 
         <main className={tab === "feed" ? "feed" : "feed hidden-phone"} id="feed" tabIndex={-1}>

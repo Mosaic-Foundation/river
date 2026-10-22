@@ -134,7 +134,7 @@ test.describe("item 3: active filter chips", () => {
     await openFeed(page);
     const active = page.getByRole("group", { name: "Active filters" });
     await expect(active).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Clear all" })).toHaveCount(0);
+    await expect(page.getByTestId("active-filters").getByRole("button", { name: "Clear all" })).toHaveCount(0);
 
     await sidebar(page).getByRole("navigation", { name: "Circles" }).getByRole("button", { name: "Civic" }).click();
     await sidebar(page).getByRole("navigation", { name: "Content type" }).getByRole("button", { name: "Civic activity" }).click();
@@ -159,7 +159,7 @@ test.describe("item 3: active filter chips", () => {
     await expect(sidebar(page).getByRole("button", { name: "Civic Hubs" })).toHaveAttribute("aria-pressed", "false");
     await expect(active.getByTestId("active-filter")).toHaveText(["Circle: Civic", "Civic activity"]);
 
-    await page.getByRole("button", { name: "Clear all" }).click();
+    await page.getByTestId("active-filters").getByRole("button", { name: "Clear all" }).click();
     await expect(active).toHaveCount(0);
     await expect(page).not.toHaveURL(/circle=|type=/);
     await expect(sidebar(page).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");

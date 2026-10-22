@@ -55,6 +55,30 @@ address; `river`, `signin`, `themes` and `media` specs use Open ↗ where they o
 - The reader's audio and video players are no longer reached from cards (logged under "Spec
   questions"); Adam may want players on media cards.
 - The check still matches `RIVER_PUBLIC_ORIGIN`, not the asking instance's host (from #27).
+## UI revisions 3, item 5: "Clear all" at the top of the filter column — 2026-10-22
+
+- Branch / PR: claude/filter-clear-all → PR (self-merge; not needs-adam)
+- Migrations: none.
+
+**What it does.** The desktop filter column gets a "Clear all" button just below search. It shows
+only when search, a circle, a content type or a network is on, and one click resets those four
+(everything shows again); the mode stays, since it is the header's switch, not a filter (logged
+in `DECISIONS.md`). Focus then moves to the search field, because the button goes away. The
+"Clear all" above the feed (ui-revisions-1 item 3) stays and shares the reset
+(`ui/src/lib/filters.ts`: `CLEARED`, `hasActiveFilter`, and `FilterState`, which moved there so
+the server's typecheck can read it).
+
+**Keys.** None.
+
+**Tests.** Unit `ui/filters` (when it shows; what it resets; never the mode). New e2e
+`filterClear.spec.ts` (hidden with nothing on, below search and above Circles with four filters
+on, one click clears all four, focus to search; a lone search shows it, Enter works, the Civic
+mode and theme stay). `revisions.spec.ts` item 3 now scopes its "Clear all" to the chip row.
+`npm run check`: 42 files, 583 tests.
+
+### Follow-ups
+- None.
+
 ## UI revisions 3, item 4: the filter column scrolls on its own — 2026-10-22
 
 - Branch / PR: claude/filter-column-scroll → PR (self-merge; not needs-adam)

@@ -70,6 +70,9 @@ Newest first: date, slice, tests added, counts.
   them off); `revisions2.spec.ts` trimmed to the filter column, the wide reader (both at a
   sample's address) and the CSP; `revisions.spec.ts` item 1 is the reader at an address; Open ↗
   replaces opening items in `river`, `signin`, `themes` and `media` specs.
+- 2026-10-22, UI revisions 3 item 5 (Clear all in the filter column): unit `ui/filters`; new e2e
+  `filterClear.spec.ts` (2); `revisions.spec.ts` item 3 scopes "Clear all" to the chip row.
+  Unit 583, e2e 88.
 - 2026-10-22, UI revisions 3 item 4 (filter column scroll): new e2e `filterColumn.spec.ts` (a
   short window: the column scrolls on its own to its last control and keeps its place while the
   feed scrolls; a tall window: nothing to scroll). e2e 86.

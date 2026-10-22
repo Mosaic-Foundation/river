@@ -342,6 +342,15 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Alternatives: a batch endpoint for checks (fewer requests from the page, same outbound count);
   checking every loaded card, seen or not (more outbound requests for pages nobody scrolls to).
 - Thread / PR: UI revisions 3, items 1-2
+## 2026-10-22 — "Clear all" in the filter column keeps the mode (UI revisions 3, item 5)
+- Decision: it resets search, circle, content types and networks, and leaves the mode (Everything
+  or Civic) as it is. It shows only when one of those four is on.
+- Why: the item says it resets "search, circle, content types and networks to Everything"; read as
+  "everything shows again" for those four. The mode is the header's switch, not a filter, and
+  the chip row's "Clear all" (ui-revisions-1 item 3) never touched it either.
+- Alternatives: also switching to the Everything mode (would change the theme and plugins from a
+  filter button).
+- Thread / PR: UI revisions 3, item 5
 
 ## 2026-10-22 — The embedded view's details (UI revisions 2, item 2)
 - Decision: "fediverse posts" are fediverse items whose URL is a Mastodon status
