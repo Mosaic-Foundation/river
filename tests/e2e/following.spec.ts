@@ -372,12 +372,13 @@ test("check 15 on a phone: the Following tab's follow box previews @w3c@w3c.soci
   expect(hidden.length).toBeGreaterThan(0);
   expect(items.some((i) => hidden.includes(i.id))).toBe(false);
 
-  // The feed shows its boost cards.
+  // The feed shows its boost cards: the boosted post where it could be fetched, else the plain card.
   await tabs.getByRole("button", { name: "Feed" }).click();
   await page.getByRole("button", { name: "Search" }).click();
   await page.getByRole("searchbox", { name: "Search your River" }).fill("World Wide Web Consortium");
   await page.getByRole("searchbox", { name: "Search your River" }).press("Enter");
-  await expect(page.locator(".card-boost").first()).toContainText("boosted a post from");
+  await expect(page.getByTestId("boost-line").first()).toHaveText("World Wide Web Consortium boosted");
+  await expect(page.locator(".card-boost").filter({ hasText: "boosted a post from" }).first()).toBeVisible();
 
   // The Circles tab edits circles.
   await tabs.getByRole("button", { name: "Circles" }).click();

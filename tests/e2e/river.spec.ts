@@ -98,8 +98,10 @@ test.describe("feed cards", () => {
       await expect(card.locator(".card-kind")).toHaveText(/^(Post|Article|Podcast|Video|Photo|Event|Civic activity)$/);
       await expect(card.locator("time").first()).toHaveText(/ago|yesterday|just now|last|in /);
     }
-    const boost = page.getByText(/boosted a post from [a-z0-9.-]+\.[a-z]+$/).first();
+    // "{booster} boosted" above a fetched post, or the plain "boosted a post from {host}" card.
+    const boost = page.locator(".card-boost").first();
     await expect(boost).toBeVisible();
+    await expect(boost).toHaveText(/^.+ boosted( a post from [a-z0-9.-]+\.[a-z]+)?$/);
     // Avatars from outside hosts were blocked: the card falls back to initials.
     const fallback = cards(page).and(page.locator('[data-source="live"]')).first().locator(".source-icon-initials");
     await expect(fallback).toHaveText(/^[A-Z0-9]{1,2}$/);
@@ -159,6 +161,36 @@ test.describe("filters and empty state", () => {
     const { emptyMessage } = (await feed.json()) as { emptyMessage: string };
     await expect(page.getByRole("status")).toHaveText(emptyMessage);
     await expect(cards(page)).toHaveCount(0);
+  });
+
+  test("spec 4.3: a boost shows the boosted post under its original author, below '{booster} boosted'; so does the reader", async ({ page }) => {
+    // @w3c boosted this @w3cdevs post (recorded); the refresh fetched the post and its author.
+    await openFeed(page);
+    const search = page.getByRole("searchbox", { name: "Search your River" });
+    await search.fill("trigger CSS animations");
+    await search.press("Enter");
+    const card = cards(page).filter({ hasText: "Want to trigger CSS animations" }).first();
+    await expect(card.getByTestId("boost-line")).toHaveText("World Wide Web Consortium boosted");
+    await expect(card.locator(".card-boost + .card-header")).toHaveCount(1);
+    await expect(card.locator(".card-source")).toHaveText("W3C Developers");
+    // The avatar's host is blocked here, so the original author's initials stand in.
+    await expect(card.locator(".source-icon-initials")).toHaveText("WD");
+    await expect(card).toHaveAttribute("aria-label", "Post from W3C Developers");
+    await expect(card).not.toContainText("boosted a post from");
+    await expect(card).not.toContainText("The boosted post opens where it lives.");
+
+    await card.locator(".card-text").first().click({ position: { x: 2, y: 2 } });
+    const reader = page.getByTestId("reader");
+    await expect(reader.getByRole("heading", { level: 1 })).toHaveText("Post from W3C Developers");
+    await expect(reader.getByTestId("boost-line")).toHaveText("World Wide Web Consortium boosted");
+    await expect(reader.getByTestId("reader-source")).toHaveText("W3C Developers");
+    await expect(reader.getByTestId("reader-author")).toHaveText("By W3C Developers @w3cdevs@w3c.social");
+    await expect(reader.locator(".reader-content").first()).toContainText("Want to trigger CSS animations");
+    await expect(reader.getByRole("link", { name: /^Open original/ })).toHaveAttribute(
+      "href",
+      "https://w3c.social/@w3cdevs/117471856565477515",
+    );
+    await expectNoSeriousAxeIssues(page);
   });
 
   test("search narrows the feed to matching items", async ({ page }) => {
