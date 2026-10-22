@@ -4,9 +4,11 @@
 // the feed where it was; "Open original" opens the item where it lives, in a new tab. Nothing is
 // fetched from outside: the item comes from the loaded feed or GET /api/items/{id}. Audio and
 // video from https sources play here, straight from the source, and load only when played
-// (preload="none"; CSP media-src 'self' https:).
+// (preload="none"; CSP media-src 'self' https:). A boost whose post the refresh fetched reads as
+// that post: its original author's name, avatar and title, under "{booster} boosted" (spec 4.3).
 import { useEffect, useRef } from "react";
 import type { FeedItem } from "../lib/api";
+import { boostedPost, boosterName } from "../lib/boost";
 import {
   deadlineLabel,
   eventDate,
@@ -71,13 +73,16 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
 
   const { item } = state;
   const host = item.source === "live" ? linkHost(item.url) : undefined;
-  const author = item.author;
+  const boosted = boostedPost(item);
+  const sourceName = boosted ? boosted.name : item.space.name;
+  const sourceIcon = boosted ? (boosted.author?.iconUrl ?? null) : item.space.iconUrl;
+  const author = boosted ? boosted.author : item.author;
   const authorHost = linkHost(author?.url);
   const event = eventDate(item.event?.startTime);
   const deadline = deadlineLabel(item.civic?.deadline);
   const duration = formatDuration(item.media.find((m) => m.duration)?.duration, item.kind);
   const civicLabel = item.kind === "civic" || item.civic ? item.civic?.label : undefined;
-  const heading = item.title || `${kindLabel(item.kind)} from ${item.space.name}`;
+  const heading = item.title || `${kindLabel(item.kind)} from ${sourceName}`;
   const players = playableMedia(item.media);
   // Media the reader can't play here (not https) still says where it plays.
   const elsewhere = players.length === 0 && item.media.some((m) => m.type === "audio" || m.type === "video");
@@ -86,11 +91,18 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
     <article className="reader" aria-labelledby="reader-title" data-testid="reader" data-item-id={item.id}>
       <BackButton onBack={onBack} />
 
+      {boosted && (
+        <p className="card-boost" data-testid="boost-line">
+          <BoostIcon />
+          {boosted.booster} boosted
+        </p>
+      )}
+
       <header className="reader-header">
-        <SourceIcon name={item.space.name} iconUrl={item.space.iconUrl} />
+        <SourceIcon name={sourceName} iconUrl={sourceIcon} />
         <div className="card-byline">
           <span className="card-source" data-testid="reader-source">
-            {item.space.name}
+            {sourceName}
           </span>
           <span className="card-meta">
             <span className="card-kind">{kindLabel(item.kind)}</span>
@@ -132,10 +144,10 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
         </p>
       )}
 
-      {item.boostOf && (
+      {item.boostOf && !boosted && (
         <p className="card-boost">
           <BoostIcon />
-          {author?.name || item.space.name} boosted a post from {item.boostOf.host}
+          {boosterName(item)} boosted a post from {item.boostOf.host}
         </p>
       )}
 
