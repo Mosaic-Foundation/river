@@ -64,6 +64,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-22, UI revisions 3 item 4 (filter column scroll): new e2e `filterColumn.spec.ts` (a
+  short window: the column scrolls on its own to its last control and keeps its place while the
+  feed scrolls; a tall window: nothing to scroll). e2e 86.
 - 2026-10-22, UI revisions 3 item 3 (River bar): new e2e `revisions3.spec.ts` measures the
   embedded view's bar on desktop and phone (width, the mark's tile centered vertically and
   horizontally, the mark filling at least 75% of it, label and link inside). e2e 84.

@@ -20,6 +20,28 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 3, item 4: the filter column scrolls on its own — 2026-10-22
+
+- Branch / PR: claude/filter-column-scroll → PR (self-merge; not needs-adam)
+- Migrations: none.
+
+**What it does.** On a desktop the left filter column (`.filter-column`, the sticky wrapper around
+the sidebar) is capped at the window's height below the header and scrolls by itself
+(`overflow-y: auto`, `overscroll-behavior: contain`, so scrolling it never scrolls the feed). It
+stays where it is while the feed scrolls, as before. A small inline padding, taken back by a
+negative margin, keeps the sidebar's shadow from being clipped. Phones are unchanged (the column
+isn't shown there).
+
+**Keys.** None.
+
+**Tests.** New e2e `filterColumn.spec.ts`: in a 480 px window the column is scrollable, fits the
+window once stuck, keeps its place while the feed scrolls, scrolls by itself (the window doesn't)
+to its last control, which then works; in a 1400 px window it has nothing to scroll.
+`npm run check`: 41 files, 580 tests. e2e `filterColumn`, `revisions`, `revisions2`: 33 passed.
+
+### Follow-ups
+- None.
+
 ## UI revisions 3, item 3: a narrower River bar, the mark centered — 2026-10-22
 
 - Branch / PR: claude/river-bar-narrow → PR (self-merge; not needs-adam)
