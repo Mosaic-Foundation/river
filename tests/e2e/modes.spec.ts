@@ -12,7 +12,7 @@ import { addAuthenticator, resetLimits, setClock, testEmail, throughCallback, wi
 
 const SEED_INSTANCE = "00000000-0000-4000-8000-000000000001";
 const LONGMONT_DEADLINE = "2026-11-08T05:00:47.238Z";
-const CIVIC_PRIMARY = "#386759"; // civic.css --civic-green
+const CIVIC_PRIMARY = "#2a4e84"; // civic.css --civic-primary-600 (Civic Hub navy)
 const MOSAIC_PRIMARY = "#14335f"; // mosaic.css --mosaic-navy
 
 function cards(page: Page): Locator {
