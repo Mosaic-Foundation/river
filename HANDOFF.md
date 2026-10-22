@@ -20,6 +20,44 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 2: items open where they live, in an embedded view; the reader is wide — 2026-10-22
+
+- Branch / PR: claude/inspiring-johnson-bzl1yf → PR (needs-adam: `vercel.json` CSP, ADR-008, a
+  new outbound request)
+- Migrations: none.
+
+**What it does.** Adam's UI revisions 2 are written down in `docs/spec/ui-revisions-2.md`.
+Clicking a card now replaces the River with an embedded view (after citizen-dashboard's
+ExternalView): a narrow bar with the Mosaic mark and "River" (back to the feed at the same scroll
+position and filters) and the source in a sandboxed iframe, at `/item/{id}` so Back and Forward
+work. Mastodon posts frame `{status url}/embed` at once. Any other live page is checked first by
+`GET /api/items/{id}/frame`, which reads the stored item's page once through the fetch guard and
+frames it only if its `X-Frame-Options` and CSP `frame-ancestors` allow the River
+(`src/river/frame/`); otherwise, and for samples, the item opens in the reader, which now spans
+the feed's and Coming up's columns and says "Open in new tab". The grid no longer changes while
+reading and the page keeps a scrollbar gutter, so the filter column never moves. The CSP gains
+`frame-src https:`.
+
+**Merge rule.** `needs-adam`: `vercel.json` changes, ADR-008 is new (Proposed), and the check is a
+new outbound request (constraint 3). Not merged.
+
+**Keys.** None (the check matches against `RIVER_PUBLIC_ORIGIN`). `npm run record-fixtures --
+--frames` records the check's pages.
+
+**Tests.** Unit `frameCheck` and `ui/embed`, `ui/csp`; API frame endpoint; e2e
+`revisions2.spec.ts` (11) and updates to the specs that opened Mastodon cards. `npm run check`:
+41 files, 580 tests, UI build OK. API 148/148 after a fresh `db reset`. e2e 82/82 on the dev
+server; `revisions2` and `river` specs also pass against `vite preview` (as CI runs them).
+
+### Follow-ups
+- Which fediverse posts are Mastodon's is read from the URL shape; a non-Mastodon server with
+  the same shape would show its own `/embed` answer. Checking the host's NodeInfo would settle it
+  (ADR-008 Consequences).
+- The reader's players for Mastodon videos are no longer reachable from a card (those open in the
+  embed); PeerTube and podcast items still play in the reader.
+- Where the fallback reader sits is logged under "Spec questions" in `DECISIONS.md` (River layout,
+  not beside the bar); Adam may prefer the other reading.
+
 ## Boost cards: the boosted post, its author and avatar, fetched at refresh — 2026-10-22
 
 - Branch / PR: claude/boost-cards-original-content-04hthy → #26 (self-merge at Adam's direct

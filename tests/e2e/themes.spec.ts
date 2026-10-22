@@ -186,7 +186,7 @@ test("Civic mode wears the Civic Hub theme on every surface, at AA contrast", as
   expect(await style(reader, "border-top-left-radius")).toBe("18px");
   expect(await style(reader, "border-left-color")).toBe(PROCESS_RGB[process]);
   expect(await style(reader.locator(".chip-process"), "color")).toBe(PROCESS_RGB[process]);
-  const open = reader.getByRole("link", { name: /Open original/ });
+  const open = reader.getByRole("link", { name: /Open in new tab/ });
   await expect(open).toBeVisible();
   expect(await style(open, "border-top-left-radius")).toBe("10px");
   expect(await style(open, "background-color")).toBe(CIVIC.primary);

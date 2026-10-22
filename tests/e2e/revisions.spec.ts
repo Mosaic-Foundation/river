@@ -211,8 +211,9 @@ test.describe("item 4: networks, and collapsible sections", () => {
 
 test.describe("item 1: the reader view", () => {
   test("a click on a card opens /item/{id} with the content, author and source beside the sidebar", async ({ page }) => {
+    // A sample has no live page, so it opens in the reader (live items: revisions2.spec.ts).
     await openFeed(page);
-    const card = cards(page).and(page.locator('[data-source="live"][data-adapter="fediverse"]')).first();
+    const card = cards(page).and(page.locator('[data-source="sample"]')).first();
     const id = (await card.getAttribute("data-item-id"))!;
     const source = (await card.locator(".card-source").textContent())!;
     await card.locator(".card-text").first().click({ position: { x: 2, y: 2 } });
@@ -239,9 +240,9 @@ test.describe("item 1: the reader view", () => {
 
   test("Back to River and the browser's Back return to the same scroll position", async ({ page }) => {
     await openFeed(page);
-    const card = cards(page).nth(8);
-    await card.scrollIntoViewIfNeeded();
-    await page.evaluate(() => window.scrollBy({ top: 300, behavior: "instant" }));
+    const card = cards(page).and(page.locator('[data-source="sample"]')).last();
+    // Centered, so the click below doesn't have to scroll to reach it.
+    await card.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "instant" }));
     // Wait until the position settles (late images can still move it), then remember it.
     let y = -1;
     await expect
@@ -451,6 +452,10 @@ test.describe("item 7: related hub cards are grouped", () => {
 });
 
 test.describe("reader view: audio and video from https sources (Adam, 2026-10-21)", () => {
+  // Every recorded fediverse video is a Mastodon post, which now opens in its embed
+  // (ui-revisions-2 item 2), so the reader's players are proven here by forcing the reader: the
+  // stored item comes back without its live URL. media.spec.ts plays PeerTube and podcast media
+  // in the reader the way they really open.
   test("a live video plays in the reader from its https source, loading nothing until played", async ({ page }) => {
     const media: string[] = [];
     page.on("request", (req) => {
@@ -468,6 +473,11 @@ test.describe("reader view: audio and video from https sources (Adam, 2026-10-21
     }
     expect(item, "the recordings hold a fediverse post with a video").toBeTruthy();
     const video = item!.media.find((m) => m.type === "video")!;
+    await page.route(`**/api/items/${item!.id}`, async (route) => {
+      const res = await route.fetch();
+      const body = (await res.json()) as { item: Record<string, unknown> };
+      await route.fulfill({ response: res, json: { item: { ...body.item, url: null } } });
+    });
 
     await page.setViewportSize(DESKTOP);
     await page.goto(`/item/${item!.id}`);

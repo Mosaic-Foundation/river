@@ -230,6 +230,39 @@ describe("one item for the reader view (ui-revisions-1 item 1)", () => {
   });
 });
 
+describe("whether an opened item can be framed (ui-revisions-2 item 2, ADR-008)", () => {
+  /** The visitor's item with this URL. */
+  function itemWithUrl(url: string): string {
+    const found = everything.find((i) => i.url === url);
+    if (!found) throw new Error(`No item in the visitor's River for ${url}`);
+    return found.id;
+  }
+
+  async function frame(id: string): Promise<{ status: number; body: { frame?: { url: string } | null; error?: string } }> {
+    const res = await fetch(`${API}/items/${id}/frame`);
+    if (res.status === 200) expect(res.headers.get("cache-control")).toBe("no-store");
+    return { status: res.status, body: (await res.json()) as { frame?: { url: string } | null } };
+  }
+
+  it("frames a page whose recorded headers allow it, and not one that sends DENY", async () => {
+    const article = "https://socialwebfoundation.org/2026/10/13/fosdem-2027-dev-room-application-is-in/";
+    expect(await frame(itemWithUrl(article))).toEqual({ status: 200, body: { frame: { url: article } } });
+    const hub = "https://longmont.civic.social/meeting-summary/proc_4ebb11759c4c40ce";
+    expect(await frame(itemWithUrl(hub))).toEqual({ status: 200, body: { frame: null } });
+  });
+
+  it("a sample never frames; a page that isn't recorded doesn't either", async () => {
+    expect(await frame(everything.find((i) => i.source === "sample")!.id)).toEqual({ status: 200, body: { frame: null } });
+    const elsewhere = itemWithUrl("https://mas.to/users/sphcow/statuses/117451397579521952");
+    expect(await frame(elsewhere)).toEqual({ status: 200, body: { frame: null } });
+  });
+
+  it("404 for an item outside the reader's River, 400 for a malformed id", async () => {
+    expect((await frame("00000000-0000-4000-8000-00000000abcd")).status).toBe(404);
+    expect((await frame("nope")).status).toBe(400);
+  });
+});
+
 describe("search (check 6)", () => {
   it("a word from a fixture title returns that item and nothing unrelated", async () => {
     const title = "How should Floyd County handle its growing bear population?";

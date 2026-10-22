@@ -6,12 +6,14 @@
 // RIVER_PUBLIC_ORIGIN (Appendix B). Visitors make none: their read state stays in the browser
 // (check 23); members' read state is written here.
 import { Router, type NextFunction, type Request, type Response } from "express";
+import { env } from "../config/env.js";
 import { forAccount } from "../db/context.js";
 import type { Viewer } from "./accounts.js";
 import { authRoutes } from "./auth/routes.js";
 import { checkOrigin, readSession, requireMember } from "./auth/session.js";
 import { memberExport } from "./export/index.js";
 import { FeedInputError, memberFeed, memberMarkAllRead, readerItem, visitorFeed, type FeedParams } from "./feed/index.js";
+import { checkFraming } from "./frame/check.js";
 import { followingRoutes } from "./following/routes.js";
 import { requireInstance, type Instance } from "./instances.js";
 
@@ -96,6 +98,26 @@ export function riverRoutes(): Router {
         return;
       }
       res.set("Cache-Control", "no-store").json({ item });
+    } catch (err) {
+      feedError(err, res, next);
+    }
+  });
+
+  // Whether an opened item's page can be shown in the embedded view (ui-revisions-2 item 2,
+  // ADR-008): one guarded request for the stored item's own URL, read for its framing headers.
+  // { frame: { url } } frames that URL; { frame: null } opens the reader view. Only items the
+  // reader can see are checked, so this can't be pointed at any other address.
+  router.get("/items/:id/frame", requireInstance(), readSession(), async (req, res, next) => {
+    try {
+      const item = await readerItem(res.locals.instance as Instance, res.locals.viewer as Viewer | undefined, String(req.params.id));
+      if (!item) {
+        res.status(404).set("Cache-Control", "no-store").json({ error: "not_found", message: "This item isn't in your River." });
+        return;
+      }
+      const answer = item.source === "live" && item.url?.startsWith("https://")
+        ? await checkFraming(item.url, env.riverPublicOrigin)
+        : undefined;
+      res.set("Cache-Control", "no-store").json({ frame: answer?.frame ? { url: answer.url } : null });
     } catch (err) {
       feedError(err, res, next);
     }

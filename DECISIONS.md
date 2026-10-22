@@ -16,6 +16,27 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-22 — Where the reader view goes when a page refuses framing (UI revisions 2)
+- Question: item (b) says a page that refuses framing shows the reader view "in that space" (the
+  window beside the embedded view's bar), while (a) and (c) put the reader in the River's layout:
+  the left filter column stays put and the reader takes the middle and right columns.
+- Reading used: the reader always opens in the River's layout (filter column unchanged, reader
+  across the feed's and Coming up's columns), as (a) and (c) describe; only a framed page gets the
+  bar-and-frame layout. While the server checks a page, the reader's space says "Opening {host}…",
+  so a refusal never flashes the embedded view first. `ui-revisions-2.md` is written this way.
+- Proposed change: none if Adam agrees; otherwise the fallback reader moves beside the bar.
+- Thread / PR: UI revisions 2
+
+### 2026-10-22 — ui-revisions-1's reader checks for live items (UI revisions 2)
+- Question: ui-revisions-1 item 1's checks (a card opens the reader, "Open original") assumed every
+  item opens in the reader; most live items now open in the embedded view.
+- Reading used: ui-revisions-2 wins. Those checks now run on samples and on pages that refuse
+  framing; "Open original" is "Open in new tab" (in the reader and in the embedded view's bar). The
+  reader's players are still checked with a recorded Mastodon video, by serving that stored item
+  without its URL so it opens in the reader.
+- Proposed change: ui-revisions-1 item 1 says "items that aren't framed (ui-revisions-2)".
+- Thread / PR: UI revisions 2
+
 ### 2026-10-21 — Appendix B's CSP and the reader's audio and video
 - Question: Appendix B's policy has no `media-src`, so `default-src 'self'` kept audio and video
   from other hosts out of the reader view.
@@ -285,6 +306,34 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-22 — The embedded view's details (UI revisions 2, item 2)
+- Decision: "fediverse posts" are fediverse items whose URL is a Mastodon status
+  (`/@name/{digits}` or `/users/{name}/statuses/{digits}`, the form plain boosts carry); they frame
+  `{url}/embed` without a check. Other fediverse software (WordPress, GoToSocial, PeerTube) is
+  checked like any page. The check is `GET /api/items/{id}/frame` (an item id, never a URL), cached
+  per process for 10 minutes and in the page for the visit. The bar is a `<nav>` holding one
+  full-height button ("Back to the River", visibly the Mosaic mark and "River") and, below it, a
+  small "Open in new tab" link, so a framed Mastodon embed can still be opened on its server. The
+  bar uses `--color-primary`; the mark sits on a `--color-surface` tile so its colors stay. Focus
+  moves to the bar's button when the view opens. The River stays mounted underneath (hidden), so
+  Back finds the feed, loaded pages and scroll position as they were.
+- Why: the spec names the Mastodon embed and the check but not which posts are Mastodon's or where
+  "Open in new tab" lives in the embedded view; these are the narrowest readings that keep the
+  item reachable and the River untouched.
+- Alternatives: asking each fediverse host's NodeInfo whether it runs Mastodon (one more request
+  per host; left for later, ADR-008 Consequences); no new-tab link in the bar (a Mastodon embed
+  shows one post, without its replies).
+- Thread / PR: UI revisions 2
+
+## 2026-10-22 — The page keeps a scrollbar gutter (UI revisions 2, item 1)
+- Decision: `html { scrollbar-gutter: stable }`, so opening a short item (which needs no
+  scrollbar) doesn't widen the page and shift the centered columns; the embedded view turns it
+  off while open so the frame reaches the window's edge. The reading layout keeps the grid's
+  columns and only spans the reader across the last two.
+- Why: item 1 says the filter column never moves or changes width when an item opens.
+- Alternatives: `overflow-y: scroll` (shows an empty scrollbar track on every page).
+- Thread / PR: UI revisions 2
 
 ## 2026-10-22 — Boost cards carry the boosted post, fetched at refresh (spec 4.3)
 - Decision: `fetchNew` fills each bare boost after the last page: the object, then its author

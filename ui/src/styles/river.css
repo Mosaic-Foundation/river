@@ -100,6 +100,16 @@
 
 /* ---------- Page frame ---------- */
 
+/* A page short enough to need no scrollbar keeps the same width, so nothing shifts when an item
+   opens (ui-revisions-2 item 1). */
+html {
+  scrollbar-gutter: stable;
+}
+
+html[data-view="external"] {
+  scrollbar-gutter: auto;
+}
+
 .page {
   min-height: 100vh;
   background: var(--color-page, var(--color-surface-alt));
@@ -1192,4 +1202,113 @@ a.button {
 .reader-video {
   height: auto;
   background: var(--color-surface-alt);
+}
+
+/* ---------- Embedded view (ui-revisions-2 item 2) ---------- */
+
+.external {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  background: var(--color-surface);
+}
+
+.external-bar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: var(--layout-external-bar);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.external-back {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-lg) 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.external-back:hover,
+.external-open:hover {
+  background: var(--color-primary-hover);
+}
+
+.external-back:focus-visible,
+.external-open:focus-visible {
+  outline-color: var(--color-on-primary);
+  outline-offset: calc(var(--space-xs) * -1);
+}
+
+.external-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-external-mark);
+  height: var(--size-external-mark);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.external-mark img {
+  width: var(--size-icon);
+  height: auto;
+}
+
+.external-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.external-open {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-md) 0;
+  color: inherit;
+}
+
+.external-frame {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.external-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--color-surface);
+}
+
+.external-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+@media (max-width: 55.99rem) {
+  .external-bar {
+    width: var(--layout-external-bar-phone);
+  }
+
+  .external-mark {
+    width: var(--size-control);
+    height: var(--size-control);
+  }
 }
