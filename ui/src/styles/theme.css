@@ -36,9 +36,10 @@
   --layout-circles: 20rem;
   --layout-row-text: 12rem;
   --layout-stream-title: 10rem;
-  --layout-external-bar: 4.5rem;
-  --layout-external-bar-phone: 3.25rem;
-  --size-external-mark: 2.75rem;
+  --layout-external-bar: 3.25rem;
+  --layout-external-bar-phone: 2.75rem;
+  --size-external-mark: 2.5rem;
+  --size-external-mark-phone: 2.25rem;
   --font-weight-bold: 700;
   --font-weight-semibold: 600;
 }
