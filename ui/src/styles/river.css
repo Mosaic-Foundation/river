@@ -1070,6 +1070,18 @@ a.button {
     position: static;
   }
 
+  /* The filter column stays in place while the feed scrolls; when it is taller than the window it
+     scrolls on its own (ui-revisions-3 item 4). The inline padding, taken back by the margin,
+     keeps the sidebar's shadow from being clipped. */
+  .filter-column {
+    max-height: calc(100vh - var(--size-control) - var(--space-lg) * 2.5);
+    max-height: calc(100dvh - var(--size-control) - var(--space-lg) * 2.5);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin-inline: calc(var(--space-sm) * -1);
+    padding: 0 var(--space-sm) var(--space-sm);
+  }
+
   .card {
     padding: var(--space-lg) var(--space-lg) var(--space-xs);
   }

@@ -481,7 +481,7 @@ export function River() {
 
       {/* The columns stay the same while reading, so the filter column never moves (ui-revisions-2 item 1). */}
       <div className={["layout", panel.length > 0 ? "layout-panel" : "", readerState ? "layout-reading" : ""].filter(Boolean).join(" ")}>
-        <div className="desktop-only">
+        <div className="desktop-only filter-column">
           <FilterSidebar {...filterProps} />
         </div>
 
