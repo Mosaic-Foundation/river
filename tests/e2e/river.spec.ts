@@ -193,6 +193,24 @@ test.describe("filters and empty state", () => {
       "href",
       "https://w3c.social/@w3cdevs/117471856565477515",
     );
+
+    // Where the reader is used (a boost whose page can't be framed), it reads the same way. The
+    // stored item is served without its URL here, so it opens in the reader (a search that matches
+    // nothing keeps it out of the loaded feed, so it comes from GET /api/items/{id}).
+    const id = (await card.getAttribute("data-item-id"))!;
+    await page.route(`**/api/items/${id}`, async (route) => {
+      const res = await route.fetch();
+      const body = (await res.json()) as { item: Record<string, unknown> };
+      await route.fulfill({ response: res, json: { item: { ...body.item, url: null } } });
+    });
+    await page.goto(`/item/${id}?q=no-such-words-anywhere`);
+    const reader = page.getByTestId("reader");
+    await expect(reader.getByRole("heading", { level: 1 })).toHaveText("Post from W3C Developers", { timeout: 30_000 });
+    await expect(reader.getByTestId("boost-line")).toHaveText("World Wide Web Consortium boosted");
+    await expect(reader.getByTestId("reader-source")).toHaveText("W3C Developers");
+    await expect(reader.getByTestId("reader-author")).toHaveText("By W3C Developers @w3cdevs@w3c.social");
+    await expect(reader.locator(".reader-content").first()).toContainText("Want to trigger CSS animations");
+    await expectNoSeriousAxeIssues(page);
   });
 
   test("search narrows the feed to matching items", async ({ page }) => {

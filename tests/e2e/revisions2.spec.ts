@@ -153,7 +153,10 @@ test.describe("item 2: the embedded view", () => {
   test("the bar and the browser's Back return to the River at the same scroll position and filters; Forward reopens", async ({ page }) => {
     await standInFrames(page);
     await openFeed(page, "/?network=fediverse");
-    const card = cards(page).nth(8);
+    // A Mastodon post well down the first page.
+    const firstPage = (await (await page.request.get("/api/feed?network=fediverse")).json()) as { items: ApiItem[] };
+    const post = firstPage.items.filter(isMastodonPost)[8]!;
+    const card = page.locator(`[data-testid="feed-card"][data-item-id="${post.id}"]`);
     // Centered, so the click below doesn't have to scroll to reach it.
     await card.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "instant" }));
     const y = await settledScroll(page);

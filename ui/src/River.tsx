@@ -175,6 +175,8 @@ export function River() {
   const [fetchedItem, setFetchedItem] = useState<{ id: string; state: ReaderState } | null>(null);
   // The framing check's answers this visit (ui-revisions-2 item 2): the URL to frame, or null.
   const [frameAnswers, setFrameAnswers] = useState<Record<string, string | null>>({});
+  // Items whose check failed (not refused): they read in the reader now and are asked again when reopened.
+  const frameFailed = useRef(new Set<string>());
   const feedScroll = useRef<{ y: number; id: string } | null>(null);
   const browserReads = useBrowserReadState();
   const serverReads = useServerReadState(load.status === "ok" ? load.items : []);
@@ -231,7 +233,10 @@ export function River() {
     if (!checkId) return;
     const controller = new AbortController();
     loadFrame(checkId, controller.signal)
-      .then((result) => setFrameAnswers((current) => ({ ...current, [checkId]: result.status === "ok" ? result.url : null })))
+      .then((result) => {
+        if (result.status !== "ok") frameFailed.current.add(checkId);
+        setFrameAnswers((current) => ({ ...current, [checkId]: result.status === "ok" ? result.url : null }));
+      })
       .catch(() => {
         // Aborted: the reader went back or opened another item.
       });
@@ -259,6 +264,13 @@ export function River() {
   }, [readerId]);
 
   const openItem = (id: string) => {
+    if (frameFailed.current.delete(id)) {
+      setFrameAnswers((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+    }
     feedScroll.current = { y: window.scrollY, id };
     markedId.current = null;
     setTab("feed");
