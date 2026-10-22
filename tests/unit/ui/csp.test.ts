@@ -26,6 +26,10 @@ describe("River CSP", () => {
     expect(policy.get("img-src")).toBe("'self' https:");
     // The reader view's audio and video, straight from the source (Adam, 2026-10-21).
     expect(policy.get("media-src")).toBe("'self' https:");
+    // The embedded view frames the opened item's https source (ui-revisions-2 item 2); the River
+    // itself may still be framed only by itself.
+    expect(policy.get("frame-src")).toBe("https:");
+    expect(policy.get("frame-ancestors")).toBe("'self'");
     expect(policy.get("connect-src")).toBe("'self'");
     expect(policy.get("default-src")).toBe("'self'");
     expect(policy.get("object-src")).toBe("'none'");
