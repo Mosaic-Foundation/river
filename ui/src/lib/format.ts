@@ -1,5 +1,5 @@
 // Pure helpers for cards (spec F1, 4.8). No React, no DOM: tests/unit/ui/ covers them.
-import type { ItemKind, MediaRef } from "./api";
+import type { CivicDetails, ItemKind, MediaRef } from "./api";
 
 /**
  * Content-type filters (spec F5), in order; `value` is what /api/feed's `type` accepts, several
@@ -179,6 +179,46 @@ export function deadlineLabel(iso: string | undefined, locale = "en"): string | 
   const at = new Date(iso);
   if (Number.isNaN(at.getTime())) return undefined;
   return `Open until ${at.toLocaleDateString(locale, { month: "short", day: "numeric" })}`;
+}
+
+/** The Civic Hub's process-type color keys (its ActivityColor) that civic.css has a color for. */
+export type ProcessKey =
+  | "vote"
+  | "proposal"
+  | "conversation"
+  | "project"
+  | "announcement"
+  | "meeting"
+  | "brief"
+  | "wordcloud";
+
+const PROCESS_KEYS: Readonly<Record<string, ProcessKey>> = {
+  "civic.vote": "vote",
+  "civic.proposal": "proposal",
+  "civic.polis_deliberation": "conversation",
+  "civic.project": "project",
+  "civic.announcement": "announcement",
+  "civic.meeting_summary": "meeting",
+  "civic.brief": "brief",
+  "civic.wordcloud": "wordcloud",
+};
+
+/** Objects that name their process when the activity carries no civic:processType. */
+const OBJECT_PROCESS_KEYS: Readonly<Record<string, ProcessKey>> = {
+  "civic:Proposal": "proposal",
+  "hub:Project": "project",
+};
+
+/**
+ * A civic item's process-type color key, for its card's left edge and pill (civic.css), from
+ * civic:processType and then the object type; undefined for anything else.
+ */
+export function processKey(civic: CivicDetails | null | undefined): ProcessKey | undefined {
+  if (!civic) return undefined;
+  return (
+    (civic.processType ? PROCESS_KEYS[civic.processType] : undefined) ??
+    (civic.objectType ? OBJECT_PROCESS_KEYS[civic.objectType] : undefined)
+  );
 }
 
 /** A circle's color from the API, only when it is a plain hex color (it ends up in a CSS value). */

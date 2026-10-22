@@ -310,6 +310,34 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   sequential fetching (up to 20 × 6 s inside a 60 s function).
 - Thread / PR: claude/boost-cards-original-content-04hthy
 
+## 2026-10-21 — Civic mode wears the Civic Hub's default theme (supersedes American Landscape)
+- Decision: `ui/src/styles/themes/civic.css` takes the Civic Hub's default theme, from
+  Civic-Social-Mono `civic-hub/ui/src/styles/design-system/tokens.css` and
+  `civic-hub/src/shared/theme.ts` (`DEFAULT_THEME_COLORS`), values as Adam copied them on
+  2026-10-21: navy primary (600 `#2a4e84` for buttons, links and selected pills), terracotta
+  accent, ink text (900 body, 950 headings, 500 muted, 200 borders), paper surfaces (page
+  `#f8f6f3`, cards white, alt `#f4f1ea`, pressed `#e8e2d4`), the hub's status colors, Libre Franklin
+  and Inter (static Fontsource weights 400-700 cover every weight used, so no variable font), radii
+  4 / 10 (inputs, buttons) / 14 (cards) / 18 (sidebar, reader, dialogs, Following panels) / pill,
+  and its three shadows and focus ring. `mosaic.css` is unchanged.
+- Process colors: civic cards and the reader get `data-process` from `civic:processType` (then the
+  object type for `civic:Proposal` and `hub:Project`) with the hub's keys: `civic.polis_deliberation`
+  is conversation and `civic.meeting_summary` is meeting. The card gets a 4px left edge in the
+  hue and its label pill is the hue on a 10% tint of it (`color-mix`), each at least 5:1. A brief
+  uses Adam's brief color, not its source process's color as the hub's feed does.
+- Status: the deadline chip is ink on the warning wash with the bright warning (`#f4c443`) edge,
+  because the hub's warning text `#946c18` on `#fdf4d6` is 4.3:1, under AA. Final result is
+  success on its wash; follow errors are danger on its wash.
+- Tokens only Civic has (`--color-page`, `--color-surface-pressed`, status, process, `--radius-control`,
+  `--radius-chip`, `--radius-xl`, `--shadow-raised`, `--shadow-overlay`, `--shadow-focus`,
+  `--border-process`) are read with a fallback to a Mosaic token, so Everything renders as before.
+  The focus ring sits inside the existing 3px outline, which stays for keyboard visibility.
+- Why: Adam's request (2026-10-21) so Civic mode looks like the hub it reads. Supersedes design
+  decisions-log row 19 and the "Civic muted text is #526366" entry below.
+- Alternatives: the hub's warning text as given (fails AA); ring-only focus (the 30% ring is
+  under 3:1 against white).
+- Thread / PR: claude/civic-mode-theme-redesign-c1vu1d
+
 ## 2026-10-21 — The reader plays https audio and video (supersedes "plays on {host}")
 - Decision: the reader view renders `<video>` and `<audio>` with `controls` and
   `preload="none"` for media whose URL is https (no userinfo), up to four, labelled by type and

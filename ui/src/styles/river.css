@@ -48,7 +48,7 @@
   min-height: var(--size-control);
   padding: 0 var(--space-md);
   border: var(--border-width) solid transparent;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-control, var(--radius-pill));
   font: inherit;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
@@ -102,7 +102,7 @@
 
 .page {
   min-height: 100vh;
-  background: var(--color-surface-alt);
+  background: var(--color-page, var(--color-surface-alt));
   overflow-x: clip;
 }
 
@@ -186,7 +186,7 @@ main.feed:focus {
   padding: var(--space-md);
   background: var(--color-surface);
   border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl, var(--radius-lg));
   box-shadow: var(--shadow-card);
 }
 
@@ -208,7 +208,7 @@ main.feed:focus {
   min-height: var(--size-control);
   padding: 0 var(--space-md) 0 calc(var(--space-md) * 2 + var(--size-icon) - var(--space-sm));
   border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-control, var(--radius-pill));
   background: var(--color-surface-alt);
   color: var(--color-text);
   font: inherit;
@@ -259,6 +259,10 @@ main.feed:focus {
 
 .filter-option:hover {
   background: var(--color-surface-alt);
+}
+
+.filter-option:active {
+  background: var(--color-surface-pressed, var(--color-surface-alt));
 }
 
 .filter-option[aria-pressed="true"] {
@@ -516,6 +520,57 @@ main.feed:focus {
 
 .card:hover {
   border-color: var(--color-primary);
+  box-shadow: var(--shadow-raised, var(--shadow-card));
+}
+
+/*
+ * Civic cards wear their process type's color (civic.css --color-process-*): a left edge, and
+ * the process pill in that hue on a light tint of it. The tokens exist only in the Civic theme;
+ * without them each var() falls back, so Everything mode's cards look as they always have.
+ */
+[data-process="vote"] {
+  --process-color: var(--color-process-vote);
+}
+
+[data-process="proposal"] {
+  --process-color: var(--color-process-proposal);
+}
+
+[data-process="conversation"] {
+  --process-color: var(--color-process-conversation);
+}
+
+[data-process="project"] {
+  --process-color: var(--color-process-project);
+}
+
+[data-process="announcement"] {
+  --process-color: var(--color-process-announcement);
+}
+
+[data-process="meeting"] {
+  --process-color: var(--color-process-meeting);
+}
+
+[data-process="brief"] {
+  --process-color: var(--color-process-brief);
+}
+
+[data-process="wordcloud"] {
+  --process-color: var(--color-process-wordcloud);
+}
+
+[data-process] {
+  --process-soft: color-mix(in srgb, var(--process-color) var(--process-tint), var(--color-surface));
+}
+
+.card[data-process],
+.reader[data-process] {
+  border-left: var(--border-process, var(--border-width)) solid var(--process-color, var(--color-border));
+}
+
+.card[data-process]:hover {
+  border-left-color: var(--process-color, var(--color-primary));
 }
 
 .card-title-link,
@@ -741,10 +796,28 @@ main.feed:focus {
 .chip-static {
   padding: var(--space-xs) var(--space-sm);
   border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-chip, var(--radius-sm));
   background: var(--color-surface-alt);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
+}
+
+.chip-process {
+  border-color: var(--process-soft, var(--color-border));
+  background: var(--process-soft, var(--color-surface-alt));
+  color: var(--process-color, inherit);
+}
+
+/* The deadline's warning hue is an edge only; its text stays ink for AA (civic.css). */
+.chip-deadline {
+  border-color: var(--color-warning, var(--color-border));
+  background: var(--color-warning-soft, var(--color-surface-alt));
+}
+
+.chip-final {
+  border-color: var(--color-success-soft, var(--color-border));
+  background: var(--color-success-soft, var(--color-surface-alt));
+  color: var(--color-success, inherit);
 }
 
 .card-footer {
@@ -785,10 +858,10 @@ main.feed:focus {
   max-width: min(var(--layout-dialog), calc(100vw - var(--space-xl)));
   padding: 0;
   border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl, var(--radius-lg));
   background: var(--color-surface);
   color: var(--color-text);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-overlay, var(--shadow-card));
 }
 
 .info-dialog::backdrop {
@@ -1017,7 +1090,7 @@ a.button {
   padding: var(--space-lg);
   background: var(--color-surface);
   border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl, var(--radius-lg));
   box-shadow: var(--shadow-card);
   overflow-wrap: anywhere;
 }

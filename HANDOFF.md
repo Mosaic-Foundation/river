@@ -67,6 +67,31 @@ reader view. Counts are in `TESTING.md`.
 - On a PeerTube channel, a share that turns out not to be the channel's own video is fetched twice
   (once by the PeerTube path, once by the fill). Rare and within the budget; left as is.
 
+## Civic mode retheme: the Civic Hub's default theme — 2026-10-21
+
+- Branch / PR: claude/civic-mode-theme-redesign-c1vu1d → PR (self-merge; not needs-adam)
+- Migrations: none.
+
+**What it does.** Civic mode now wears the Civic Hub's default theme (Adam, 2026-10-21; source
+and values in DECISIONS.md): navy buttons, links and selected pills, terracotta accent, ink text
+on warm paper, Libre Franklin and Inter, the hub's radii, shadows and focus ring, and its status
+colors. Civic cards and the reader carry `data-process` (`processKey()` in `ui/src/lib/format.ts`)
+and wear the hub's process-type color as a 4px left edge and as the label pill (hue on a 10%
+tint). Tokens only Civic has are read with a Mosaic fallback, so Everything mode is unchanged
+(`mosaic.css` untouched). Screenshots: `docs/design/screenshots/civic-*.png`.
+
+**Keys.** None. New Civic-only CSS tokens are listed in civic.css's header.
+
+**Tests.** Unit `ui/civicTheme` (hub values; AA for every text pair and process pill),
+`ui/format` (`processKey`); e2e `themes.spec.ts` (every Civic surface, axe AA, screenshots;
+Everything unchanged), `modes.spec.ts` (civic primary). `npm run check`: 37 files, 535 passed;
+e2e: 70 passed.
+
+### Follow-ups
+- The hub's warning text (`#946c18` on `#fdf4d6`, 4.3:1) fails AA, so the deadline chip uses ink
+  text with a warning edge. If the hub darkens its warning text, the River can match it.
+- The identity host's server-rendered pages keep their own look; retheme them separately if wanted.
+
 ## Identity host: configuration errors say what failed in the log — 2026-10-21
 
 - Branch / PR: claude/identity-error-message → PR (self-merge; not needs-adam)

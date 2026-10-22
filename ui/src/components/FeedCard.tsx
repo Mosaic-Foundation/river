@@ -16,6 +16,7 @@ import {
   fullDateTime,
   kindLabel,
   linkHost,
+  processKey,
   relativeTime,
 } from "../lib/format";
 import { CardMedia } from "./CardMedia";
@@ -63,6 +64,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
   const event = eventDate(item.event?.startTime);
   const deadline = deadlineLabel(item.civic?.deadline);
   const civicLabel = item.kind === "civic" || item.civic ? item.civic?.label : undefined;
+  const process = processKey(item.civic);
   const text = item.contentHtml ? undefined : item.summary;
   const href = itemPath(item.id, window.location.search);
   const open = openHandler(item.id, onOpen);
@@ -77,6 +79,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
       data-source={item.source}
       data-kind={item.kind}
       data-adapter={item.space.adapter}
+      data-process={process}
       data-group-size={1 + earlier.length}
       onClick={(e) => {
         // The card's own links and buttons keep their behavior; selecting text doesn't open it.
@@ -186,9 +189,9 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
 
       {(civicLabel || deadline || duration || item.isFinalResult) && (
         <ul className="card-chips" aria-label="Details">
-          {civicLabel && <li className="chip-static">{civicLabel}</li>}
-          {deadline && <li className="chip-static">{deadline}</li>}
-          {item.isFinalResult && <li className="chip-static">Final result</li>}
+          {civicLabel && <li className={process ? "chip-static chip-process" : "chip-static"}>{civicLabel}</li>}
+          {deadline && <li className="chip-static chip-deadline">{deadline}</li>}
+          {item.isFinalResult && <li className="chip-static chip-final">Final result</li>}
           {duration && (
             <li className="chip-static">
               <span className="visually-hidden">Length: </span>

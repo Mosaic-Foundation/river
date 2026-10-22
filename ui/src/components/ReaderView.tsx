@@ -17,6 +17,7 @@ import {
   kindLabel,
   linkHost,
   playableMedia,
+  processKey,
   safeMediaUrl,
 } from "../lib/format";
 import { CardMedia } from "./CardMedia";
@@ -82,13 +83,20 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
   const deadline = deadlineLabel(item.civic?.deadline);
   const duration = formatDuration(item.media.find((m) => m.duration)?.duration, item.kind);
   const civicLabel = item.kind === "civic" || item.civic ? item.civic?.label : undefined;
+  const process = processKey(item.civic);
   const heading = item.title || `${kindLabel(item.kind)} from ${sourceName}`;
   const players = playableMedia(item.media);
   // Media the reader can't play here (not https) still says where it plays.
   const elsewhere = players.length === 0 && item.media.some((m) => m.type === "audio" || m.type === "video");
 
   return (
-    <article className="reader" aria-labelledby="reader-title" data-testid="reader" data-item-id={item.id}>
+    <article
+      className="reader"
+      aria-labelledby="reader-title"
+      data-testid="reader"
+      data-item-id={item.id}
+      data-process={process}
+    >
       <BackButton onBack={onBack} />
 
       {boosted && (
@@ -206,9 +214,9 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
 
       {(civicLabel || deadline || duration || item.isFinalResult) && (
         <ul className="card-chips" aria-label="Details">
-          {civicLabel && <li className="chip-static">{civicLabel}</li>}
-          {deadline && <li className="chip-static">{deadline}</li>}
-          {item.isFinalResult && <li className="chip-static">Final result</li>}
+          {civicLabel && <li className={process ? "chip-static chip-process" : "chip-static"}>{civicLabel}</li>}
+          {deadline && <li className="chip-static chip-deadline">{deadline}</li>}
+          {item.isFinalResult && <li className="chip-static chip-final">Final result</li>}
           {duration && (
             <li className="chip-static">
               <span className="visually-hidden">Length: </span>

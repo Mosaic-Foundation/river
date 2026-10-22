@@ -71,9 +71,19 @@ Newest first: date, slice, tests added, counts.
   (only `fetched` boosts show the original author). `fediverseAdapter` paging tests now expect one more `onPage` with the filled
   boosts; `mediaAdapters` PeerTube tests read a non-own share as a filled boost. e2e
   `river.spec.ts` checks a filled boost card and the reader (title, byline, boost line, Open
-  original, axe); `following.spec.ts` sees both the filled and the plain boost line. Unit 553,
-  API 145 (fresh `db reset`), e2e 69. Locally the e2e ran on the preinstalled Chromium 1194 headless shell (mapped
+  original, axe); `following.spec.ts` sees both the filled and the plain boost line. Unit 558,
+  API 145 (fresh `db reset`), e2e 71 (with main through #25). Locally the e2e ran on the preinstalled Chromium 1194 headless shell (mapped
   through `PLAYWRIGHT_BROWSERS_PATH`), since the sandbox can't download Playwright's own.
+- 2026-10-21, Civic mode retheme (Civic Hub default theme): unit `ui/civicTheme` reads civic.css,
+  checks the hub's values and that every text pair (body, heading, muted, link, danger on page,
+  card and alt; filled buttons; chips and banners; each process pill on its 10% tint) is at least
+  4.5:1, and that every key `processKey` returns has a color; `ui/format` covers `processKey`.
+  e2e `themes.spec.ts`: Civic tokens and shadow updated; new "Civic mode wears the Civic Hub theme
+  on every surface" (page, header, mode switch, sidebar, pills, active chip, cards and their
+  process edge and pill, panel, focus ring, reader, phone; axe wcag2a/wcag2aa on the feed, the
+  reader and a phone) attaches three screenshots to the report (reference copies in
+  `docs/design/screenshots/`); "Everything mode keeps the Mosaic look" proves the fallbacks.
+  `modes.spec.ts` civic primary is now `#2a4e84`. Unit 535, e2e 70.
 
 - 2026-10-21, M12 brought up to date with main (after #17-#24): e2e `media.spec.ts` now checks
   the card's host (`card-host`) instead of the removed "Open on" link, and in the reader view
