@@ -292,10 +292,16 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   actor). One budget of 20 requests per refresh covers both, and PeerTube's own videos; authors
   are read once per refresh. Four boosts are filled at a time (the guard still allows 2 per host).
   Pages are stored as they arrive and the filled boosts are written by one more `onPage` call,
-  so a slow boosted post never delays the feed. The boost keeps its Announce id, time and booster
-  in `author`; the original author goes in `boost_of.author`, the object in `raw.object`. A
-  boosted public reply is shown (the booster shared it); a non-public object, one served from
-  another host, or an author on another host than the post is not used.
+  so a slow boosted post never delays the feed, and no boost starts more than 8 s into the fill,
+  so the refresh ends inside its 20 s claim. The boost keeps its Announce id, time and booster
+  in `author`; the original author goes in `boost_of.author`, the object in `raw.object`, and
+  `boost_of.fetched` is set. A fetched public reply is shown (the booster shared it); a
+  non-public object, one served from another host, or an author on another host than the post
+  is not used.
+- Only `boost_of.fetched` boosts show the original author. A post an Announce embeds (WordPress,
+  Group relays) is re-read from its own host, and a Mastodon REST reblog isn't, because their
+  text came from the booster's server: a real author's name and avatar over it would let that
+  server speak for them. Unfetched boosts keep the booster's card with whatever text they carry.
 - Why: Adam asked for boosts to show the original post (2026-10-22); 4.3's "20 dereferences per
   refresh" is the cap. ADR-001 already covers boosted objects' and actors' hosts. The lookup
   matters because mastodon.social answers unsigned actor reads with 401 but serves posts.
