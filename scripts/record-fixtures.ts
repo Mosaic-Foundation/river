@@ -8,8 +8,12 @@
 // M12: `npm run record-fixtures -- --media <feed URL, page URL or @channel@server>` (repeatable)
 // records only those sources, through the follow box's resolve and the adapter's fetch
 // (scripts/recorders/media.ts), and leaves the seed recordings alone.
+//
+// ui-revisions-2: `npm run record-fixtures -- --frames` records only the framing check's pages
+// (scripts/recorders/frames.ts).
 import { civicHubRecorders } from "./recorders/civicHub.js";
 import { fediverseRecorder } from "./recorders/fediverse.js";
+import { framesRecorder } from "./recorders/frames.js";
 import { mediaInputs, mediaRecorder } from "./recorders/media.js";
 
 interface Recorder {
@@ -21,8 +25,13 @@ interface Recorder {
 
 const OUT_DIR = "tests/fixtures/http";
 
-const media = mediaInputs(process.argv.slice(2));
-const recorders: Recorder[] = media.length > 0 ? [mediaRecorder(media)] : [...civicHubRecorders, fediverseRecorder];
+const args = process.argv.slice(2);
+const media = mediaInputs(args.filter((a) => a !== "--frames"));
+const recorders: Recorder[] = args.includes("--frames")
+  ? [framesRecorder]
+  : media.length > 0
+    ? [mediaRecorder(media)]
+    : [...civicHubRecorders, fediverseRecorder];
 
 async function main(): Promise<void> {
   if (recorders.length === 0) {
