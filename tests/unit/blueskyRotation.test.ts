@@ -58,13 +58,33 @@ describe("chooseForRefresh", () => {
     expect(chooseForRefresh(others, NOW).map((r) => r.id)).toEqual(["hub", "fedi"]);
   });
 
-  it("refreshes at most the cap of hundreds, most recent posters first", () => {
-    // 300 accounts fetched 10 minutes ago, each having posted i hours ago (all due except the
-    // ones that posted within a day, whose 2-minute interval has passed too).
-    const rows = Array.from({ length: 300 }, (_, i) => bsky(`b${i}`, (i + 1) * HOUR, 10 * MIN));
+  it("refreshes at most the cap of hundreds, the most overdue first, recent posters on a tie", () => {
+    // 300 accounts fetched 10 minutes ago that all posted within the day (2-minute interval):
+    // equally overdue, so the most recent posters go first.
+    const rows = Array.from({ length: 300 }, (_, i) => bsky(`b${i}`, (i + 1) * MIN, 10 * MIN));
     const chosen = chooseForRefresh(rows, NOW);
     expect(chosen).toHaveLength(BLUESKY_REFRESH_CAP);
     expect(chosen.map((r) => r.id)).toEqual(rows.slice(0, BLUESKY_REFRESH_CAP).map((r) => r.id));
+    // One that waited longer than its interval asks for comes before them.
+    const waited = bsky("waited", 3 * DAY, 2 * HOUR);
+    expect(chooseForRefresh([...rows, waited], NOW)[0]?.id).toBe("waited");
+  });
+
+  it("reaches every account of a large import over the following opens, busy ones more often", () => {
+    // 300 accounts fetched once, an hour ago; half posted within the day, half within the week.
+    let rows = Array.from({ length: 300 }, (_, i) => bsky(`b${i}`, i < 150 ? (i + 1) * MIN : 2 * DAY, HOUR));
+    const refreshed = new Map<string, number>();
+    // One open every 10 minutes for 10 hours, no new posts.
+    for (let open = 0; open < 60; open++) {
+      const at = NOW + open * 10 * MIN;
+      const chosen = new Set(chooseForRefresh(rows, at).map((r) => r.id));
+      for (const id of chosen) refreshed.set(id, (refreshed.get(id) ?? 0) + 1);
+      rows = rows.map((r) => (chosen.has(r.id) ? { ...r, last_fetched_at: new Date(at) } : r));
+    }
+    expect(refreshed.size).toBe(300);
+    const busy = rows.slice(0, 150).reduce((n, r) => n + (refreshed.get(r.id) ?? 0), 0);
+    const quieter = rows.slice(150).reduce((n, r) => n + (refreshed.get(r.id) ?? 0), 0);
+    expect(busy).toBeGreaterThan(quieter);
   });
 
   it("rotates: what was just refreshed waits, so the next open reaches the next ones", () => {

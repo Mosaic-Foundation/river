@@ -30,8 +30,9 @@ A member types a handle; `POST /api/follow/bluesky/preview` lists who it follows
 (`app.bsky.graph.getFollows`, 100 a page, at most 10 pages) with a count and the first 12 names.
 The member picks one circle (or none), and `POST /api/follow/bluesky/import` follows them all:
 spaces keyed by DID, in bulk, never twice. Accounts that hide from signed-out readers are left out
-and counted. Each feed open now refreshes at most 12 Bluesky spaces, a rotating subset with the
-most recent posters first (`src/river/feed/rotation.ts`; design in DECISIONS.md).
+and counted. Each feed open now refreshes at most 12 Bluesky spaces, a rotating subset: most
+overdue first (recent posters have shorter intervals), with shares for just-imported accounts
+and the longest-waiting ones (`src/river/feed/rotation.ts`; design in DECISIONS.md).
 
 **Keys.** None.
 
@@ -42,6 +43,8 @@ adds nothing, the feed's capped refresh, errors); e2e `bluesky.spec.ts` import t
 recordings: `@eff.org`'s profile, DID document and three pages of follows. Counts in TESTING.md.
 
 ### Follow-ups
+- The spec review found that ordering by recency alone starved all but the 12 busiest accounts;
+  fixed (overdue order plus a round-robin share), with a simulation test of 300 accounts.
 - Importing again later adds accounts followed since; unfollows on Bluesky aren't mirrored (an
   import only adds).
 

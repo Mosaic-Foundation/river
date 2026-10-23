@@ -355,12 +355,19 @@ Places where the spec looked contradictory or wrong, and the reading that was us
     - within a week: 15 minutes;
     - within 30 days: 1 hour;
     - quieter than that: 6 hours.
-  - **Order (recency first).** Due spaces that were fetched before come first, most recent
-    poster first (`newest_item_at`), then whichever has waited longest. Spaces never fetched
-    (just imported) come after, in getFollows' order (most recently followed first).
-  - **Share.** At most 4 of the 12 slots go to never-fetched spaces, so an import of hundreds
-    fills in over the next opens without crowding out the accounts already posting. A group
-    that doesn't need its slots leaves them to the other.
+  - **Order (recency first, everyone in turn).** Due spaces that were fetched before come first,
+    most overdue first: time since the last fetch divided by the space's interval. Recent posters
+    have shorter intervals, so they are due sooner and come round more often, but every due space
+    gets its turn; ties go to the most recent poster. Spaces never fetched (just imported) come
+    after, in the order their follows were stored. (An earlier draft sorted by `newest_item_at`
+    alone. Once 12 accounts had posted within a day, the same 12 won every open; the spec
+    review caught it.)
+  - **Shares.** At most 4 of the 12 slots go to never-fetched spaces, so an import of hundreds
+    fills in over the next opens without crowding out the accounts already posting. Up to 4 go
+    to the due spaces that have waited longest (round robin), so a crowd of busy accounts can't
+    keep quieter ones out for hours. The rest go by overdue order. A group that doesn't need its
+    slots leaves them to the others. With 300 accounts, half busy and one open every 10 minutes,
+    every account is refreshed within 10 hours, and busy ones more often (unit test).
   - **Rotation.** A refreshed space isn't due again until its interval passes, so the next open
     reaches the next ones. The 120 s claim (spec 4.5) still stops two readers fetching the same
     space twice.
