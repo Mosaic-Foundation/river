@@ -5,7 +5,8 @@
 // The scope is computed before the query (visitor.ts for visitors; M8/M9 add a member's scope from
 // their follows, circles and stream rules), so this module only knows spaces and streams.
 import type { Db } from "../../db/context.js";
-import type { ItemKind } from "../../shared/items/index.js";
+import type { ItemEmbed, ItemKind } from "../../shared/items/index.js";
+import { readEmbed } from "../adapters/bluesky/index.js";
 import type { PluginItem } from "../plugins/api.js";
 import type { SpaceRow } from "./spaces.js";
 
@@ -50,13 +51,14 @@ export function parseContentTypes(raw: string | undefined): ItemKind[] | undefin
   return kinds.size > 0 ? [...kinds] : undefined;
 }
 
-/** Network filter values (ui-revisions-1 item 4) and the adapter each one shows. */
+/** Network filter values (ui-revisions-1 item 4; Bluesky, ADR-009) and the adapter each one shows. */
 export const NETWORKS: Record<string, string> = {
   hubs: "civic_hub",
   fediverse: "fediverse",
+  bluesky: "atproto",
 };
 
-/** `hubs,fediverse`, any case: the adapters to show; undefined for all networks. */
+/** `hubs,fediverse,bluesky`, any case: the adapters to show; undefined for all networks. */
 export function parseNetworks(raw: string | undefined): string[] | undefined {
   if (raw === undefined || raw.trim() === "") return undefined;
   const adapters = new Set<string>();
@@ -154,6 +156,8 @@ export interface FeedItem {
   read?: boolean;
   /** For events: when and where, when the source says (raw or raw.object: startTime, location.name). */
   event?: { startTime?: string; location?: string };
+  /** A Bluesky post's link card or quoted post (ADR-009 item 4), from raw.embed. */
+  embed?: ItemEmbed;
   /** Exactly one of Live (a real source) or Sample (seeded demo entry). */
   source: "live" | "sample";
   space: {
@@ -183,6 +187,7 @@ interface ItemRow {
   is_final_result: boolean;
   event_start: string | null;
   event_location: string | null;
+  embed: unknown;
   space_id: string;
   space_name: string;
   space_icon_url: string | null;
@@ -256,6 +261,7 @@ export async function queryFeed(
             i.media, i.boost_of, i.civic, i.is_final_result,
             CASE WHEN i.kind = 'event' THEN coalesce(i.raw ->> 'startTime', i.raw -> 'object' ->> 'startTime') END AS event_start,
             CASE WHEN i.kind = 'event' THEN coalesce(i.raw -> 'location' ->> 'name', i.raw -> 'object' -> 'location' ->> 'name') END AS event_location,
+            CASE WHEN s.adapter = 'atproto' THEN i.raw -> 'embed' END AS embed,
             s.id AS space_id, s.name AS space_name, s.icon_url AS space_icon_url,
             s.category AS space_category, s.adapter AS space_adapter,
             ${read}
@@ -360,6 +366,7 @@ function toFeedItem(row: ItemRow): FeedItem {
           ...(row.event_location ? { location: row.event_location } : {}),
         }
       : undefined;
+  const embed = row.space_adapter === "atproto" ? readEmbed(row.embed) : undefined;
   return {
     id: row.id,
     kind: row.kind,
@@ -377,6 +384,7 @@ function toFeedItem(row: ItemRow): FeedItem {
     isFinalResult: row.is_final_result,
     ...(row.read === null ? {} : { read: row.read }),
     ...(event ? { event } : {}),
+    ...(embed ? { embed } : {}),
     source: row.space_adapter === "sample" ? "sample" : "live",
     space: {
       id: row.space_id,
