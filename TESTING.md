@@ -64,6 +64,14 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-23, UI revisions 7 (circles menu on Following rows): new e2e `circlesMenu.spec.ts`
+  (add and remove with every circle listed and the row's checked, a reload keeps it, the row
+  changing before a held save and undone with its error when refused, Escape and a click outside
+  close it, New circle… with the row in it and a taken name refused, keyboard only (Enter, Home,
+  arrows wrapping, Space and Enter toggle, Escape, focus back on the button), a 390px bottom sheet
+  measured after it slides in, axe). `following.spec.ts` reads the row's circles from the menu
+  button. Unit `ui/following` (`toggleId`, `nextCircleColor`). Unit 688, e2e 125 (124 locally;
+  check 37 needs `TEST_RECOVERY_KEY_FILE`).
 - 2026-10-23, Import from Bluesky and the refresh rotation: new recordings of `@eff.org`'s
   follows (three pages of `getFollows`, 259 accounts, 25 hiding from signed-out readers). Unit
   `bluesky/follows` (every page, each account once, the 1,000 cap, a failing later or first page,

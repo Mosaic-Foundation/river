@@ -20,6 +20,32 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 7: a circles menu on each Following row — 2026-10-23
+
+- Branch / PR: claude/following-circles-menu → PR (self-merge when `ci` is green)
+- Migrations: none.
+
+**What it does.** Each followed row on the Following page (and the River's phone Following tab)
+gets a "Circles" menu button showing its circles as swatches with names
+(`ui/src/components/CirclesMenu.tsx`). Its menu lists every circle with the row's checked. A click
+adds or removes the row at once through `addToCircle` and `removeFromCircle`; a refused save is
+undone and its sentence shown. "New circle…" makes a circle (next unused color) with the row in
+it. The menu closes with Escape, a click outside or Done, and focus goes back to the button.
+Below 56rem it's a small bottom sheet. The Circles panel's editor is unchanged. Spec:
+`docs/spec/ui-revisions-7.md`; details in DECISIONS.md.
+
+**Keys.** None.
+
+**Tests.** e2e `circlesMenu.spec.ts` (5 tests: add and remove with every circle listed, the row
+changing before a held save and undone when it's refused, Escape and a click outside, New
+circle… and a taken name, keyboard only, a 390px phone sheet with axe). `following.spec.ts`
+reads the row's circles from the button. Unit `ui/following` (`toggleId`, `nextCircleColor`).
+`npm run check`: 48 files, 688 tests passed; UI built. e2e: 124 passed; check 37 needs
+`TEST_RECOVERY_KEY_FILE`, which this session doesn't have (it runs in CI).
+
+### Follow-ups
+- None.
+
 ## Bluesky reading, step 4: Import from Bluesky and the refresh rotation — 2026-10-23
 
 - Branch / PR: claude/bluesky-import → PR (self-merge after ADR-009's PR and the two before it)
