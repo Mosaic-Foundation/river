@@ -64,6 +64,13 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-23, Bluesky network and cards: new e2e `bluesky.spec.ts` (a member follows `@bsky.app`
+  by handle: preview with name, bio and the avatar attempted from cdn.bsky.app; filters by
+  Bluesky; only Bluesky cards; no framing check, the body opens nothing, Open ↗ to bsky.app;
+  "reposted"; a quoted post and a link card; axe). API `bluesky.test.ts` adds `network=bluesky`
+  with `embed` (and none on other networks). Unit `feedScope` (bluesky network), `ui/embed`,
+  `ui/boost` (`boostVerb`), `ui/format`; the Networks pills in `revisions` and `revisions6`
+  specs list Bluesky. Unit 666, API 161, e2e 119.
 - 2026-10-23, Bluesky adapter (ADR-009): real recordings from `public.api.bsky.app` and
   `plc.directory` (`npm run record-fixtures -- --bluesky`; four accounts, see
   `tests/fixtures/http/README.md`). Unit `bluesky/input` (what the follow box takes, routing),

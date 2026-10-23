@@ -20,6 +20,26 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Bluesky reading, step 3: the Bluesky network and its cards — 2026-10-23
+
+- Branch / PR: claude/bluesky-network → PR (self-merge after ADR-009's PR and the adapter PR)
+- Migrations: none.
+
+**What it does.** "Bluesky" joins the Networks filter (`network=bluesky`, adapter `atproto`).
+Bluesky posts stay in the feed like fediverse posts: no framing check, the body opens nothing,
+"Open ↗" opens the post on bsky.app. Reposts say "reposted". `GET /api/feed` returns a Bluesky
+item's link card and quoted post as `embed`, and cards draw them (`ui/src/components/PostEmbed.tsx`).
+
+**Keys.** None.
+
+**Tests.** New e2e `bluesky.spec.ts` (sign up, follow `@bsky.app` by handle with its preview,
+filter by Bluesky, Open ↗, reposted, a quote and a link card, axe); API `bluesky.test.ts`
+`network=bluesky` with embeds; unit `feedScope`, `ui/embed`, `ui/boost`, `ui/format`; the
+Networks pills in `revisions` and `revisions6` specs. Counts in TESTING.md.
+
+### Follow-ups
+- The reader view (reached only from an item's own address) doesn't draw link cards or quotes.
+
 ## Bluesky reading, step 2: the adapter — 2026-10-23
 
 - Branch / PR: claude/bluesky-adapter → PR (self-merge after ADR-009's PR merges)

@@ -341,6 +341,22 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-23 — Bluesky cards (Bluesky reading, step 3)
+- Decision: "Bluesky" is a third Networks pill (value `bluesky`, adapter `atproto`), after
+  Fediverse. Bluesky cards behave as fediverse cards do (ui-revisions-3 item 1): the body opens
+  nothing, "Open ↗" opens the post on bsky.app, and no framing check is asked for them. A repost
+  says "{account} reposted", Bluesky's word, where a fediverse boost says "boosted". A link card
+  is one link (thumbnail, host, title, two lines of description) to the page, in a new tab; a
+  quoted post is a `blockquote` with the author's avatar, name, handle and time, its text, up to
+  four image thumbnails and "Open quoted post ↗"; a quoted post that can't be shown says "The
+  quoted post isn't available." Both are rendered as text from the feed's `embed` field, which
+  the API fills only for Bluesky items (from `raw.embed`, re-checked by `readEmbed()`).
+- Why: `docs/spec/bluesky-1.md` items 2 and 3; nothing new reaches the page as HTML.
+- Alternatives: framing bsky.app posts (they would need a check per card, and fediverse posts
+  aren't framed either); building link cards into `content_html` (the sanitizer allowlist has no
+  images, and changing it is `needs-adam`).
+- Thread / PR: Bluesky network and cards
+
 ## 2026-10-23 — The Bluesky adapter's calls the plan didn't settle (ADR-009)
 - Decision:
   - **What the follow box takes.** `@handle` for any handle (`@name.bsky.social`,
