@@ -72,7 +72,8 @@ Newest first: date, slice, tests added, counts.
   adult labels and `!no-unauthenticated`, every recorded entry), `bluesky/adapter` (resolve by
   handle, profile URL and DID with the DID document check, the well-known fallback, refusals,
   429; fetchNew paging, stop rules, handle change). API `bluesky.test.ts` (preview with bio;
-  follow and see posts and reposts; handle, URL and DID reach one space). Unit 660, API 160.
+  follow and see posts and reposts; handle, URL and DID reach one space; malformed input is a 422). `revisions4.spec.ts` scrolls
+  its hub card into view before the framing check. Unit 664, API 160, e2e 118.
 - 2026-10-23, UI revisions 6 (mobile filter sheet): new e2e `revisions6.spec.ts` (11 tests at
   390x844: the button, its count and one-line summary; the sheet's height, handle, content and
   wrapping pills; live updates behind it; Show results, Back, a tap outside and a swipe down keep
