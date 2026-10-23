@@ -499,6 +499,11 @@
   outline-offset: calc(var(--border-width) * -3);
 }
 
+/* Its save is on the way; another click waits for it. */
+.circles-menu-item[aria-disabled="true"] {
+  cursor: progress;
+}
+
 .circles-menu-check {
   display: inline-flex;
   flex: none;

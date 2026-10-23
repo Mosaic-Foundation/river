@@ -82,6 +82,7 @@ test("item 1: add the row to a circle and remove it; every circle is listed with
   await openFollowing(page);
   const target = await circleWithout(page);
   const { circles, spaceId } = await circlesOf(page);
+  const members = circles.find((c) => c.name === target)!.spaceIds.length + 1;
 
   const button = circlesButton(page);
   await expect(button).toHaveAttribute("aria-haspopup", "menu");
@@ -120,7 +121,7 @@ test("item 1: add the row to a circle and remove it; every circle is listed with
   expect((await circlesOf(page)).circles.find((c) => c.name === target)!.spaceIds).toContain(spaceId);
   // The Circles panel counts it too.
   await expect(page.getByRole("complementary", { name: "Circles" }).getByTestId("circle-row").filter({ hasText: target })).toContainText(
-    /\d+ spaces?/,
+    members === 1 ? "1 space" : `${members} spaces`,
   );
 
   // Remove.
@@ -169,6 +170,7 @@ test("item 2: the row changes before the save returns, and a refused save is und
   await page.getByRole("heading", { level: 1, name: "Following" }).click();
   await expect(menu(page)).toHaveCount(0);
   await expect(circlesButton(page)).toHaveAttribute("aria-expanded", "false");
+  await expect(circlesButton(page)).toBeFocused();
 });
 
 test("item 1: New circle… creates a circle with the row in it", async ({ page }) => {
@@ -196,6 +198,15 @@ test("item 1: New circle… creates a circle with the row in it", async ({ page 
   await page.getByLabel("New circle name").fill("Book club");
   await page.getByRole("button", { name: "Create and add" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "You already have a circle with that name." })).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+
+  // Deleted in the Circles panel, it's gone from the row and its menu.
+  page.once("dialog", (dialog) => void dialog.accept());
+  await page.getByRole("complementary", { name: "Circles" }).getByRole("button", { name: "Delete Book club" }).click();
+  await expect(page.getByRole("complementary", { name: "Circles" }).getByTestId("circle-row").filter({ hasText: "Book club" })).toHaveCount(0);
+  await expect(circlesButton(page)).not.toContainText("Book club");
+  await circlesButton(page).click();
+  await expect(menu(page).getByRole("menuitemcheckbox", { name: "Book club" })).toHaveCount(0);
 });
 
 test("item 3: keyboard only — open, move, toggle, close; focus returns to the button", async ({ page }) => {
@@ -219,8 +230,12 @@ test("item 3: keyboard only — open, move, toggle, close; focus returns to the 
   await expect(items.nth(1)).toBeFocused();
   const second = circles[1]!;
   const was = second.spaceIds.includes(spaceId);
+  const saved = (method: string) =>
+    page.waitForResponse((r) => r.request().method() === method && /\/api\/circles\/[^/]+\/spaces\//.test(r.url()));
+  const first = saved(was ? "DELETE" : "PUT");
   await page.keyboard.press("Space");
   await expect(items.nth(1)).toHaveAttribute("aria-checked", String(!was));
+  await first;
   // Up from the first wraps to the last item ("New circle…").
   await page.keyboard.press("ArrowUp");
   await page.keyboard.press("ArrowUp");
@@ -228,8 +243,10 @@ test("item 3: keyboard only — open, move, toggle, close; focus returns to the 
   // Enter toggles too.
   await page.keyboard.press("Home");
   await page.keyboard.press("ArrowDown");
+  const back = saved(was ? "PUT" : "DELETE");
   await page.keyboard.press("Enter");
   await expect(items.nth(1)).toHaveAttribute("aria-checked", String(was));
+  await back;
 
   await page.keyboard.press("Escape");
   await expect(menu(page)).toHaveCount(0);

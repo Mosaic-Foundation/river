@@ -31,23 +31,32 @@ export interface CirclesMenuProps {
 
 /**
  * The row's circle ids as shown: the saved ones, or the member's clicks while their saves are on
- * the way. Once nothing is on the way, the next page load wins again.
+ * the way. Once nothing is on the way, the next page load wins again. One save per circle at a
+ * time: a click on a circle whose save is still on the way is ignored, so two quick clicks can't
+ * reach the server in the wrong order.
  */
 function useShownCircles(saved: string[], run: Run) {
   const [override, setOverride] = useState<string[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [inFlight, setInFlight] = useState<ReadonlySet<string>>(new Set());
   const pending = useRef(0);
+  const busy = useRef(new Set<string>());
 
   useEffect(() => {
     if (pending.current === 0) setOverride(null);
   }, [saved]);
 
   const save = async (id: string, change: () => Promise<Result<unknown>>) => {
+    if (busy.current.has(id)) return false;
+    busy.current.add(id);
+    setInFlight(new Set(busy.current));
     pending.current += 1;
     setError(null);
     setOverride((ids) => toggleId(ids ?? saved, id));
     const outcome = await run(change);
     pending.current -= 1;
+    busy.current.delete(id);
+    setInFlight(new Set(busy.current));
     if (outcome !== true) {
       // Undo just this click; any other on the way keeps its own.
       setOverride((ids) => toggleId(ids ?? saved, id));
@@ -56,18 +65,19 @@ function useShownCircles(saved: string[], run: Run) {
     return outcome === true;
   };
 
-  return { ids: override ?? saved, error, setError, save };
+  return { ids: override ?? saved, inFlight, error, setError, save };
 }
 
 export function CirclesMenu({ space, circles, run }: CirclesMenuProps) {
-  const { ids, error, setError, save } = useShownCircles(space.circleIds, run);
+  const { ids, inFlight, error, setError, save } = useShownCircles(space.circleIds, run);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
-  // A circle just made here, shown until the page's reload brings it.
-  const [made, setMade] = useState<CircleView | null>(null);
+  // A circle just made here, shown until the page's next load (which has it, unless it was
+  // deleted since): kept with the circles it was made against.
+  const [made, setMade] = useState<{ circle: CircleView; against: readonly CircleView[] } | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -76,7 +86,7 @@ export function CirclesMenu({ space, circles, run }: CirclesMenuProps) {
   // A circle just made here takes focus once its item has rendered.
   const focusNext = useRef<string | null>(null);
 
-  const all = made && !circles.some((c) => c.id === made.id) ? [...circles, made] : [...circles];
+  const all = made && made.against === circles && !circles.some((c) => c.id === made.circle.id) ? [...circles, made.circle] : [...circles];
   const inRow = all.filter((c) => ids.includes(c.id));
   // The menu's items: every circle, then "New circle…".
   const itemCount = all.length + 1;
@@ -124,10 +134,11 @@ export function CirclesMenu({ space, circles, run }: CirclesMenuProps) {
       const target = e.target as Node;
       if ([popupRef, buttonRef, backdropRef].some((r) => r.current?.contains(target))) return;
       close(false);
-      // Focus goes back to the button, unless the click put it on something else.
+      // Focus goes back to the button, unless the click put it on another control (a container
+      // that only takes focus from script, like the page's <main tabIndex={-1}>, doesn't count).
       window.setTimeout(() => {
-        const now = document.activeElement;
-        if (!now || now === document.body) buttonRef.current?.focus();
+        const now = document.activeElement as HTMLElement | null;
+        if (!now || now === document.body || now.tabIndex < 0) buttonRef.current?.focus();
       }, 0);
     };
     document.addEventListener("pointerdown", onPointerDown);
@@ -151,7 +162,7 @@ export function CirclesMenu({ space, circles, run }: CirclesMenuProps) {
       return;
     }
     const circle = { ...created.value.circle, spaceIds: [] };
-    setMade(circle);
+    setMade({ circle, against: circles });
     setCreating(false);
     setNewName("");
     focusNext.current = circle.id;
@@ -242,6 +253,7 @@ export function CirclesMenu({ space, circles, run }: CirclesMenuProps) {
                       type="button"
                       role="menuitemcheckbox"
                       aria-checked={checked}
+                      aria-disabled={inFlight.has(c.id) || undefined}
                       className="circles-menu-item"
                       data-circle-id={c.id}
                       tabIndex={i === active ? 0 : -1}
