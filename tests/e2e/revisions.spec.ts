@@ -40,12 +40,15 @@ test.describe("item 5: Civic mode lists only the civic circle", () => {
     await expect(page).not.toHaveURL(/circle=/);
     await expect(page.getByTestId("plugin-coming-up")).toBeVisible();
 
-    // The phone chip row lists the same circles.
+    // The phone's filter sheet (ui-revisions-6) lists the same circles.
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.getByRole("group", { name: "Filters" }).getByRole("list", { name: "Circles" }).getByRole("button")).toHaveText([
+    await page.getByTestId("filter-button").click();
+    const sheet = page.getByRole("dialog", { name: "Filter your River" });
+    await expect(sheet.getByRole("navigation", { name: "Circles" }).getByRole("list").getByRole("button")).toHaveText([
       "All",
       "Civic",
     ]);
+    await sheet.getByRole("button", { name: "Show results" }).click();
 
     // Back in Everything, every circle shows again.
     await page.setViewportSize(DESKTOP);
@@ -114,13 +117,14 @@ test.describe("item 2: content types are toggle pills", () => {
     await expect(types.getByRole("button", { name: "Posts" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  test("on a phone the chip row has the same pills", async ({ page }) => {
+  test("on a phone the filter sheet has the same pills", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
     await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
-    const row = page.getByRole("group", { name: "Filters" });
-    await row.getByRole("list", { name: "Content type" }).getByRole("button", { name: "Photos" }).click();
-    await expect(row.getByRole("list", { name: "Content type" }).getByRole("button", { name: "Photos" })).toHaveAttribute(
+    await page.getByTestId("filter-button").click();
+    const types = page.getByRole("dialog", { name: "Filter your River" }).getByRole("navigation", { name: "Content type" });
+    await types.getByRole("button", { name: "Photos" }).click();
+    await expect(types.getByRole("button", { name: "Photos" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );

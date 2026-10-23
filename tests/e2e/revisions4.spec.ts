@@ -154,9 +154,10 @@ test.describe("item 1: circles are multi-select", () => {
     await expect(page).toHaveURL(/\?mode=civic$/);
   });
 
-  test("on a phone the chip row toggles circles the same way", async ({ page }) => {
+  test("on a phone the filter sheet toggles circles the same way", async ({ page }) => {
     await openFeed(page, "/", PHONE);
-    const chips = page.getByRole("group", { name: "Filters" }).getByRole("list", { name: "Circles" });
+    await page.getByTestId("filter-button").click();
+    const chips = page.getByRole("dialog", { name: "Filter your River" }).getByRole("navigation", { name: "Circles" }).getByRole("list");
     const chip = (name: string) => chips.getByRole("button", { name, exact: true });
     await chip("Family").click();
     await chip("Soccer").click();
@@ -280,23 +281,24 @@ test.describe("item 5: no active-filter chips above the feed", () => {
     await expect(cards(page).first()).toBeVisible();
   });
 
-  test("on a phone Clear all sits first in the chip row and clears every filter", async ({ page }) => {
+  test("on a phone Clear all is compact in the filter sheet and clears every filter", async ({ page }) => {
+    // Since ui-revisions-6 the phone's filters live in a sheet (revisions6.spec.ts covers it).
     await openFeed(page, "/", PHONE);
-    const row = page.getByRole("group", { name: "Filters" });
-    const clear = row.getByRole("button", { name: "Clear all" });
+    await page.getByTestId("filter-button").click();
+    const sheet = page.getByRole("dialog", { name: "Filter your River" });
+    const clear = sheet.getByRole("button", { name: "Clear all" });
     await expect(clear).toHaveCount(0);
-    await row.getByRole("list", { name: "Circles" }).getByRole("button", { name: "Family", exact: true }).click();
-    await row.getByRole("list", { name: "Content type" }).getByRole("button", { name: "Photos" }).click();
+    await sheet.getByRole("navigation", { name: "Circles" }).getByRole("button", { name: "Family", exact: true }).click();
+    await sheet.getByRole("navigation", { name: "Content type" }).getByRole("button", { name: "Photos" }).click();
     await expect(page).toHaveURL(/\?circle=Family&type=photos$/);
     await expect(clear).toBeVisible();
     expect((await clear.boundingBox())!.height).toBeLessThanOrEqual(32);
-    expect(await row.evaluate((el) => el.children[0]?.textContent)).toBe("Clear all");
     await expect(page.getByTestId("active-filters")).toHaveCount(0);
     await clear.focus();
     await page.keyboard.press("Enter");
     await expect(page).not.toHaveURL(/circle=|type=/);
     await expect(clear).toHaveCount(0);
-    await expect(row.getByRole("button", { name: "Posts" })).toBeFocused();
-    await expect(row.getByRole("list", { name: "Circles" }).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(sheet.getByRole("searchbox", { name: "Search your River" })).toBeFocused();
+    await expect(sheet.getByRole("navigation", { name: "Circles" }).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
 });

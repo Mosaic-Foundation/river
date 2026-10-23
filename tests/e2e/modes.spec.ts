@@ -156,7 +156,7 @@ test("check 7 on a phone: the header's mode picker, the panel above the feed, no
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
   await expect(page.getByRole("navigation", { name: "River sections" })).toBeVisible();
-  await expect(page.getByRole("group", { name: "Filters" })).toBeVisible();
+  await expect(page.getByTestId("filter-button")).toBeVisible();
   await expectNoSeriousAxeIssues(page);
 });
 
