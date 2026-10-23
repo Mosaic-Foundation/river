@@ -201,8 +201,32 @@ test.describe("item 3: live filters, and every way to close", () => {
     await expect(page).toHaveURL(/\?type=articles&network=hubs$/);
     await expect(page.getByTestId("filter-count")).toHaveText("2");
 
-    // Closing never leaves a stray history entry: Back now leaves the River's feed for the page before.
-    expect(await page.evaluate(() => (window.history.state as { riverSheet?: boolean } | null)?.riverSheet ?? false)).toBe(false);
+    // Closing stepped back over the sheet's entry. Forward onto it leaves the sheet closed and
+    // the filters as they are, and unmarks it: the next open and close steps back only once.
+    const sheetEntry = () => page.evaluate(() => (window.history.state as { riverSheet?: boolean } | null)?.riverSheet ?? false);
+    expect(await sheetEntry()).toBe(false);
+    await page.goForward();
+    await expect(sheet(page)).toBeHidden();
+    await expect(page).toHaveURL(/\?type=articles&network=hubs$/);
+    expect(await sheetEntry()).toBe(false);
+    // Mark this entry: closing with Back must land back on it (one step back, not two).
+    await page.evaluate(() => window.history.replaceState({ ...(window.history.state as object), mark: "here" }, ""));
+    await openSheet(page);
+    await page.goBack();
+    await expect(sheet(page)).toBeHidden();
+    await expect.poll(() => page.evaluate(() => (window.history.state as { mark?: string } | null)?.mark)).toBe("here");
+    await expect(page).toHaveURL(/\?type=articles&network=hubs$/);
+
+    // Keyboard on the handle closes it, even right after a drag that snapped back.
+    await openSheet(page);
+    const grip = (await sheet(page).getByTestId("filter-sheet-handle").boundingBox())!;
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2 + 30, { steps: 3 });
+    await page.mouse.up();
+    await expect(sheet(page)).toBeVisible();
+    await sheet(page).getByTestId("filter-sheet-handle").press("Enter");
+    await expect(sheet(page)).toBeHidden();
   });
 
   test("Clear all resets every filter and the sheet stays open", async ({ page }) => {
