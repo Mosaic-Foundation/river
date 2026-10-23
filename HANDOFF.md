@@ -20,6 +20,29 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 4, item 1: circles are multi-select — 2026-10-23
+
+- Branch / PR: claude/dreamy-ride-w3nd4z → PR (self-merge; not needs-adam)
+- Migrations: none.
+
+**What it does.** Adds `docs/spec/ui-revisions-4.md` (Adam's five items). Circles toggle like the
+content-type pills (check mark, `aria-pressed`), several at once; "All" clears them. The feed
+shows (any selected circle) AND types AND networks AND search. Each circle is its own `circle`
+parameter in the page URL, `GET /api/feed` and the "Mark all read" body (a string or a list), so
+a one-circle link still works and circle names may hold commas. Switching to Civic keeps only
+the civic circle. The active-filter chips show one chip per circle until item 5 removes them.
+
+**Keys.** None.
+
+**Tests.** Unit `feedScope`, `ui/filters`, `ui/format`; API `feed` and `signin`; new e2e
+`revisions4.spec.ts` item 1 (5 tests); `river.spec.ts` adjusted. `npm run check`: 42 files, 587
+tests. API: 150 passed. e2e: 92 passed (vite preview, as CI).
+
+### Follow-ups
+- Items 2-5 (six circles then scroll, the title, a compact Clear all, no chips) come in the next PR.
+- A link that names a non-civic circle in Civic mode still shows nothing, with the circle
+  unlisted (as before this change); "Clear all" clears it.
+
 ## UI revisions 3, items 1-2: fediverse posts stay in the feed; other items framed or in a new tab — 2026-10-22
 
 - Branch / PR: claude/inspiring-johnson-bzl1yf → PR (needs-adam: ADR-008 amended)

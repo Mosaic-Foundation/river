@@ -324,6 +324,20 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-23 — Several circles in the URL and the API (UI revisions 4, item 1)
+- Decision: each selected circle is its own `circle` parameter (`?circle=Family&circle=Soccer`),
+  in the page's URL, `GET /api/feed` and the "Mark all read" body (`circle` there takes a string
+  or a list). A one-circle link reads as before. The list keeps the order the circles are listed
+  in; "All" or an empty value means every circle. An unknown circle anywhere in the list is a 400
+  (`bad_circle`), and the page then shows All, as it did for one unknown circle. Switching to
+  Civic keeps the selected circles Civic lists (the civic circle) and drops the rest; with none
+  left the feed shows All. Lists of more than 100 circles are refused.
+- Why: visitors' circles are named by their names, which may hold a comma, so the comma list
+  that content types and networks use (`type=posts,videos`) would be ambiguous for circles.
+- Alternatives: a comma list with escaping; circle ids for visitors too (would change the
+  visitor feed's circle ids, which links already use).
+- Thread / PR: UI revisions 4, item 1
+
 ## 2026-10-22 — How a card opens, in detail (UI revisions 3, items 1 and 2)
 - Decision: "fediverse posts" are items of the fediverse adapter (Mastodon, WordPress, PeerTube
   alike); they are never framed or checked, and their title and time aren't links. Other live
