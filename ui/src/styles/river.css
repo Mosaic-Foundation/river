@@ -230,7 +230,7 @@ main.feed:focus {
   font: inherit;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);
-  line-height: 1.25;
+  line-height: var(--line-height-tight);
   white-space: nowrap;
   cursor: pointer;
 }

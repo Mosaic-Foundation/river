@@ -234,9 +234,19 @@ export function FilterChips({
   onNetwork,
   onClearAll,
 }: Omit<FiltersProps, "onSearch"> & { onClearAll: () => void }) {
+  const rowRef = useRef<HTMLDivElement>(null);
   return (
-    <div className="chip-row" role="group" aria-label="Filters">
-      {hasActiveFilter(value) && <ClearAll testId="chips-clear" onClear={onClearAll} />}
+    <div className="chip-row" role="group" aria-label="Filters" ref={rowRef}>
+      {hasActiveFilter(value) && (
+        <ClearAll
+          testId="chips-clear"
+          onClear={() => {
+            onClearAll();
+            // The button goes away with the filters; focus moves to the row's first chip.
+            window.setTimeout(() => rowRef.current?.querySelector<HTMLButtonElement>("button")?.focus(), 0);
+          }}
+        />
+      )}
       <ul className="chip-list" aria-label="Content type">
         {CONTENT_TYPES.map((t) => (
           <li key={t.value}>
