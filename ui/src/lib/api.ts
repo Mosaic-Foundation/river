@@ -35,6 +35,20 @@ export interface BoostRef {
   fetched?: boolean;
 }
 
+/** A Bluesky post's link card or quoted post (ADR-009). Plain text and https URLs only. */
+export interface ItemEmbed {
+  link?: { url: string; title?: string; description?: string; thumb?: string };
+  quote?: {
+    url?: string;
+    author?: ItemAuthor;
+    text?: string;
+    publishedAt?: string;
+    media?: MediaRef[];
+    /** The quoted post can't be shown (deleted, blocked, or hidden from signed-out readers). */
+    unavailable?: boolean;
+  };
+}
+
 export interface CivicDetails {
   activityType?: string;
   objectType?: string;
@@ -63,6 +77,8 @@ export interface FeedItem {
   /** Members only: the server's read state for this item. */
   read?: boolean;
   event?: { startTime?: string; location?: string };
+  /** A Bluesky post's link card or quoted post. */
+  embed?: ItemEmbed;
   source: "live" | "sample";
   space: {
     id: string;

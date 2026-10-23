@@ -13,6 +13,11 @@ export interface BoostedPost {
   author: ItemAuthor | null;
 }
 
+/** What a boost is called where it happened: a Bluesky repost, a fediverse boost. */
+export function boostVerb(item: Pick<FeedItem, "space">): "reposted" | "boosted" {
+  return item.space.adapter === "atproto" ? "reposted" : "boosted";
+}
+
 /** The name on a boost line: the followed account that boosted. */
 export function boosterName(item: FeedItem): string {
   return item.author?.name || item.space.name;

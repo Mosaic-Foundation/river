@@ -9,9 +9,11 @@
 // process fold into the card under "N earlier updates" (ui-revisions-1 item 7); Mark read then
 // covers them all. A boost whose post the refresh fetched shows that post under its original
 // author's name and avatar, with "{booster} boosted" above (spec 4.3); otherwise it keeps the
-// plain "{booster} boosted a post from {host}" card.
+// plain "{booster} boosted a post from {host}" card. A Bluesky post (ADR-009) says "reposted"
+// and shows its link card or quoted post below its text; its card opens nothing, like a
+// fediverse post's.
 import type { FeedItem } from "../lib/api";
-import { boostedPost, boosterName } from "../lib/boost";
+import { boostedPost, boosterName, boostVerb } from "../lib/boost";
 import {
   deadlineLabel,
   eventDate,
@@ -23,6 +25,7 @@ import {
   relativeTime,
 } from "../lib/format";
 import { CardMedia } from "./CardMedia";
+import { PostEmbed } from "./PostEmbed";
 import { type CardOpen, isHttpsUrl, openInNewTab } from "../lib/embed";
 import { CARD_INTERACTIVE, isNewTabClick, itemPath } from "../lib/reader";
 import { BoostIcon } from "./Icons";
@@ -80,7 +83,8 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
   const href = itemPath(item.id, window.location.search);
   const open = openHandler(item.id, onOpen);
   const original = item.source === "live" && isHttpsUrl(item.url) ? item.url : undefined;
-  // The title (or time) link does what a click on the card does; fediverse posts and samples have none.
+  // The title (or time) link does what a click on the card does; fediverse and Bluesky posts and
+  // samples have none.
   const cardLink =
     opens === "none"
       ? undefined
@@ -118,7 +122,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
       {boosted && (
         <p className="card-boost" data-testid="boost-line">
           <BoostIcon />
-          {boosted.booster} boosted
+          {boosted.booster} {boostVerb(item)}
         </p>
       )}
 
@@ -170,7 +174,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
       {item.boostOf && !boosted && (
         <p className="card-boost">
           <BoostIcon />
-          {boosterName(item)} boosted a post from {item.boostOf.host}
+          {boosterName(item)} {boostVerb(item)} a post from {item.boostOf.host}
         </p>
       )}
 
@@ -216,6 +220,8 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
       )}
 
       <CardMedia media={item.media} />
+
+      {item.embed && <PostEmbed embed={item.embed} now={now} onOpened={() => onMarkRead(item.id)} />}
 
       {(civicLabel || deadline || duration || item.isFinalResult) && (
         <ul className="card-chips" aria-label="Details">

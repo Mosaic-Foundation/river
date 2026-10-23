@@ -1,5 +1,6 @@
 // How an item opens (ui-revisions-3 items 1 and 2, revising ui-revisions-2 item 2). Fediverse
-// posts stay in the feed: their card opens nothing, and "Open ↗" opens the original in a new tab.
+// and Bluesky posts (ADR-009 item 5) stay in the feed: their card opens nothing, and "Open ↗"
+// opens the original in a new tab; no framing check is made for them.
 // Any other live https page is framed in the embedded view when the server's framing check
 // (GET /api/items/{id}/frame, ADR-008) allows it, and opens in a new tab when it refuses. Samples
 // and items without a live https URL have no original; only their own address shows the reader.
@@ -9,10 +10,13 @@ type Openable = Pick<FeedItem, "url" | "source" | "space">;
 
 export type FramePlan = { kind: "none" } | { kind: "check" } | { kind: "reader" };
 
-/** What opening `item` can do: nothing in the River (fediverse), a framing check, or the reader. */
+/** Spaces whose posts stay in the feed (ui-revisions-3 item 1; Bluesky, ADR-009 item 5). */
+export const STAYS_IN_FEED: ReadonlySet<string> = new Set(["fediverse", "atproto"]);
+
+/** What opening `item` can do: nothing in the River (fediverse, Bluesky), a framing check, or the reader. */
 export function framePlan(item: Openable): FramePlan {
   if (item.source !== "live" || !isHttpsUrl(item.url)) return { kind: "reader" };
-  if (item.space.adapter === "fediverse") return { kind: "none" };
+  if (STAYS_IN_FEED.has(item.space.adapter)) return { kind: "none" };
   return { kind: "check" };
 }
 

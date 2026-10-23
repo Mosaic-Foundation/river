@@ -15,10 +15,11 @@ export const CONTENT_TYPES: ReadonlyArray<{ value: string; label: string }> = [
   { value: "civic", label: "Civic activity" },
 ];
 
-/** Network filters (ui-revisions-1 item 4); `value` is what /api/feed's `network` accepts. */
+/** Network filters (ui-revisions-1 item 4; Bluesky, ADR-009); `value` is what /api/feed's `network` accepts. */
 export const NETWORKS: ReadonlyArray<{ value: string; label: string; detail?: string }> = [
   { value: "hubs", label: "Civic Hubs" },
   { value: "fediverse", label: "Fediverse", detail: "Mastodon and compatible" },
+  { value: "bluesky", label: "Bluesky" },
 ];
 
 /** Keeps the known values of a comma-separated list, in the list's own order, once each. */
