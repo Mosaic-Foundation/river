@@ -84,27 +84,47 @@ test.describe("item 1: circles are multi-select", () => {
     await expect(page.locator('[data-testid="feed-card"]:not([data-kind="article"])')).toHaveCount(0);
     for (const id of await shownIds(page)) expect(family.has(id) || news.has(id)).toBe(true);
 
-    // Clicking a selected circle turns it off; All clears the rest.
+    // Clicking a selected circle turns it off, and on again.
     await circle(page, "Family").click();
     await expectPressed(page, ["News and ideas"]);
     await expect(page).toHaveURL(/\?circle=News\+and\+ideas&type=articles$/);
+    await circle(page, "Family").click();
+    await expectPressed(page, ["Family", "News and ideas"]);
+
+    // All clears both: every article shows, from any circle.
     await circle(page, "All").click();
     await expectPressed(page, []);
     await expect(page).toHaveURL(/\?type=articles$/);
+    const articles = ((await (await page.request.get("/api/feed?type=articles")).json()) as { items: ApiItem[] }).items;
+    await expect.poll(() => shownIds(page)).toEqual(articles.map((i) => i.id));
   });
 
-  test("the URL carries the circles: a link opens the same selection, and it survives Back", async ({ page }) => {
-    await openFeed(page, "/?circle=Family&circle=Soccer");
-    await expectPressed(page, ["Family", "Soccer"]);
-    const both = await allIds(page, "circle=Family&circle=Soccer");
+  test("the URL carries the circles: a link opens the same selection, and it survives opening an item and Back", async ({ page }) => {
+    // Hub pages answer the framing check as allowing it (a stand-in, as in revisions3.spec.ts), so
+    // a hub card opens inside the River at /item/{id}.
+    await page.route("**/api/items/*/frame", (route) => route.fulfill({ json: { frame: { url: "https://longmont.civic.social/stand-in" } } }));
+    await openFeed(page, "/?circle=Civic&circle=Family");
+    await expectPressed(page, ["Civic", "Family"]);
+    const both = await allIds(page, "circle=Civic&circle=Family");
     for (const id of await shownIds(page)) expect(both.has(id)).toBe(true);
 
-    await page.goto("/following");
-    await expect(page).toHaveURL(/\/following/);
+    const hub = page.locator('[data-testid="feed-card"][data-adapter="civic_hub"]').first();
+    await expect(hub).toHaveAttribute("data-open", "frame");
+    const id = (await hub.getAttribute("data-item-id"))!;
+    await hub.locator(".card-source").click();
+    await expect(page).toHaveURL(new RegExp(`/item/${id}\\?circle=Civic&circle=Family$`));
+    await expect(page.getByTestId("external-frame")).toBeVisible();
     await page.goBack();
-    await expect(page).toHaveURL(/\?circle=Family&circle=Soccer$/);
+    await expect(page).toHaveURL(/\/\?circle=Civic&circle=Family$/);
+    await expect(cards(page).first()).toBeVisible();
+    await expectPressed(page, ["Civic", "Family"]);
+
+    // Leaving the River and coming Back keeps them too.
+    await page.goto("/following");
+    await page.goBack();
+    await expect(page).toHaveURL(/\/\?circle=Civic&circle=Family$/);
     await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
-    await expectPressed(page, ["Family", "Soccer"]);
+    await expectPressed(page, ["Civic", "Family"]);
   });
 
   test("circles toggle from the keyboard", async ({ page }) => {
