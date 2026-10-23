@@ -324,6 +324,23 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-23 — The filter column after UI revisions 4 (items 2-5)
+- Decision: UI revisions 1 item 3 (active-filter chips above the feed, each with ✕, plus "Clear
+  all") is withdrawn by UI revisions 4 item 5: the chips are gone, and the unread count and sort
+  line stay. "Clear all" lives in the filter column below search (ui-revisions-3 item 5) and, at
+  phone width, first in the chip row, since the phone has no column and the chip row's "Clear
+  all" was the phone's only one. It is outlined (primary border and text, filled on hover) rather
+  than filled, so it doesn't read as a pressed filter. "All" sits above the scrolling list and
+  doesn't count among the six circles; the hint ("Scroll for more circles") shows only while the
+  list overflows. The title is the column's `h2`; the sections' headings became `h3`. The phone's
+  chip row gets no title (items 2 and 3 are about the desktop column), and the column keeps its
+  "Filters" label for assistive tech.
+- Why: item 5 says the column already shows what's selected; item 4 asks for a button that takes
+  little vertical space; item 2 counts circles, and "All" isn't one.
+- Alternatives: Clear all on the title's line (moves it above search, against ui-revisions-3 item
+  5); a filled button; counting All among the six.
+- Thread / PR: UI revisions 4, items 2-5
+
 ## 2026-10-23 — Several circles in the URL and the API (UI revisions 4, item 1)
 - Decision: each selected circle is its own `circle` parameter (`?circle=Family&circle=Soccer`),
   in the page's URL, `GET /api/feed` and the "Mark all read" body (`circle` there takes a string

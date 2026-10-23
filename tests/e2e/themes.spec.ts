@@ -141,10 +141,11 @@ test("Civic mode wears the Civic Hub theme on every surface, at AA contrast", as
   await pills.first().click();
   await expect(pills.first()).toHaveAttribute("aria-pressed", "true");
   expect(await style(pills.first(), "background-color")).toBe(CIVIC.primary);
-  const chip = page.locator(".active-filter").first();
-  await expect(chip).toBeVisible();
-  expect(await style(chip, "background-color")).toBe("rgb(220, 229, 242)");
-  expect(await style(chip, "color")).toBe(CIVIC.primary);
+  // "Clear all" is outlined in Civic's primary colour (ui-revisions-4 item 4).
+  const clear = page.getByTestId("sidebar-clear");
+  await expect(clear).toBeVisible();
+  expect(await style(clear, "border-top-color")).toBe(CIVIC.primary);
+  expect(await style(clear, "color")).toBe(CIVIC.primary);
   await pills.first().click();
   await expect(pills.first()).toHaveAttribute("aria-pressed", "false");
 

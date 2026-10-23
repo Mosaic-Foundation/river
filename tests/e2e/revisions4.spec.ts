@@ -174,3 +174,129 @@ test.describe("item 1: circles are multi-select", () => {
     await expect(page).not.toHaveURL(/circle=/);
   });
 });
+
+/**
+ * Adds stand-in circles to the feed's answer, so the visitor's five circles become more. Only the
+ * column's layout is checked with them; clicking one would ask the API for a circle it doesn't
+ * know.
+ */
+async function extraCircles(page: Page, count: number): Promise<void> {
+  await page.route((url) => url.pathname === "/api/feed", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { circles: Array<{ id: string; name: string; color: string | null; role: null }> };
+    for (let n = 1; n <= count; n++) body.circles.push({ id: `Extra ${n}`, name: `Extra ${n}`, color: null, role: null });
+    await route.fulfill({ response, json: body });
+  });
+}
+
+test.describe("item 2: six circles, then the section scrolls", () => {
+  test("with more than six circles the list shows six rows, scrolls to the last, and says so", async ({ page }) => {
+    await extraCircles(page, 3);
+    await openFeed(page);
+    const scroll = page.getByTestId("circle-scroll");
+    const rows = scroll.getByRole("button");
+    await expect(rows).toHaveCount(8);
+    const row = (await rows.first().boundingBox())!.height;
+    const box = (await scroll.boundingBox())!;
+    expect(box.height).toBeLessThanOrEqual(row * 6 + 2);
+    expect(box.height).toBeGreaterThanOrEqual(row * 6 - 2);
+    expect(await scroll.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    await expect(page.getByTestId("circle-scroll-hint")).toHaveText("Scroll for more circles");
+    await expect(page.getByTestId("circle-scroll-hint")).toBeVisible();
+
+    // The last circle is reached by scrolling the section; All stays above it.
+    const last = rows.last();
+    await last.scrollIntoViewIfNeeded();
+    const lastBox = (await last.boundingBox())!;
+    const after = (await scroll.boundingBox())!;
+    expect(await scroll.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(after.y + after.height + 1);
+    await expect(circle(page, "All")).toBeInViewport();
+
+    // The column itself keeps its own scroll (ui-revisions-3 item 4).
+    expect(await page.locator(".filter-column").evaluate((el) => getComputedStyle(el).overflowY)).toBe("auto");
+  });
+
+  test("with six circles or fewer there's no inner scroll and no hint", async ({ page }) => {
+    await extraCircles(page, 1);
+    await openFeed(page);
+    const scroll = page.getByTestId("circle-scroll");
+    await expect(scroll.getByRole("button")).toHaveCount(6);
+    expect(await scroll.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
+    await expect(page.getByTestId("circle-scroll-hint")).toHaveCount(0);
+  });
+});
+
+test.describe("item 3: the filter column's title", () => {
+  for (const mode of ["everything", "civic"]) {
+    test(`"Filter your River" heads the column in ${mode}`, async ({ page }) => {
+      await openFeed(page, mode === "civic" ? "/?mode=civic" : "/");
+      const title = sidebar(page).getByRole("heading", { level: 2 });
+      await expect(title).toHaveText("Filter your River");
+      expect(await sidebar(page).evaluate((el) => el.children[0]?.textContent)).toBe("Filter your River");
+      const titleBox = (await title.boundingBox())!;
+      const searchBox = (await sidebar(page).getByRole("searchbox").boundingBox())!;
+      expect(titleBox.y + titleBox.height).toBeLessThanOrEqual(searchBox.y);
+    });
+  }
+});
+
+test.describe("item 4: a compact Clear all", () => {
+  for (const mode of ["everything", "civic"]) {
+    test(`one line, at most 32 px tall, in the primary colour, only with a filter on (${mode})`, async ({ page }) => {
+      await openFeed(page, mode === "civic" ? "/?mode=civic" : "/");
+      const clear = sidebar(page).getByRole("button", { name: "Clear all" });
+      await expect(clear).toHaveCount(0);
+      const pill = sidebar(page).getByRole("button", { name: "Articles" });
+      await pill.click();
+      await expect(clear).toBeVisible();
+      const box = (await clear.boundingBox())!;
+      expect(box.height).toBeLessThanOrEqual(32);
+      const lineHeight = await clear.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+      const padding = await clear.evaluate((el) => parseFloat(getComputedStyle(el).paddingTop) * 2 + parseFloat(getComputedStyle(el).borderTopWidth) * 2);
+      expect(box.height).toBeLessThan(lineHeight * 2 + padding); // one line of text
+      // A pressed pill wears the primary colour; Clear all's border and text are that colour.
+      const primary = await pill.evaluate((el) => getComputedStyle(el).backgroundColor);
+      expect(await clear.evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(primary);
+      expect(await clear.evaluate((el) => getComputedStyle(el).color)).toBe(primary);
+
+      await clear.click();
+      await expect(page).toHaveURL(mode === "civic" ? /\/\?mode=civic$/ : /\/$/);
+      await expect(clear).toHaveCount(0);
+    });
+  }
+});
+
+test.describe("item 5: no active-filter chips above the feed", () => {
+  test("filters on show no chips; the unread count and sort line stay", async ({ page }) => {
+    await openFeed(page, "/?circle=Family&circle=Civic&q=a");
+    await sidebar(page).getByRole("button", { name: "Civic Hubs" }).click();
+    await expect(page).toHaveURL(/network=hubs/);
+    await expect(sidebar(page).getByRole("button", { name: "Clear all" })).toBeVisible();
+    await expect(page.getByTestId("active-filters")).toHaveCount(0);
+    await expect(page.getByRole("group", { name: "Active filters" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Remove filter/ })).toHaveCount(0);
+    await expect(page.locator(".feed-summary")).toHaveText(/^\d+ unread · newest first$/);
+  });
+
+  test("on a phone Clear all sits first in the chip row and clears every filter", async ({ page }) => {
+    await openFeed(page, "/", PHONE);
+    const row = page.getByRole("group", { name: "Filters" });
+    const clear = row.getByRole("button", { name: "Clear all" });
+    await expect(clear).toHaveCount(0);
+    await row.getByRole("list", { name: "Circles" }).getByRole("button", { name: "Family", exact: true }).click();
+    await row.getByRole("list", { name: "Content type" }).getByRole("button", { name: "Photos" }).click();
+    await expect(page).toHaveURL(/\?circle=Family&type=photos$/);
+    await expect(clear).toBeVisible();
+    expect((await clear.boundingBox())!.height).toBeLessThanOrEqual(32);
+    expect(await row.evaluate((el) => el.children[0]?.textContent)).toBe("Clear all");
+    await expect(page.getByTestId("active-filters")).toHaveCount(0);
+    await expect(page.locator(".feed-summary")).toHaveText(/unread · newest first$/);
+    await clear.focus();
+    await page.keyboard.press("Enter");
+    await expect(page).not.toHaveURL(/circle=|type=/);
+    await expect(clear).toHaveCount(0);
+    await expect(row.getByRole("button", { name: "Posts" })).toBeFocused();
+    await expect(row.getByRole("list", { name: "Circles" }).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
+  });
+});
