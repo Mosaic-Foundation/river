@@ -16,6 +16,14 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-23 — The mobile filter arrived as "ui-revisions-5.md"
+- Question: Adam asked for the mobile filter to be added as `docs/spec/ui-revisions-5.md`; that
+  file already holds the feed-top revision merged the same day.
+- Reading used: the mobile filter is `ui-revisions-6.md`; `ui-revisions-5.md` is unchanged. Its
+  header says it was sent under the other name.
+- Proposed change: none, unless Adam wants the files renumbered.
+- Thread / PR: UI revisions 6
+
 ### 2026-10-22 — "Every card gets that Open ↗ button" and samples (UI revisions 3)
 - Question: item 1 gives every card "Open ↗", the original in a new tab; sample entries have no
   original (no URL).
@@ -323,6 +331,25 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-23 — The phone's filter sheet, in detail (UI revisions 6)
+- Decision: the sheet is the native `<dialog>` opened with `showModal()` (the browser traps
+  focus, makes the page behind inert and closes on Escape), as the River's other dialogs are, with
+  `aria-modal="true"` and `aria-labelledby` its "Filter your River" title. Opening it adds a
+  history entry, so the back gesture closes it; every other close (Show results, Escape, a tap on
+  the backdrop, the handle) steps back over that entry, and the page then writes the current
+  filters into the address it lands on, since filters live in the page, not in history. The
+  handle is a button ("Close filters"): a tap or Enter closes; a drag of 80 px or more closes on
+  release, and a shorter one snaps back. The footer says "Show results": the feed is paged, so an
+  item count would need another query. The sheet's circles are pills (All first) like the other
+  sections, each section still collapsible. The header's phone search button stays; it and the
+  sheet's search edit the same search. The sheet closes if the window grows to desktop width.
+  Count: one per circle, type and network, plus one for a search.
+- Why: item 4 asks for a modal dialog with Escape and focus return, which `<dialog>` gives; item
+  3 asks for the back gesture to close it, which needs the history entry.
+- Alternatives: a hand-built focus trap on a `div` (more code, same result); "Show N items" from
+  a count endpoint (another query per toggle).
+- Thread / PR: UI revisions 6
 
 ## 2026-10-23 — The feed's top after UI revisions 5
 - Decision: the feed keeps one `h1` naming the view ("Everything", or "Citizen Dashboard" in

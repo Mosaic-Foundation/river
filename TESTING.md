@@ -64,6 +64,14 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-23, UI revisions 6 (mobile filter sheet): new e2e `revisions6.spec.ts` (11 tests at
+  390x844: the button, its count and one-line summary; the sheet's height, handle, content and
+  wrapping pills; live updates behind it; Show results, Back, a tap outside and a swipe down keep
+  the selections; Clear all stays open; Civic mode; the modal dialog, focus in and back, Escape;
+  Tab reaches every control; reduced motion; axe in both modes). `openSheet` waits for the slide
+  to finish before measuring. Phone steps in `revisions`, `revisions4`, `river` and `modes`
+  specs use the sheet instead of the chip strip; `river.spec.ts` matches the You tab exactly
+  ("Filter your River" contains "you"); unit `ui/filters` (count, summary). Unit 590, e2e 118.
 - 2026-10-23, UI revisions 5 (feed top, Citizen Dashboard): new e2e `revisions5.spec.ts` (8
   tests: nothing visible above the first card in both modes at desktop and phone width, one
   `h1`; a card's Mark read; Citizen Dashboard centred in Civic's top bar, gone in Everything, no

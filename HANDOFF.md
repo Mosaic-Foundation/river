@@ -20,10 +20,32 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 6: the mobile filter sheet — 2026-10-23
+
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #34) → PR (self-merge; not
+  needs-adam)
+- Migrations: none.
+
+**What it does.** Adds `docs/spec/ui-revisions-6.md` (sent as "ui-revisions-5.md", which was
+taken; logged under "Spec questions"). Below 56rem the chip strip is gone: one full-width
+"Filter your River" button shows the count and a one-line summary of what's on, and opens a
+bottom sheet (`FilterSheet` in `ui/src/components/Filters.tsx`, on `<dialog>` + `showModal()`)
+with the title, search, Clear all and the three sections as wrapping pills. Toggles apply at
+once; "Show results", Escape, the backdrop, the handle (tap or swipe down) and Back close it
+and keep the selections. The desktop is unchanged.
+
+**Keys.** None.
+
+**Tests.** New e2e `revisions6.spec.ts` (11 tests); phone steps in `revisions`, `revisions4`,
+`river` and `modes` specs moved to the sheet; unit `ui/filters`. `npm run check`: 42 files, 590 tests. e2e: 118
+passed (vite preview, as CI).
+
+### Follow-ups
+- "Show N items" would need a count from the API; the footer says "Show results" for now.
+
 ## UI revisions 5: the feed starts with an item; "Citizen Dashboard" in Civic — 2026-10-23
 
-- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #33) → PR (self-merge; not
-  needs-adam)
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #33) → #34 (merged)
 - Migrations: none.
 
 **What it does.** Adds `docs/spec/ui-revisions-5.md`. The middle column loses its visible title
