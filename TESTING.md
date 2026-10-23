@@ -64,14 +64,14 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
-- 2026-10-23, UI revisions 5 (feed top, Citizen Dashboard): new e2e `revisions5.spec.ts` (7
+- 2026-10-23, UI revisions 5 (feed top, Citizen Dashboard): new e2e `revisions5.spec.ts` (8
   tests: nothing visible above the first card in both modes at desktop and phone width, one
-  `h1`; a card's Mark read; Citizen Dashboard centred in Civic's top bar, gone in Everything, on
-  its own line on a phone). Mark all read steps removed from `river.spec.ts` (visitor) and
+  `h1`; a card's Mark read; Citizen Dashboard centred in Civic's top bar, gone in Everything, no
+  overlap at 900-1100 px, on its own line on a phone). Mark all read steps removed from `river.spec.ts` (visitor) and
   `signin.spec.ts` (check 23); `smoke`, `modes` and `themes` specs read the hidden `h1` and the
   top-bar title; `revisions4.spec.ts` item 5 no longer expects the summary line; unit
   `ui/modes` (`viewTitle`, `topbarTitle`). Unit 588,
-  e2e 106.
+  e2e 107.
 - 2026-10-23, UI revisions 4 items 2-5 (filter column): e2e `revisions4.spec.ts` items 2-5 (8
   tests: six rows then scroll with a hint, none at six, using stand-in circles added to the feed's
   answer; the title in both modes; Clear all compact and primary in both modes; no chips, the

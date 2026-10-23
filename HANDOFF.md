@@ -29,13 +29,15 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 **What it does.** Adds `docs/spec/ui-revisions-5.md`. The middle column loses its visible title
 ("Everything" / "Civic"), the "N unread · newest first" line and "Mark all read", so the first
 card tops the column; the view's `h1` stays, visually hidden. Civic mode shows "Citizen
-Dashboard" centred in the top bar (its own line on a phone), and the window title follows.
+Dashboard" centred in the top bar (a three-column grid, so it never overlaps the switch or the
+actions; its own line on a phone), and the window title follows.
 Cards keep their unread dot and Mark read / Mark unread.
 
 **Keys.** None.
 
-**Tests.** New e2e `revisions5.spec.ts` (7 tests); `river`, `signin`, `smoke`, `modes`, `themes`
-and `revisions4` specs updated. `npm run check`: 42 files, 588 tests. e2e: 106 passed.
+**Tests.** New e2e `revisions5.spec.ts` (8 tests); `river`, `signin`, `smoke`, `modes`, `themes`
+and `revisions4` specs updated. `npm run check`: 42 files, 588 tests. e2e: 106 passed, then `revisions5` (8) after the
+narrow-desktop fix.
 
 ### Follow-ups
 - `POST /api/read-state/all` has no caller in the UI now; remove it (and its API tests) if Adam
