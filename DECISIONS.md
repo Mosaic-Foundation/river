@@ -324,6 +324,20 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-23 — The feed's top after UI revisions 5
+- Decision: the feed keeps one `h1` naming the view ("Everything", or "Citizen Dashboard" in
+  Civic mode), visually hidden, so assistive tech still finds a page heading. The top bar's
+  "Citizen Dashboard" is plain text, not a second heading. The window title follows the `h1`
+  ("Citizen Dashboard · Mosaic River"). Civic mode is matched by its id (`civic`), so a renamed
+  mode still gets the title. At phone width the title takes its own centred line in the top bar,
+  since the bar's single row has no room. "Mark all read" is gone from the UI only;
+  `POST /api/read-state/all` and its API tests stay until Adam says it can go.
+- Why: item 1 removes the visible title; a page still needs a heading to navigate by. Item 2 asks
+  for the title in the top bar, centred.
+- Alternatives: the top bar's title as the `h1` (two `h1`s while an item is open in the reader);
+  removing the endpoint too (a server change nobody asked for).
+- Thread / PR: UI revisions 5
+
 ## 2026-10-23 — The filter column after UI revisions 4 (items 2-5)
 - Decision: UI revisions 1 item 3 (active-filter chips above the feed, each with ✕, plus "Clear
   all") is withdrawn by UI revisions 4 item 5: the chips are gone, and the unread count and sort

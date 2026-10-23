@@ -20,10 +20,30 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 5: the feed starts with an item; "Citizen Dashboard" in Civic — 2026-10-23
+
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #33) → PR (self-merge; not
+  needs-adam)
+- Migrations: none.
+
+**What it does.** Adds `docs/spec/ui-revisions-5.md`. The middle column loses its visible title
+("Everything" / "Civic"), the "N unread · newest first" line and "Mark all read", so the first
+card tops the column; the view's `h1` stays, visually hidden. Civic mode shows "Citizen
+Dashboard" centred in the top bar (its own line on a phone), and the window title follows.
+Cards keep their unread dot and Mark read / Mark unread.
+
+**Keys.** None.
+
+**Tests.** New e2e `revisions5.spec.ts` (7 tests); `river`, `signin`, `smoke`, `modes`, `themes`
+and `revisions4` specs updated. `npm run check`: 42 files, 588 tests. e2e: 106 passed.
+
+### Follow-ups
+- `POST /api/read-state/all` has no caller in the UI now; remove it (and its API tests) if Adam
+  agrees.
+
 ## UI revisions 4, items 2-5: the filter column — 2026-10-23
 
-- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #32) → PR (self-merge; not
-  needs-adam)
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #32) → #33 (merged)
 - Migrations: none.
 
 **What it does.** The filter column opens with the title "Filter your River" (`h2`; the
