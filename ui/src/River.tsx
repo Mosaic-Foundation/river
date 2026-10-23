@@ -8,7 +8,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import {
   loadFeed,
   loadItem,
-  saveAllRead,
   saveReadState,
   signOut,
   SIGN_IN_URL,
@@ -18,7 +17,7 @@ import {
   type SurfaceOutput,
   type Viewer,
 } from "./lib/api";
-import { modeFromSearch, withMode } from "./lib/modes";
+import { modeFromSearch, topbarTitle, viewTitle, withMode } from "./lib/modes";
 import { PluginPanel } from "./components/PluginPanel";
 import { CONTENT_TYPES, kindLabel, linkHost, NETWORKS, parseList, SAMPLE_EXPLAINER, toggleValue } from "./lib/format";
 import { browserStore, loadRead, markRead, markUnread, saveRead } from "./lib/readState";
@@ -152,13 +151,6 @@ function useServerReadState(items: FeedItem[]) {
     isRead: (id: string) => changes.get(id) ?? fromFeed.get(id) ?? false,
     markRead: (ids: string[]) => change(ids, true),
     markUnread: (ids: string[]) => change(ids, false),
-    /** Marks the whole view read on the server, and the loaded items here. */
-    markView: (ids: string[], query: FilterState) => {
-      set(ids, true);
-      void saveAllRead(query).then((ok) => {
-        if (!ok) set(ids, undefined);
-      });
-    },
   };
 }
 
@@ -335,6 +327,8 @@ export function River() {
   const mode = load.status === "ok" ? load.mode : chosenMode;
   const modes = load.status === "ok" ? load.modes : [];
   const modeTitle = modes.find((m) => m.id === mode)?.title ?? MODE_TITLES[mode] ?? "River";
+  // Civic mode is the Citizen Dashboard (ui-revisions-5 item 2).
+  const pageTitle = viewTitle(mode, modeTitle);
   // Links to the Following page keep a mode other than Everything (its theme follows).
   const linkMode = mode === "everything" ? "" : mode;
   const circles = load.status === "ok" ? load.circles : [];
@@ -343,8 +337,8 @@ export function River() {
   const readerTitle = readerItem ? readerItem.title || readerItem.space.name : null;
   useEffect(() => {
     if (load.status === "unknown_host") return;
-    document.title = `${readerTitle ? `${readerTitle} · ` : ""}${modeTitle} · Mosaic River`;
-  }, [modeTitle, load.status, readerTitle]);
+    document.title = `${readerTitle ? `${readerTitle} · ` : ""}${pageTitle} · Mosaic River`;
+  }, [pageTitle, load.status, readerTitle]);
 
   const changeMode = (next: string) => {
     setTab("feed");
@@ -407,7 +401,6 @@ export function River() {
   // One card per hub process (ui-revisions-1 item 7); a card is unread while any of its items is.
   const groups = groupItems(items);
   const groupRead = (ids: string[]) => ids.every((id) => reads.isRead(id));
-  const unread = groups.filter((g) => !groupRead(groupIds(g)));
   const filterProps = {
     circles: shownCircles,
     value: filters,
@@ -447,6 +440,7 @@ export function River() {
         </p>
       )}
       <Header
+        title={topbarTitle(mode)}
         modes={modes}
         mode={chosenMode}
         onMode={changeMode}
@@ -493,26 +487,8 @@ export function River() {
           )}
           {/* The feed stays mounted while reading, so Back finds it exactly as it was. */}
           <div className="feed-body" hidden={Boolean(readerState)}>
-            <div className="feed-head">
-              <h1 className="feed-title">{modeTitle}</h1>
-              <p className="feed-summary">
-                {load.status === "ok" && items.length > 0 ? `${unread.length} unread · newest first` : "Newest first"}
-              </p>
-              {load.status === "ok" && items.length > 0 && (
-                <button
-                  type="button"
-                  className="button button-quiet"
-                  disabled={unread.length === 0}
-                  onClick={() =>
-                    viewer
-                      ? serverReads.markView(items.map((i) => i.id), filters)
-                      : browserReads.markRead(items.map((i) => i.id))
-                  }
-                >
-                  Mark all read
-                </button>
-              )}
-            </div>
+            {/* No visible title or summary: the first card tops the column (ui-revisions-5 item 1). */}
+            <h1 className="visually-hidden">{pageTitle}</h1>
 
             {load.status === "loading" && (
               <p className="feed-status" role="status">

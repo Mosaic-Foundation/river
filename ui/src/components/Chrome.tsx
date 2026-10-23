@@ -67,16 +67,24 @@ export interface HeaderProps {
   /** Undefined while the first feed loads; null for a visitor. */
   viewer: Viewer | null | undefined;
   onSignOut: () => void;
+  /** A title centred in the bar (Civic mode's "Citizen Dashboard", ui-revisions-5 item 2). */
+  title?: string | null;
 }
 
-export function Header({ modes, mode, onMode, followingHref, searchOpen, onToggleSearch, onFollow, viewer, onSignOut }: HeaderProps) {
+export function Header({ modes, mode, onMode, followingHref, searchOpen, onToggleSearch, onFollow, viewer, onSignOut, title }: HeaderProps) {
   const switchShown = showModeSwitch(modes);
   return (
-    <header className={switchShown ? "topbar topbar-modes" : "topbar"}>
+    <header className={["topbar", switchShown ? "topbar-modes" : "", title ? "topbar-titled" : ""].filter(Boolean).join(" ")}>
       <div className="topbar-start">
         <Brand />
         <ModeSwitch modes={modes} current={mode} onChange={onMode} />
       </div>
+      {/* The page's h1 is in the feed (visually hidden), so this is text, not a second heading. */}
+      {title && (
+        <p className="topbar-title" data-testid="topbar-title">
+          {title}
+        </p>
+      )}
       <div className="topbar-actions">
         {viewer === null && (
           <a className="button button-quiet desktop-inline" href={SIGN_IN_URL}>

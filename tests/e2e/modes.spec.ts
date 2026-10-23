@@ -116,7 +116,7 @@ test("check 7: Civic mode shows only civic items, wears the Civic theme and show
 
   await modeSwitch(page).getByRole("button", { name: "Civic" }).click();
   await expect(modeSwitch(page).getByRole("button", { name: "Civic" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("heading", { level: 1, name: "Civic" })).toBeVisible();
+  await expect(page.getByTestId("topbar-title")).toHaveText("Citizen Dashboard");
   await expectTheme(page, "civic");
   await expect(page).toHaveURL(/[?&]mode=civic\b/);
   await expectCivicPanel(page);
@@ -137,7 +137,8 @@ test("check 7: Civic mode shows only civic items, wears the Civic theme and show
   await expect(page.getByTestId("plugin-your-representatives")).toHaveCount(0);
   await expectTheme(page, "mosaic");
   await expect(page).not.toHaveURL(/mode=/);
-  await expect(page.getByRole("heading", { level: 1, name: "Everything" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Everything" })).toBeAttached();
+  await expect(page.getByTestId("topbar-title")).toHaveCount(0);
 });
 
 test("check 7 on a phone: the header's mode picker, the panel above the feed, no sideways scroll", async ({ page }) => {
@@ -227,7 +228,7 @@ test("check 8: an instance with modes_enabled = [civic] hides the switch and ope
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(url.href);
     await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole("heading", { level: 1, name: "Civic" })).toBeVisible();
+    await expect(page.getByTestId("topbar-title")).toHaveText("Citizen Dashboard");
     await expectTheme(page, "civic");
     await expectCivicPanel(page);
     await expect(modeSwitch(page)).toHaveCount(0);
@@ -239,7 +240,7 @@ test("check 8: an instance with modes_enabled = [civic] hides the switch and ope
     url.search = "?mode=everything";
     await page.goto(url.href);
     await expectTheme(page, "civic");
-    await expect(page.getByRole("heading", { level: 1, name: "Civic" })).toBeVisible();
+    await expect(page.getByTestId("topbar-title")).toHaveText("Citizen Dashboard");
     await expect(page).not.toHaveURL(/mode=/);
     await expectNoSeriousAxeIssues(page);
 

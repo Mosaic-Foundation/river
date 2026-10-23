@@ -3,6 +3,22 @@
 // words and links. No React or DOM, so tests/unit/ui/ can import it.
 import type { DateEntry, ModeOption, PluginOutput } from "./api";
 
+/** Civic mode's title, shown in the top bar (ui-revisions-5 item 2). */
+export const CIVIC_TITLE = "Citizen Dashboard";
+
+/**
+ * The view's title for the page's h1 and the window title: Civic mode is the Citizen Dashboard;
+ * any other mode keeps its own title (ui-revisions-5).
+ */
+export function viewTitle(mode: string, modeTitle: string): string {
+  return mode === "civic" ? CIVIC_TITLE : modeTitle;
+}
+
+/** The top bar's title: Civic mode only; Everything shows none (ui-revisions-5 item 2). */
+export function topbarTitle(mode: string): string | null {
+  return mode === "civic" ? CIVIC_TITLE : null;
+}
+
 /** The switch shows only when the instance offers more than one mode (spec F9). */
 export function showModeSwitch(modes: readonly ModeOption[]): boolean {
   return modes.length > 1;

@@ -1,15 +1,7 @@
 // The UI's mode and panel helpers (spec F9, 4.7; checks 7 and 8, UI logic part).
 import { describe, expect, it } from "vitest";
 import { feedSearch } from "../../../ui/src/lib/api";
-import {
-  dateEntryDetail,
-  modeFromSearch,
-  pluginTag,
-  showModeSwitch,
-  themeForMode,
-  waitingOnText,
-  withMode,
-} from "../../../ui/src/lib/modes";
+import { dateEntryDetail, modeFromSearch, pluginTag, showModeSwitch, themeForMode, topbarTitle, viewTitle, waitingOnText, withMode } from "../../../ui/src/lib/modes";
 
 describe("mode switch and links", () => {
   it("shows the switch only for more than one mode (check 8)", () => {
@@ -69,5 +61,15 @@ describe("panel words", () => {
     expect(dateEntryDetail({ ...base, what: "event", spaceName: "Elm Street Neighbors" })).toBe(
       "Starts · Elm Street Neighbors",
     );
+  });
+});
+
+// ui-revisions-5 item 2: Civic mode is the Citizen Dashboard; Everything has no top-bar title.
+describe("view titles", () => {
+  it("names Civic mode the Citizen Dashboard and leaves other modes their own title", () => {
+    expect(viewTitle("civic", "Civic")).toBe("Citizen Dashboard");
+    expect(viewTitle("everything", "Everything")).toBe("Everything");
+    expect(topbarTitle("civic")).toBe("Citizen Dashboard");
+    expect(topbarTitle("everything")).toBeNull();
   });
 });

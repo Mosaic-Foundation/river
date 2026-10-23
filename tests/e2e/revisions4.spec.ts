@@ -268,7 +268,7 @@ test.describe("item 4: a compact Clear all", () => {
 });
 
 test.describe("item 5: no active-filter chips above the feed", () => {
-  test("filters on show no chips; the unread count and sort line stay", async ({ page }) => {
+  test("filters on show no chips above the feed", async ({ page }) => {
     await openFeed(page, "/?circle=Family&circle=Civic&q=a");
     await sidebar(page).getByRole("button", { name: "Civic Hubs" }).click();
     await expect(page).toHaveURL(/network=hubs/);
@@ -276,7 +276,8 @@ test.describe("item 5: no active-filter chips above the feed", () => {
     await expect(page.getByTestId("active-filters")).toHaveCount(0);
     await expect(page.getByRole("group", { name: "Active filters" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Remove filter/ })).toHaveCount(0);
-    await expect(page.locator(".feed-summary")).toHaveText(/^\d+ unread · newest first$/);
+    // ui-revisions-5 item 1 later removed the unread count and sort line too (revisions5.spec.ts).
+    await expect(cards(page).first()).toBeVisible();
   });
 
   test("on a phone Clear all sits first in the chip row and clears every filter", async ({ page }) => {
@@ -291,7 +292,6 @@ test.describe("item 5: no active-filter chips above the feed", () => {
     expect((await clear.boundingBox())!.height).toBeLessThanOrEqual(32);
     expect(await row.evaluate((el) => el.children[0]?.textContent)).toBe("Clear all");
     await expect(page.getByTestId("active-filters")).toHaveCount(0);
-    await expect(page.locator(".feed-summary")).toHaveText(/unread · newest first$/);
     await clear.focus();
     await page.keyboard.press("Enter");
     await expect(page).not.toHaveURL(/circle=|type=/);
