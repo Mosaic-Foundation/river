@@ -25,7 +25,7 @@ import { browserStore, loadRead, markRead, markUnread, saveRead } from "./lib/re
 import { Header, TabBar, YouPanel } from "./components/Chrome";
 import { TAB_PLACEHOLDERS, type Tab } from "./lib/tabs";
 import { FeedCard } from "./components/FeedCard";
-import { ActiveFilters, FilterChips, FilterSidebar, SearchField, type FilterState } from "./components/Filters";
+import { FilterChips, FilterSidebar, SearchField, type FilterState } from "./components/Filters";
 import { CLEARED, toggleCircle } from "./lib/filters";
 import { InfoDialog } from "./components/InfoDialog";
 import { NotFound } from "./components/NotFound";
@@ -471,7 +471,7 @@ export function River() {
         </div>
       )}
       <div className={tab === "feed" && !readerId ? "phone-only" : "phone-only hidden"}>
-        <FilterChips {...filterProps} />
+        <FilterChips {...filterProps} onClearAll={() => setFilter(CLEARED)} />
       </div>
 
       {/* The columns stay the same while reading, so the filter column never moves (ui-revisions-2 item 1). */}
@@ -513,8 +513,6 @@ export function River() {
                 </button>
               )}
             </div>
-
-            <ActiveFilters circles={shownCircles} value={filters} onChange={setFilter} />
 
             {load.status === "loading" && (
               <p className="feed-status" role="status">

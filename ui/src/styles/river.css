@@ -206,9 +206,42 @@ main.feed:focus {
   align-items: center;
 }
 
-/* "Clear all" just below search (ui-revisions-3 item 5); the sidebar's gap sets the spacing. */
-.sidebar-clear {
+/* The filter column's title (ui-revisions-4 item 3). */
+.sidebar-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-heading, var(--font-weight-bold));
+  color: var(--color-heading, var(--color-text));
+}
+
+/* "Clear all": compact, on one line, outlined in the theme's primary colour (ui-revisions-4 item
+   4). Below search in the column (ui-revisions-3 item 5), first in the phone's chip row. */
+.button-clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
   align-self: flex-start;
+  padding: var(--space-xs) var(--space-sm);
+  border: calc(var(--border-width) * 1.5) solid var(--color-primary);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.25;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.button-clear:hover {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.chip-row .button-clear {
+  align-self: center;
 }
 
 .search-icon {
@@ -297,6 +330,34 @@ main.feed:focus {
 
 .filter-option-check {
   flex: none;
+}
+
+/* Six circles show; more scroll inside the section, with a hint below (ui-revisions-4 item 2). The
+   rows don't wrap, so six of them are six times a row's height. */
+.circle-scroll {
+  max-height: calc(var(--size-control) * 0.85 * 6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.circle-scroll-more {
+  border-block: var(--border-width) solid var(--color-border);
+}
+
+.circle-scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: var(--space-xs) 0 0;
+  padding-inline: var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.circle-scroll-chevron {
+  width: calc(var(--size-icon) * 0.8);
+  height: calc(var(--size-icon) * 0.8);
 }
 
 .circle-swatch {
@@ -400,63 +461,6 @@ main.feed:focus {
   margin: var(--space-xs) 0 0 var(--space-sm);
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
-}
-
-/* Active filter chips above the feed (ui-revisions-1 item 3). */
-.active-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-md);
-}
-
-.active-filter-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.active-filter {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  min-height: calc(var(--size-control) * 0.85);
-  padding: 0 var(--space-xs) 0 var(--space-md);
-  border-radius: var(--radius-pill);
-  background: var(--color-info-soft);
-  color: var(--color-primary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  max-width: 100%;
-}
-
-.active-filter > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.active-filter-remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: calc(var(--size-control) * 0.7);
-  height: calc(var(--size-control) * 0.7);
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-}
-
-.active-filter-remove:hover {
-  background: var(--color-surface);
 }
 
 .chip {

@@ -1,4 +1,4 @@
-// The feed's filter state, and "Clear all" (ui-revisions-1 item 3, ui-revisions-3 item 5): the
+// The feed's filter state, and "Clear all" (ui-revisions-3 item 5, ui-revisions-4 item 4): the
 // filters it resets, and whether any of them is on. The mode is the header's, not a filter, so it
 // stays.
 

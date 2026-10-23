@@ -1,14 +1,15 @@
 // Filters (spec F5, ui-revisions-1 items 2-4, ui-revisions-4 item 1): circles AND content types AND
-// networks (each toggles, several at once, none means all; "All" clears the circles), plus search. Desktop:
-// everything in the left column, each section collapsible. Phone: a chip row (content types,
-// networks, then circles); search sits behind the header's search button. Above the feed, a chip
-// per active filter with its own ✕, and "Clear all"; on a desktop "Clear all" also sits at the top
-// of the filter column, below search (ui-revisions-3 item 5).
-import { useId, useRef, useState } from "react";
+// networks (each toggles, several at once, none means all; "All" clears the circles), plus search.
+// Desktop: everything in the left column under "Filter your River", each section collapsible, the
+// circles scrolling after six (ui-revisions-4 items 2-3). Phone: a chip row (content types,
+// networks, then circles); search sits behind the header's search button. A compact "Clear all"
+// shows while a filter is on: below search in the column (ui-revisions-3 item 5), first in the
+// phone's chip row (ui-revisions-4 items 4-5; the chips above the feed are gone).
+import { useEffect, useId, useRef, useState } from "react";
 import type { FeedCircle } from "../lib/api";
-import { CLEARED, hasActiveFilter, type FilterState } from "../lib/filters";
+import { hasActiveFilter, type FilterState } from "../lib/filters";
 import { circleColor, CONTENT_TYPES, NETWORKS } from "../lib/format";
-import { CheckIcon, ChevronIcon, CloseIcon, SearchIcon } from "./Icons";
+import { CheckIcon, ChevronIcon, SearchIcon } from "./Icons";
 
 export type { FilterState };
 
@@ -82,7 +83,7 @@ function FilterSection({ title, children }: { title: string; children: React.Rea
   const id = useId();
   return (
     <nav className="filter-group" aria-labelledby={`${id}-heading`}>
-      <h2 className="filter-heading" id={`${id}-heading`}>
+      <h3 className="filter-heading" id={`${id}-heading`}>
         <button
           type="button"
           className="filter-toggle"
@@ -93,7 +94,7 @@ function FilterSection({ title, children }: { title: string; children: React.Rea
           {title}
           <ChevronIcon className="filter-chevron" />
         </button>
-      </h2>
+      </h3>
       <div id={`${id}-body`} hidden={!open}>
         {children}
       </div>
@@ -101,13 +102,53 @@ function FilterSection({ title, children }: { title: string; children: React.Rea
   );
 }
 
+const ALL: Pick<FeedCircle, "id" | "name" | "color"> = { id: "All", name: "All", color: null };
+
 function allCircles(circles: FeedCircle[]): Array<Pick<FeedCircle, "id" | "name" | "color">> {
-  return [{ id: "All", name: "All", color: null }, ...circles];
+  return [ALL, ...circles];
 }
 
 /** "All" is on when no circle is; a circle is on when it is selected. */
 function circlePressed(value: FilterState, id: string): boolean {
   return id === "All" ? value.circles.length === 0 : value.circles.includes(id);
+}
+
+/** "Clear all": a compact button in the theme's primary colour (ui-revisions-4 item 4). */
+function ClearAll({ onClear, testId }: { onClear: () => void; testId: string }) {
+  return (
+    <button type="button" className="button-clear" data-testid={testId} onClick={onClear}>
+      Clear all
+    </button>
+  );
+}
+
+/** A circle row: "All" is on when no circle is; a circle toggles. */
+function CircleOption({ circle, value, onCircle }: { circle: Pick<FeedCircle, "id" | "name" | "color">; value: FilterState; onCircle: (id: string) => void }) {
+  const pressed = circlePressed(value, circle.id);
+  return (
+    <li>
+      <button type="button" className="filter-option" aria-pressed={pressed} onClick={() => onCircle(circle.id)}>
+        <span className="circle-swatch" style={swatch(circle.color)} aria-hidden="true" />
+        <span className="filter-option-name">{circle.name}</span>
+        {pressed && <CheckIcon className="pill-check filter-option-check" />}
+      </button>
+    </li>
+  );
+}
+
+/** Whether the element's content is taller than the element (it scrolls). */
+function useOverflows(ref: React.RefObject<HTMLElement | null>, key: unknown): boolean {
+  const [overflows, setOverflows] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setOverflows(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, key]);
+  return overflows;
 }
 
 export function FilterSidebar({
@@ -120,41 +161,45 @@ export function FilterSidebar({
   onClearAll,
 }: FiltersProps & { onClearAll: () => void }) {
   const asideRef = useRef<HTMLElement>(null);
+  const circleScroll = useRef<HTMLDivElement>(null);
+  // Six circles show; more scroll inside the section, with a hint (ui-revisions-4 item 2).
+  const circlesScroll = useOverflows(circleScroll, circles.length);
   return (
     <aside className="sidebar" aria-label="Filters" ref={asideRef}>
+      <h2 className="sidebar-title">Filter your River</h2>
       <SearchField id="search-desktop" value={value.q} onSearch={onSearch} />
       {hasActiveFilter(value) && (
-        <button
-          type="button"
-          className="button button-quiet sidebar-clear"
-          data-testid="sidebar-clear"
-          onClick={() => {
+        <ClearAll
+          testId="sidebar-clear"
+          onClear={() => {
             onClearAll();
             // The button goes away with the filters; focus moves to the search field.
             window.setTimeout(() => asideRef.current?.querySelector<HTMLInputElement>("input[type=search]")?.focus(), 0);
           }}
-        >
-          Clear all
-        </button>
+        />
       )}
 
       <FilterSection title="Circles">
         <ul className="filter-list">
-          {allCircles(circles).map((c) => (
-            <li key={c.id}>
-              <button
-                type="button"
-                className="filter-option"
-                aria-pressed={circlePressed(value, c.id)}
-                onClick={() => onCircle(c.id)}
-              >
-                <span className="circle-swatch" style={swatch(c.color)} aria-hidden="true" />
-                <span className="filter-option-name">{c.name}</span>
-                {circlePressed(value, c.id) && <CheckIcon className="pill-check filter-option-check" />}
-              </button>
-            </li>
-          ))}
+          <CircleOption circle={ALL} value={value} onCircle={onCircle} />
         </ul>
+        <div
+          className={circlesScroll ? "circle-scroll circle-scroll-more" : "circle-scroll"}
+          ref={circleScroll}
+          data-testid="circle-scroll"
+        >
+          <ul className="filter-list">
+            {circles.map((c) => (
+              <CircleOption key={c.id} circle={c} value={value} onCircle={onCircle} />
+            ))}
+          </ul>
+        </div>
+        {circlesScroll && (
+          <p className="circle-scroll-hint" data-testid="circle-scroll-hint">
+            <ChevronIcon className="circle-scroll-chevron" />
+            Scroll for more circles
+          </p>
+        )}
       </FilterSection>
 
       <FilterSection title="Content type">
@@ -181,9 +226,17 @@ export function FilterSidebar({
   );
 }
 
-export function FilterChips({ circles, value, onCircle, onType, onNetwork }: Omit<FiltersProps, "onSearch">) {
+export function FilterChips({
+  circles,
+  value,
+  onCircle,
+  onType,
+  onNetwork,
+  onClearAll,
+}: Omit<FiltersProps, "onSearch"> & { onClearAll: () => void }) {
   return (
     <div className="chip-row" role="group" aria-label="Filters">
+      {hasActiveFilter(value) && <ClearAll testId="chips-clear" onClear={onClearAll} />}
       <ul className="chip-list" aria-label="Content type">
         {CONTENT_TYPES.map((t) => (
           <li key={t.value}>
@@ -219,59 +272,6 @@ export function FilterChips({ circles, value, onCircle, onType, onNetwork }: Omi
           </li>
         ))}
       </ul>
-    </div>
-  );
-}
-
-export interface ActiveFiltersProps {
-  circles: FeedCircle[];
-  value: FilterState;
-  onChange: (patch: Partial<FilterState>) => void;
-}
-
-/** One chip per active filter, each with an ✕, plus "Clear all" (ui-revisions-1 item 3). */
-export function ActiveFilters({ circles, value, onChange }: ActiveFiltersProps) {
-  const chips: Array<{ key: string; label: string; remove: Partial<FilterState> }> = [];
-  for (const id of value.circles) {
-    const name = circles.find((c) => c.id === id)?.name ?? id;
-    chips.push({ key: `circle-${id}`, label: `Circle: ${name}`, remove: { circles: value.circles.filter((c) => c !== id) } });
-  }
-  for (const t of CONTENT_TYPES.filter((t) => value.types.includes(t.value))) {
-    chips.push({ key: `type-${t.value}`, label: t.label, remove: { types: value.types.filter((v) => v !== t.value) } });
-  }
-  for (const n of NETWORKS.filter((n) => value.networks.includes(n.value))) {
-    chips.push({
-      key: `network-${n.value}`,
-      label: n.label,
-      remove: { networks: value.networks.filter((v) => v !== n.value) },
-    });
-  }
-  if (value.q) chips.push({ key: "q", label: `Search: “${value.q}”`, remove: { q: "" } });
-  if (chips.length === 0) return null;
-  return (
-    <div className="active-filters" role="group" aria-label="Active filters" data-testid="active-filters">
-      <ul className="active-filter-list">
-        {chips.map((chip) => (
-          <li key={chip.key} className="active-filter" data-testid="active-filter">
-            <span>{chip.label}</span>
-            <button
-              type="button"
-              className="active-filter-remove"
-              aria-label={`Remove filter: ${chip.label}`}
-              onClick={() => onChange(chip.remove)}
-            >
-              <CloseIcon />
-            </button>
-          </li>
-        ))}
-      </ul>
-      <button
-        type="button"
-        className="button button-quiet active-filters-clear"
-        onClick={() => onChange(CLEARED)}
-      >
-        Clear all
-      </button>
     </div>
   );
 }
