@@ -20,6 +20,26 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Bluesky reading, step 1: ADR-009 — 2026-10-23
+
+- Branch / PR: claude/hopeful-planck-thcj8d → PR (needs-adam: a new ADR and new outbound hosts)
+- Migrations: none.
+
+**What it does.** Adds `decisions/009-reading-bluesky.md` (Proposed), the first Bluesky step of
+Adam's Phase 2 plan (2026-10-23). It names the new outbound hosts and why: Bluesky's public
+AppView (`public.api.bsky.app`: resolveHandle, getProfile, getAuthorFeed, getFollows), the PLC
+directory for `did:plc`, a `did:web`'s own domain, and a handle's `/.well-known/atproto-did`.
+All through the fetch guard, unauthenticated, public data only. Records Bluesky's published rate
+limits (none numeric for the AppView) and the River's own caps.
+
+**Keys.** None.
+
+**Tests.** None (docs only).
+
+### Follow-ups
+- The adapter, the Bluesky network filter and "Import from Bluesky" follow in their own PRs,
+  merged only after this one.
+
 ## UI revisions 6: the mobile filter sheet — 2026-10-23
 
 - Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #34) → PR (self-merge; not
