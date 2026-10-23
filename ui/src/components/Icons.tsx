@@ -109,6 +109,15 @@ export function CloseIcon(props: IconProps) {
   );
 }
 
+/** Three lines, shortening: the phone's filter button (ui-revisions-6 item 1). */
+export function FilterIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 7h16M7 12h10M10 17h4" />
+    </Svg>
+  );
+}
+
 export function ChevronIcon(props: IconProps) {
   return (
     <Svg {...props}>

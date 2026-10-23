@@ -307,9 +307,12 @@ test.describe("phone (390 px)", () => {
     }
     await expect(page.getByRole("complementary", { name: "Filters" })).toBeHidden();
 
-    const chips = page.getByRole("group", { name: "Filters" });
-    await chips.getByRole("list", { name: "Content type" }).getByRole("button", { name: "Podcasts" }).click();
-    await chips.getByRole("button", { name: "News and ideas" }).click();
+    // The filters are in the phone's sheet (ui-revisions-6).
+    await page.getByTestId("filter-button").click();
+    const sheet = page.getByRole("dialog", { name: "Filter your River" });
+    await sheet.getByRole("navigation", { name: "Content type" }).getByRole("button", { name: "Podcasts" }).click();
+    await sheet.getByRole("navigation", { name: "Circles" }).getByRole("button", { name: "News and ideas" }).click();
+    await sheet.getByRole("button", { name: "Show results" }).click();
     await expect(cards(page)).toHaveCount(1);
     await expect(cards(page).first()).toHaveAttribute("data-kind", "podcast");
     expect(await overflow()).toBeLessThanOrEqual(0);
@@ -390,7 +393,7 @@ test.describe("check 31: accessibility", () => {
     await page.setViewportSize(PHONE);
     await openFeed(page);
     await expectNoSeriousAxeIssues(page);
-    await page.getByRole("button", { name: "You" }).click();
+    await page.getByRole("button", { name: "You", exact: true }).click();
     await expectNoSeriousAxeIssues(page);
     await page.getByRole("button", { name: "Feed" }).click();
 

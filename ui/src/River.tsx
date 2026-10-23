@@ -24,7 +24,7 @@ import { browserStore, loadRead, markRead, markUnread, saveRead } from "./lib/re
 import { Header, TabBar, YouPanel } from "./components/Chrome";
 import { TAB_PLACEHOLDERS, type Tab } from "./lib/tabs";
 import { FeedCard } from "./components/FeedCard";
-import { FilterChips, FilterSidebar, SearchField, type FilterState } from "./components/Filters";
+import { FilterButton, FilterSheet, FilterSidebar, SearchField, type FilterState } from "./components/Filters";
 import { CLEARED, toggleCircle } from "./lib/filters";
 import { InfoDialog } from "./components/InfoDialog";
 import { NotFound } from "./components/NotFound";
@@ -94,6 +94,17 @@ function filtersToUrl(filters: FilterState): void {
   // The reader view keeps its /item/{id} path; the query string still carries the filters.
   const path = itemIdFromPath(window.location.pathname) ? window.location.pathname : "/";
   window.history.replaceState(window.history.state, "", search ? `${path}?${search}` : path);
+}
+
+/** Whether this history entry is the one the phone's filter sheet added (ui-revisions-6). */
+function onSheetEntry(): boolean {
+  return Boolean((window.history.state as { riverSheet?: boolean } | null)?.riverSheet);
+}
+
+function clearSheetEntry(): void {
+  const state = { ...(window.history.state as Record<string, unknown>) };
+  delete state.riverSheet;
+  window.history.replaceState(state, "");
 }
 
 function useNow(): number {
@@ -177,8 +188,50 @@ export function River() {
   const now = useNow();
 
   // The browser's Back and Forward move between the feed and the reader.
+  // The phone's filter sheet (ui-revisions-6): opening it adds a history entry, so the back
+  // gesture closes it; every other way of closing steps back over that entry.
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const sheetTrigger = useRef<HTMLButtonElement | null>(null);
+  const filtersNow = useRef(filters);
   useEffect(() => {
-    const onPop = () => setReaderId(itemIdFromPath(window.location.pathname));
+    filtersNow.current = filters;
+  }, [filters]);
+  const openSheet = (trigger: HTMLButtonElement) => {
+    sheetTrigger.current = trigger;
+    window.history.pushState({ riverSheet: true }, "", window.location.href);
+    setSheetOpen(true);
+  };
+  const sheetClosed = () => {
+    setSheetOpen(false);
+    // Back to the button, unless it's hidden (the window grew to desktop width).
+    if (sheetTrigger.current?.checkVisibility()) sheetTrigger.current.focus();
+    if (onSheetEntry()) window.history.back();
+  };
+  useEffect(() => {
+    // A reload while the sheet was open lands on its entry with the sheet closed: unmark it.
+    if (onSheetEntry()) clearSheetEntry();
+  }, []);
+  useEffect(() => {
+    // The sheet is for phones: a window that grows to desktop width closes it.
+    const query = window.matchMedia(PHONE_QUERY);
+    const onChange = () => {
+      if (!query.matches) setSheetOpen(false);
+    };
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    const onPop = () => {
+      setReaderId(itemIdFromPath(window.location.pathname));
+      // Back from the sheet's entry closes it. Filters live in this page, not in history, so the
+      // entry Back lands on takes the current ones (the sheet may have changed them).
+      setSheetOpen(false);
+      // Forward onto the sheet's old entry leaves the sheet closed; unmark it so the next close
+      // doesn't step back twice.
+      if (onSheetEntry()) clearSheetEntry();
+      filtersToUrl(filtersNow.current);
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
@@ -464,9 +517,10 @@ export function River() {
           <SearchField id="search-phone" value={filters.q} onSearch={filterProps.onSearch} />
         </div>
       )}
-      <div className={tab === "feed" && !readerId ? "phone-only" : "phone-only hidden"}>
-        <FilterChips {...filterProps} onClearAll={() => setFilter(CLEARED)} />
+      <div className={tab === "feed" && !readerId ? "phone-only filter-bar" : "phone-only hidden"}>
+        <FilterButton circles={shownCircles} value={filters} expanded={sheetOpen} onOpen={openSheet} />
       </div>
+      <FilterSheet {...filterProps} open={sheetOpen} onClose={sheetClosed} onClearAll={() => setFilter(CLEARED)} />
 
       {/* The columns stay the same while reading, so the filter column never moves (ui-revisions-2 item 1). */}
       <div className={["layout", panel.length > 0 ? "layout-panel" : "", readerState ? "layout-reading" : ""].filter(Boolean).join(" ")}>
