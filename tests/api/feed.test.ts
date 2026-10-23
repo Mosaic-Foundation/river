@@ -220,7 +220,7 @@ describe("filters (check 5)", () => {
   });
 
   it("refuses an unknown mode, circle, type or cursor", async () => {
-    for (const query of ["mode=party", "circle=Bowling", "type=memes", "cursor=nope", "type=a&type=b", "network=bluesky"]) {
+    for (const query of ["mode=party", "circle=Bowling", "type=memes", "cursor=nope", "type=a&type=b", "network=atproto"]) {
       const res = await fetch(`${API}/feed?${query}`);
       expect(res.status, query).toBe(400);
     }
