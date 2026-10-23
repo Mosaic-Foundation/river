@@ -33,14 +33,25 @@ interface Feed {
   refresh: { claimed: string[]; pending: string[] };
 }
 
-async function getFeed(query: Record<string, string> = {}): Promise<Feed> {
-  const res = await fetch(`${API}/feed?${new URLSearchParams(query)}`);
+/** A list value repeats its parameter (`circle=a&circle=b`). */
+type Query = Record<string, string | string[]>;
+
+function search(query: Query): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [name, value] of Object.entries(query)) {
+    for (const v of Array.isArray(value) ? value : [value]) params.append(name, v);
+  }
+  return params;
+}
+
+async function getFeed(query: Query = {}): Promise<Feed> {
+  const res = await fetch(`${API}/feed?${search(query)}`);
   if (res.status !== 200) throw new Error(`GET /feed answered ${res.status}: ${await res.text()}`);
   return (await res.json()) as Feed;
 }
 
 /** Every page of a query, following nextCursor. */
-async function allItems(query: Record<string, string> = {}): Promise<FeedItem[]> {
+async function allItems(query: Query = {}): Promise<FeedItem[]> {
   const items: FeedItem[] = [];
   let cursor: string | null = null;
   for (let page = 0; page < 100; page++) {
@@ -163,6 +174,24 @@ describe("filters (check 5)", () => {
     const events = await allItems({ type: "events" });
     expect(events.length).toBeGreaterThan(0);
     expect(events.every((i) => i.kind === "event")).toBe(true);
+  });
+
+  it("several circles show items from any of them, AND the type (ui-revisions-4 item 1)", async () => {
+    const family = await allItems({ circle: "Family" });
+    const news = await allItems({ circle: "News and ideas" });
+    const both = await allItems({ circle: ["Family", "News and ideas"] });
+    expect(new Set(both.map((i) => i.id))).toEqual(new Set([...family, ...news].map((i) => i.id)));
+    expect(new Set(both.map((i) => i.space.name))).toEqual(new Set([...family, ...news].map((i) => i.space.name)));
+    const articles = await allItems({ circle: ["Family", "News and ideas"], type: "articles" });
+    expect(articles.length).toBeGreaterThan(0);
+    expect(articles.every((i) => i.kind === "article")).toBe(true);
+    expect(new Set(articles.map((i) => i.id))).toEqual(new Set(both.filter((i) => i.kind === "article").map((i) => i.id)));
+    // "All" among them changes nothing; one unknown circle refuses the request.
+    expect((await allItems({ circle: ["All", "Family"] })).map((i) => i.id)).toEqual(family.map((i) => i.id));
+    const res = await fetch(`${API}/feed?${search({ circle: ["Family", "Bowling"] })}`);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("bad_circle");
+    expect((await fetch(`${API}/feed?circle[x]=Family`)).status).toBe(400);
   });
 
   it("several types show any of those kinds; networks show only their adapters (ui-revisions-1)", async () => {

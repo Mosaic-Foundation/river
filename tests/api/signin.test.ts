@@ -416,5 +416,28 @@ describe("a member's read state (check 23, API side)", () => {
     const everything = await feed(cookie);
     expect(everything.items.some((i) => i.read === false)).toBe(true);
     expect((await post("/read-state/all", { circle: "Soccer" }, { cookie, origin })).status).toBe(400);
+    expect((await post("/read-state/all", { circle: [soccer!.id, 7] }, { cookie, origin })).status).toBe(400);
+  });
+
+  it("several circles: the feed and Mark all read take any of them (ui-revisions-4 item 1)", async () => {
+    const cookie = await member();
+    await post("/read-state", { unread: (await feed(cookie)).items.map((i) => i.id) }, { cookie, origin });
+    const circles = (await feed(cookie)).circles;
+    const family = circles.find((c) => c.name === "Family")!;
+    const soccer = circles.find((c) => c.name === "Soccer")!;
+    const both = await feed(cookie, `?circle=${family.id}&circle=${soccer.id}`);
+    const one = [
+      ...(await feed(cookie, `?circle=${family.id}`)).items.map((i) => ({ ...i, circle: family.id })),
+      ...(await feed(cookie, `?circle=${soccer.id}`)).items.map((i) => ({ ...i, circle: soccer.id })),
+    ];
+    expect(one.length).toBeGreaterThan(0);
+    // The newest of either circle's items: each is on that circle's own first page.
+    expect(both.items.length).toBeGreaterThanOrEqual(Math.max(...[family, soccer].map((c) => one.filter((i) => i.circle === c.id).length)));
+    const ids = new Set(one.map((i) => i.id));
+    expect(both.items.every((i) => ids.has(i.id))).toBe(true);
+    const res = await post("/read-state/all", { circle: [family.id, soccer.id] }, { cookie, origin });
+    expect(res.status).toBe(200);
+    expect((await feed(cookie, `?circle=${family.id}&circle=${soccer.id}`)).items.every((i) => i.read)).toBe(true);
+    expect((await feed(cookie)).items.some((i) => i.read === false)).toBe(true);
   });
 });
