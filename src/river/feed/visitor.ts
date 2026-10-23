@@ -65,19 +65,22 @@ export function parseMode(raw: string | undefined, instance: Instance): Mode {
 }
 
 /**
- * The scope after the circle and the mode (spec F5, F9): circle (one at a time) AND the mode's
- * scope. Civic mode keeps spaces with category civic plus members of the reader's circle whose
- * `role` is civic: found by role, never by name, so a renamed Civic circle still counts.
+ * The scope after the circles and the mode (spec F5, F9, ui-revisions-4 item 1): any of the chosen
+ * circles (none means All) AND the mode's scope. Civic mode keeps spaces with category civic plus
+ * members of the reader's circle whose `role` is civic: found by role, never by name, so a renamed
+ * Civic circle still counts.
  */
-export function scopeFor(view: ReaderView, mode: Mode, circleId: string | undefined): FeedScope {
-  let circle: ReaderCircle | undefined;
-  if (circleId !== undefined && circleId !== "" && circleId.toLowerCase() !== "all") {
-    circle = view.circles.find((c) => c.id === circleId);
+export function scopeFor(view: ReaderView, mode: Mode, circleIds: readonly string[] | undefined): FeedScope {
+  const chosen: ReaderCircle[] = [];
+  for (const circleId of circleIds ?? []) {
+    if (circleId === "" || circleId.toLowerCase() === "all") continue;
+    const circle = view.circles.find((c) => c.id === circleId);
     if (!circle) throw new FeedInputError("circle", `Unknown circle "${circleId}"`);
+    if (!chosen.includes(circle)) chosen.push(circle);
   }
   const civicCircle = view.circles.find((c) => c.role === "civic");
   const allowed = (spaceId: string): boolean => {
-    if (circle && !circle.spaceIds.includes(spaceId)) return false;
+    if (chosen.length > 0 && !chosen.some((c) => c.spaceIds.includes(spaceId))) return false;
     if (MODE_DEFINITIONS[mode].scope === "civic") {
       return view.categories.get(spaceId) === "civic" || Boolean(civicCircle?.spaceIds.includes(spaceId));
     }

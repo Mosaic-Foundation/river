@@ -64,6 +64,15 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-23, UI revisions 4 item 1 (multi-select circles): unit `feedScope` (several circles,
+  "All" among them, an unknown one refuses the list), `ui/filters` (`toggleCircle`) and
+  `ui/format` (one `circle` parameter per circle); API `feed.test.ts` (two circles are the union,
+  AND a type; a bad or malformed circle is 400; 30 repeats still read as a list) and
+  `signin.test.ts` (a member's two circles, and Mark all read with a list); new e2e
+  `revisions4.spec.ts` item 1 (5 tests: union, type, toggle off and on, All shows every article;
+  the URL, a link, opening an item and Back; keyboard; Civic keeps only the civic circle; the
+  phone chip row). `river.spec.ts` turns News and ideas off before picking Soccer. Unit 587,
+  API 150, e2e 92.
 - 2026-10-22, UI revisions 3 items 1-2 (how a card opens): unit `ui/embed` rewritten; e2e
   `revisions3.spec.ts` items 1 and 2 (8 tests; the framed path uses a stand-in framing answer
   via `page.route`, new tabs are checked by their navigation request since fixtures.ts cuts

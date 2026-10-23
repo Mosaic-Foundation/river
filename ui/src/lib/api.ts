@@ -142,7 +142,8 @@ export function viewerLabel(viewer: Viewer): string {
 export interface FeedQuery {
   /** Empty or undefined: the instance's default mode. */
   mode?: string;
-  circle?: string;
+  /** Circle ids, any of them; empty or undefined for All. */
+  circles?: string[];
   /** Content types; empty or undefined for All. */
   types?: string[];
   /** Networks; empty or undefined for every network. */
@@ -161,11 +162,12 @@ export type FeedResult =
   | { status: "bad_mode" }
   | { status: "error"; message: string };
 
-/** The query string for /api/feed; empty values and "All" are left out. */
+/** The query string for /api/feed; empty values are left out. */
 export function feedSearch(query: FeedQuery): string {
   const params = new URLSearchParams();
   if (query.mode) params.set("mode", query.mode);
-  if (query.circle && query.circle !== "All") params.set("circle", query.circle);
+  // One `circle` per circle: a visitor's circles are named by name, which may hold a comma.
+  for (const circle of query.circles ?? []) params.append("circle", circle);
   if (query.types?.length) params.set("type", query.types.join(","));
   if (query.networks?.length) params.set("network", query.networks.join(","));
   const q = query.q?.trim();
@@ -218,11 +220,11 @@ export async function saveReadState(change: { read?: string[]; unread?: string[]
   }
 }
 
-/** A member's "Mark all read" for the current view (its mode, circle, types, networks and search). */
+/** A member's "Mark all read" for the current view (its mode, circles, types, networks and search). */
 export async function saveAllRead(query: Omit<FeedQuery, "cursor">): Promise<boolean> {
-  const body: Record<string, string> = {};
+  const body: Record<string, string | string[]> = {};
   if (query.mode) body.mode = query.mode;
-  if (query.circle && query.circle !== "All") body.circle = query.circle;
+  if (query.circles?.length) body.circle = query.circles;
   if (query.types?.length) body.type = query.types.join(",");
   if (query.networks?.length) body.network = query.networks.join(",");
   if (query.q?.trim()) body.q = query.q.trim();

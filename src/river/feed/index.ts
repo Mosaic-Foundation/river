@@ -31,7 +31,8 @@ export { FeedInputError, EMPTY_MESSAGE } from "./query.js";
 
 export interface FeedParams {
   mode?: string;
-  circle?: string;
+  /** Circles to show items from, any of them (ui-revisions-4 item 1); none, or "All", for every circle. */
+  circle?: string[];
   /** One or more content types, comma-separated (ui-revisions-1 item 2). */
   type?: string;
   /** One or more networks, comma-separated: hubs, fediverse (ui-revisions-1 item 4). */
@@ -122,9 +123,9 @@ export async function visitorFeed(
 ): Promise<FeedResponse> {
   // Validate before any work, so a bad request costs nothing.
   const { mode, cursor, filter } = parseCommon(instance, params);
-  const circle = params.circle;
-  if (circle && circle.toLowerCase() !== "all" && !instance.defaultCircles.some((c) => c.name === circle)) {
-    throw new FeedInputError("circle", `Unknown circle "${circle}"`);
+  const circles = parseCircles(params.circle);
+  for (const circle of circles) {
+    if (!instance.defaultCircles.some((c) => c.name === circle)) throw new FeedInputError("circle", `Unknown circle "${circle}"`);
   }
 
   const inputs = instance.seedFollows.map((f) => f.url);
@@ -139,7 +140,7 @@ export async function visitorFeed(
     async (db) => {
       const spaces = await findSpaces(db, [...new Set([...inputs, ...circleInputs])]);
       const view = visitorView(instance, spaces);
-      const scope = scopeFor(view, mode, params.circle);
+      const scope = scopeFor(view, mode, circles);
       const page = await queryFeed(db, scope, { ...filter, cursor });
       const empty = page.items.length === 0 && !cursor;
       const surfaces = cursor
@@ -171,11 +172,22 @@ export async function visitorFeed(
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-/** A member's circle parameter: "All", empty, or one of their circle ids. */
-function parseMemberCircle(raw: string | undefined): string | undefined {
-  if (raw === undefined || raw === "" || raw.toLowerCase() === "all") return undefined;
-  if (!UUID.test(raw.toLowerCase())) throw new FeedInputError("circle", `Unknown circle "${raw}"`);
-  return raw.toLowerCase();
+/** More circles than anyone keeps; a longer list is a bad request, not a slow one. */
+const MAX_CIRCLES = 100;
+
+/** The circle parameters without "All" and empty values, each once. */
+function parseCircles(raw: readonly string[] | undefined): string[] {
+  const circles = [...new Set((raw ?? []).filter((c) => c !== "" && c.toLowerCase() !== "all"))];
+  if (circles.length > MAX_CIRCLES) throw new FeedInputError("circle", "Too many circles");
+  return circles;
+}
+
+/** A member's circle parameters: "All", empty, or their circle ids. */
+function parseMemberCircles(raw: readonly string[] | undefined): string[] {
+  return parseCircles(raw?.map((c) => c.toLowerCase())).map((c) => {
+    if (!UUID.test(c)) throw new FeedInputError("circle", `Unknown circle "${c}"`);
+    return c;
+  });
 }
 
 /**
@@ -189,7 +201,7 @@ export async function memberFeed(
   deps: RefreshDeps = {},
 ): Promise<FeedResponse> {
   const { mode, cursor, filter } = parseCommon(instance, params);
-  const circle = parseMemberCircle(params.circle);
+  const circles = parseMemberCircles(params.circle);
   const account = <T>(fn: Parameters<typeof forAccount<T>>[2]) =>
     forAccount(instance.id, viewer.accountId, fn, deps.source);
 
@@ -212,7 +224,7 @@ export async function memberFeed(
   return account(async (db) => {
     if (!cursor) await applyPendingSeeds(db);
     const view = await memberView(db);
-    const scope = scopeFor(view, mode, circle);
+    const scope = scopeFor(view, mode, circles);
     const page = await queryFeed(db, scope, { ...filter, cursor, withRead: true });
     const empty = page.items.length === 0 && !cursor;
     const surfaces = cursor
@@ -240,7 +252,7 @@ export async function memberFeed(
   });
 }
 
-/** "Mark all read" for a member's current view (mode, circle, type, search). */
+/** "Mark all read" for a member's current view (mode, circles, type, search). */
 export async function memberMarkAllRead(
   instance: Instance,
   viewer: Viewer,
@@ -248,11 +260,11 @@ export async function memberMarkAllRead(
   deps: Pick<RefreshDeps, "source"> = {},
 ): Promise<number> {
   const { mode, filter } = parseCommon(instance, { ...params, cursor: undefined });
-  const circle = parseMemberCircle(params.circle);
+  const circles = parseMemberCircles(params.circle);
   return forAccount(
     instance.id,
     viewer.accountId,
-    async (db) => markViewRead(db, scopeFor(await memberView(db), mode, circle), filter),
+    async (db) => markViewRead(db, scopeFor(await memberView(db), mode, circles), filter),
     deps.source,
   );
 }

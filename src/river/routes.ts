@@ -25,6 +25,41 @@ function param(req: Request, name: string): string | undefined {
   return value;
 }
 
+/**
+ * A query parameter that may repeat (`circle=a&circle=b`, ui-revisions-4 item 1). Repeating keeps
+ * circle names (visitors' circles are named by name) free to hold commas.
+ */
+function paramList(req: Request, name: string): string[] | undefined {
+  const value = req.query[name];
+  if (value === undefined) return undefined;
+  const values = Array.isArray(value) ? value : typeof value === "object" ? indexed(value) : [value];
+  if (!values.every((v): v is string => typeof v === "string")) {
+    throw new FeedInputError(name as FeedInputError["field"], `${name} must be text`);
+  }
+  return values;
+}
+
+/**
+ * Express's query parser (qs) returns more than 20 repeats of a key as an object keyed "0", "1", ...
+ * rather than an array. Those keys, in order, are the list; any other key is a malformed request.
+ */
+function indexed(value: object): unknown[] {
+  const entries = Object.entries(value);
+  if (!entries.every(([key]) => /^\d+$/.test(key))) return [value];
+  return entries.sort(([a], [b]) => Number(a) - Number(b)).map(([, v]) => v);
+}
+
+/** A field of a JSON body that holds one string or a list of them (circles). */
+function bodyParamList(body: unknown, name: keyof FeedParams): string[] | undefined {
+  const value = (body as Record<string, unknown> | undefined)?.[name];
+  if (value === undefined || value === null) return undefined;
+  const values = Array.isArray(value) ? (value as unknown[]) : [value];
+  if (!values.every((v): v is string => typeof v === "string")) {
+    throw new FeedInputError(name as FeedInputError["field"], `${name} must be a string or a list of strings`);
+  }
+  return values;
+}
+
 /** A string field of a JSON body, for the view parameters "Mark all read" takes. */
 function bodyParam(body: unknown, name: keyof FeedParams): string | undefined {
   const value = (body as Record<string, unknown> | undefined)?.[name];
@@ -73,7 +108,7 @@ export function riverRoutes(): Router {
     try {
       const params: FeedParams = {
         mode: param(req, "mode"),
-        circle: param(req, "circle"),
+        circle: paramList(req, "circle"),
         type: param(req, "type"),
         network: param(req, "network"),
         q: param(req, "q"),
@@ -155,12 +190,12 @@ export function riverRoutes(): Router {
     }
   });
 
-  // "Mark all read" for the member's current view: { mode?, circle?, type?, network?, q? }.
+  // "Mark all read" for the member's current view: { mode?, circle? (one or a list), type?, network?, q? }.
   router.post("/read-state/all", requireInstance(), readSession(), requireMember(), async (req, res, next) => {
     try {
       const marked = await memberMarkAllRead(res.locals.instance as Instance, res.locals.viewer as Viewer, {
         mode: bodyParam(req.body, "mode"),
-        circle: bodyParam(req.body, "circle"),
+        circle: bodyParamList(req.body, "circle"),
         type: bodyParam(req.body, "type"),
         network: bodyParam(req.body, "network"),
         q: bodyParam(req.body, "q"),

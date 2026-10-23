@@ -123,9 +123,21 @@ describe("visitor scope", () => {
   });
 
   it("a circle narrows to its members", () => {
-    expect(scopeFor(view, "everything", "News and ideas")).toEqual({ spaceIds: ["w3c", "podcast"], streams: [], mutedStreams: [] });
-    expect(scopeFor(view, "everything", "All").spaceIds).toHaveLength(5);
-    expect(() => scopeFor(view, "everything", "Bowling")).toThrow(FeedInputError);
+    expect(scopeFor(view, "everything", ["News and ideas"])).toEqual({ spaceIds: ["w3c", "podcast"], streams: [], mutedStreams: [] });
+    expect(scopeFor(view, "everything", ["All"]).spaceIds).toHaveLength(5);
+    expect(scopeFor(view, "everything", []).spaceIds).toHaveLength(5);
+    expect(() => scopeFor(view, "everything", ["Bowling"])).toThrow(FeedInputError);
+  });
+
+  it("several circles show the members of any of them (ui-revisions-4 item 1)", () => {
+    expect(scopeFor(view, "everything", ["Family", "News and ideas"])).toEqual({
+      spaceIds: ["w3c", "podcast", "family", "video"],
+      streams: [],
+      mutedStreams: [],
+    });
+    // "All" among them adds nothing; one unknown circle refuses the whole list.
+    expect(scopeFor(view, "everything", ["All", "Family"]).spaceIds).toEqual(["family", "video"]);
+    expect(() => scopeFor(view, "everything", ["Family", "Bowling"])).toThrow(FeedInputError);
   });
 
   it("civic mode keeps civic-category spaces and the civic-role circle (spec F9)", () => {
@@ -135,7 +147,8 @@ describe("visitor scope", () => {
       mutedStreams: [],
     });
     // circle AND mode
-    expect(scopeFor(view, "civic", "Family")).toEqual({ spaceIds: [], streams: [], mutedStreams: [] });
+    expect(scopeFor(view, "civic", ["Family"])).toEqual({ spaceIds: [], streams: [], mutedStreams: [] });
+    expect(scopeFor(view, "civic", ["Family", "Civic"]).spaceIds).toEqual(["hub"]);
   });
 
   it("modes must be enabled on the instance", () => {
@@ -173,7 +186,7 @@ describe("member stream rules: the most specific rule wins (spec F7, check 17)",
   });
 
   it("a circle that leaves the space out leaves its mutes out too", () => {
-    expect(scopeFor(view, "everything", "c1")).toEqual({
+    expect(scopeFor(view, "everything", ["c1"])).toEqual({
       spaceIds: [],
       streams: [{ spaceId: "longmont", key: "https://longmont.civic.social/process/proc_1" }],
       mutedStreams: [],

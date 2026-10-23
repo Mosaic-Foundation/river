@@ -150,7 +150,10 @@ test.describe("filters and empty state", () => {
     await expect(cards(page).first().getByText("38 min")).toBeVisible();
     await expect(page).toHaveURL(/circle=News\+and\+ideas/);
 
+    // Circles toggle (ui-revisions-4 item 1): News and ideas off, Soccer on.
+    await sidebar.getByRole("button", { name: "News and ideas" }).click();
     await sidebar.getByRole("button", { name: "Soccer" }).click();
+    await expect(page).toHaveURL(/\?circle=Soccer&type=podcasts$/);
     const feed = await page.request.get("/api/feed?circle=Soccer&type=podcasts");
     const { emptyMessage } = (await feed.json()) as { emptyMessage: string };
     await expect(page.getByRole("status")).toHaveText(emptyMessage);
