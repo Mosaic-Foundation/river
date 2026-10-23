@@ -11,7 +11,7 @@
 // and title, under "{booster} boosted" (spec 4.3).
 import { useEffect, useRef } from "react";
 import type { FeedItem } from "../lib/api";
-import { boostedPost, boosterName } from "../lib/boost";
+import { boostedPost, boosterName, boostVerb } from "../lib/boost";
 import {
   deadlineLabel,
   eventDate,
@@ -109,7 +109,7 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
       {boosted && (
         <p className="card-boost" data-testid="boost-line">
           <BoostIcon />
-          {boosted.booster} boosted
+          {boosted.booster} {boostVerb(item)}
         </p>
       )}
 
@@ -162,7 +162,7 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
       {item.boostOf && !boosted && (
         <p className="card-boost">
           <BoostIcon />
-          {boosterName(item)} boosted a post from {item.boostOf.host}
+          {boosterName(item)} {boostVerb(item)} a post from {item.boostOf.host}
         </p>
       )}
 

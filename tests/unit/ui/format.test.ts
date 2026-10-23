@@ -36,7 +36,7 @@ describe("card helpers", () => {
     expect(CONTENT_TYPES.map((t) => t.value)).toEqual([
       "posts", "articles", "podcasts", "videos", "photos", "events", "civic",
     ]);
-    expect(NETWORKS.map((n) => n.value)).toEqual(["hubs", "fediverse"]);
+    expect(NETWORKS.map((n) => n.value)).toEqual(["hubs", "fediverse", "bluesky"]);
   });
 
   it("plays audio and video from https sources only", () => {

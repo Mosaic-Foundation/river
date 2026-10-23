@@ -35,7 +35,7 @@ export interface FeedParams {
   circle?: string[];
   /** One or more content types, comma-separated (ui-revisions-1 item 2). */
   type?: string;
-  /** One or more networks, comma-separated: hubs, fediverse (ui-revisions-1 item 4). */
+  /** One or more networks, comma-separated: hubs, fediverse, bluesky (ui-revisions-1 item 4, ADR-009). */
   network?: string;
   q?: string;
   cursor?: string;

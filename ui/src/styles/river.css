@@ -748,6 +748,109 @@ main.feed:focus {
   font-style: italic;
 }
 
+/* A Bluesky post's link card and quoted post (ADR-009). */
+.card-link {
+  display: flex;
+  gap: var(--space-sm);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  background: var(--color-surface);
+}
+
+.card-link:hover .card-link-title,
+.card-link:focus-visible .card-link-title {
+  text-decoration: underline;
+}
+
+.card-link-thumb {
+  width: var(--size-link-thumb);
+  height: var(--size-link-thumb);
+  flex: none;
+  object-fit: cover;
+  background: var(--color-surface-alt);
+}
+
+.card-link-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+  padding: var(--space-sm);
+  line-height: var(--line-height-tight);
+}
+
+.card-link-host {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.card-link-title {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-link);
+  overflow-wrap: anywhere;
+}
+
+.card-link-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-quote {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: var(--space-sm);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+}
+
+.card-quote-byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.card-quote-byline .source-icon {
+  width: var(--size-avatar-small);
+  height: var(--size-avatar-small);
+  font-size: var(--font-size-xs);
+}
+
+.card-quote-name {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+}
+
+.card-quote-handle {
+  overflow-wrap: anywhere;
+}
+
+.card-quote-text {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.card-quote-open {
+  align-self: flex-start;
+  font-size: var(--font-size-sm);
+  color: var(--color-link);
+}
+
 .card-media {
   display: grid;
   gap: var(--space-xs);

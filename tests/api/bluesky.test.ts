@@ -30,6 +30,10 @@ interface FeedItem {
   author: { name?: string; handle?: string } | null;
   boostOf: { author?: { handle?: string }; fetched?: boolean } | null;
   contentHtml: string | null;
+  embed?: {
+    link?: { url: string; title?: string };
+    quote?: { url?: string; author?: { handle?: string }; text?: string; unavailable?: boolean };
+  };
   source: string;
   space: { id: string; name: string; adapter: string };
 }
@@ -143,6 +147,32 @@ describe("following a Bluesky account (ADR-009)", () => {
     expect(items.every((i) => i.space.id === spaceId)).toBe(true);
     expect(items.some((i) => (i.contentHtml ?? "").includes('href="https://'))).toBe(true);
     expect((await call("DELETE", `/circles/${circleId}`)).status).toBe(204);
+  });
+
+  it("network=bluesky shows only Bluesky items, with their link cards and quoted posts (spec item 3)", async () => {
+    await follow("@bsky.app");
+    const res = await fetch(`${API}/feed?network=bluesky`, { headers: { cookie: member.cookie } });
+    expect(res.status).toBe(200);
+    const items = ((await res.json()) as { items: FeedItem[] }).items;
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((i) => i.space.adapter === "atproto")).toBe(true);
+    const all: FeedItem[] = [];
+    let cursor: string | null = null;
+    for (let n = 0; n < 20; n++) {
+      const page = await fetch(`${API}/feed?network=bluesky${cursor ? `&cursor=${cursor}` : ""}`, { headers: { cookie: member.cookie } });
+      const body = (await page.json()) as { items: FeedItem[]; nextCursor: string | null };
+      all.push(...body.items);
+      cursor = body.nextCursor;
+      if (!cursor) break;
+    }
+    const quote = all.find((i) => i.embed?.quote?.author?.handle === "@niedermeyer.online");
+    expect(quote?.embed?.quote?.url).toMatch(/^https:\/\/bsky\.app\/profile\/did:plc:/);
+    expect(all.some((i) => i.embed?.quote?.unavailable === true)).toBe(true);
+    expect(all.some((i) => i.embed?.link?.url.startsWith("https://"))).toBe(true);
+    // Other networks' items carry no embed.
+    const hubs = ((await (await fetch(`${API}/feed?network=hubs,fediverse`, { headers: { cookie: member.cookie } })).json()) as { items: FeedItem[] }).items;
+    expect(hubs.length).toBeGreaterThan(0);
+    expect(hubs.every((i) => i.space.adapter !== "atproto" && i.embed === undefined)).toBe(true);
   });
 
   it("answers in the follow box's words for an account it can't reach, or malformed input", async () => {
