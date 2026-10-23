@@ -305,6 +305,7 @@ export function FilterSheet({ circles, value, onCircle, onType, onNetwork, onSea
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const drag = useRef<{ start: number; moved: number } | null>(null);
+  const dragged = useRef(false);
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
@@ -345,13 +346,22 @@ export function FilterSheet({ circles, value, onCircle, onType, onNetwork, onSea
             drag.current = { start: e.clientY, moved: 0 };
           }}
           onPointerMove={(e) => {
+            // Only while pressed: drag is set on pointerdown and cleared on release.
             if (!drag.current) return;
             drag.current.moved = Math.max(0, e.clientY - drag.current.start);
             setOffset(drag.current.moved);
           }}
           onPointerUp={() => {
-            if ((drag.current?.moved ?? 0) >= SWIPE_CLOSE) close();
+            const moved = drag.current?.moved ?? 0;
+            drag.current = null;
+            if (moved >= SWIPE_CLOSE) close();
             else setOffset(0);
+            // A drag isn't a tap: the click that may follow this release mustn't close the sheet.
+            // A touch swipe often sends no click, so the flag lasts only until this task ends.
+            if (moved >= 6) {
+              dragged.current = true;
+              window.setTimeout(() => (dragged.current = false), 0);
+            }
           }}
           onPointerCancel={() => {
             drag.current = null;
@@ -359,9 +369,7 @@ export function FilterSheet({ circles, value, onCircle, onType, onNetwork, onSea
           }}
           onClick={() => {
             // A tap (or Enter) closes; a short drag that snapped back doesn't.
-            const moved = drag.current?.moved ?? 0;
-            drag.current = null;
-            if (moved < 6) close();
+            if (!dragged.current) close();
           }}
         >
           <span className="filter-sheet-grip" aria-hidden="true" />

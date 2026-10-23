@@ -96,6 +96,17 @@ function filtersToUrl(filters: FilterState): void {
   window.history.replaceState(window.history.state, "", search ? `${path}?${search}` : path);
 }
 
+/** Whether this history entry is the one the phone's filter sheet added (ui-revisions-6). */
+function onSheetEntry(): boolean {
+  return Boolean((window.history.state as { riverSheet?: boolean } | null)?.riverSheet);
+}
+
+function clearSheetEntry(): void {
+  const state = { ...(window.history.state as Record<string, unknown>) };
+  delete state.riverSheet;
+  window.history.replaceState(state, "");
+}
+
 function useNow(): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -192,9 +203,14 @@ export function River() {
   };
   const sheetClosed = () => {
     setSheetOpen(false);
-    sheetTrigger.current?.focus();
-    if ((window.history.state as { riverSheet?: boolean } | null)?.riverSheet) window.history.back();
+    // Back to the button, unless it's hidden (the window grew to desktop width).
+    if (sheetTrigger.current?.checkVisibility()) sheetTrigger.current.focus();
+    if (onSheetEntry()) window.history.back();
   };
+  useEffect(() => {
+    // A reload while the sheet was open lands on its entry with the sheet closed: unmark it.
+    if (onSheetEntry()) clearSheetEntry();
+  }, []);
   useEffect(() => {
     // The sheet is for phones: a window that grows to desktop width closes it.
     const query = window.matchMedia(PHONE_QUERY);
@@ -211,6 +227,9 @@ export function River() {
       // Back from the sheet's entry closes it. Filters live in this page, not in history, so the
       // entry Back lands on takes the current ones (the sheet may have changed them).
       setSheetOpen(false);
+      // Forward onto the sheet's old entry leaves the sheet closed; unmark it so the next close
+      // doesn't step back twice.
+      if (onSheetEntry()) clearSheetEntry();
       filtersToUrl(filtersNow.current);
     };
     window.addEventListener("popstate", onPop);
