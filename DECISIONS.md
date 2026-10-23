@@ -331,7 +331,8 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   in; "All" or an empty value means every circle. An unknown circle anywhere in the list is a 400
   (`bad_circle`), and the page then shows All, as it did for one unknown circle. Switching to
   Civic keeps the selected circles Civic lists (the civic circle) and drops the rest; with none
-  left the feed shows All. Lists of more than 100 circles are refused.
+  left the feed shows All. Lists of more than 100 circles are refused; more than 20 repeats,
+  which Express's query parser hands over as an index-keyed object, still read as a list.
 - Why: visitors' circles are named by their names, which may hold a comma, so the comma list
   that content types and networks use (`type=posts,videos`) would be ambiguous for circles.
 - Alternatives: a comma list with escaping; circle ids for visitors too (would change the
