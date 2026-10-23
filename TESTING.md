@@ -67,7 +67,8 @@ Newest first: date, slice, tests added, counts.
 - 2026-10-23, UI revisions 6 (mobile filter sheet): new e2e `revisions6.spec.ts` (11 tests at
   390x844: the button, its count and one-line summary; the sheet's height, handle, content and
   wrapping pills; live updates behind it; Show results, Back, a tap outside and a swipe down keep
-  the selections; Clear all stays open; Civic mode; the modal dialog, focus in and back, Escape;
+  the selections (and Forward onto the old entry doesn't make a later Back step twice; Enter on
+  the handle closes after a short drag); Clear all stays open; Civic mode; the modal dialog, focus in and back, Escape;
   Tab reaches every control; reduced motion; axe in both modes). `openSheet` waits for the slide
   to finish before measuring. Phone steps in `revisions`, `revisions4`, `river` and `modes`
   specs use the sheet instead of the chip strip; `river.spec.ts` matches the You tab exactly

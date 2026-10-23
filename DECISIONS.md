@@ -345,6 +345,9 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   sections, each section still collapsible. The header's phone search button stays; it and the
   sheet's search edit the same search. The sheet closes if the window grows to desktop width.
   Count: one per circle, type and network, plus one for a search.
+  A history entry the sheet added but no longer shows (Forward onto it, or a reload while the
+  sheet was open) is unmarked, so a later close steps back only once. After a resize closes the
+  sheet, focus stays put if the phone button is hidden.
 - Why: item 4 asks for a modal dialog with Escape and focus return, which `<dialog>` gives; item
   3 asks for the back gesture to close it, which needs the history entry.
 - Alternatives: a hand-built focus trap on a `div` (more code, same result); "Show N items" from
