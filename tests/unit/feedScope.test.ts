@@ -78,15 +78,17 @@ describe("content types (spec F5)", () => {
 });
 
 describe("networks (ui-revisions-1 item 4)", () => {
-  it("names adapters: hubs is civic_hub, fediverse is fediverse", () => {
+  it("names adapters: hubs is civic_hub, fediverse is fediverse, bluesky is atproto (ADR-009)", () => {
     expect(parseNetworks("hubs")).toEqual(["civic_hub"]);
     expect(parseNetworks("Fediverse,hubs")).toEqual(["fediverse", "civic_hub"]);
+    expect(parseNetworks("bluesky")).toEqual(["atproto"]);
+    expect(parseNetworks("bluesky,fediverse")).toEqual(["atproto", "fediverse"]);
     expect(parseNetworks("")).toBeUndefined();
     expect(parseNetworks(undefined)).toBeUndefined();
   });
 
   it("refuses an unknown network", () => {
-    expect(() => parseNetworks("bluesky")).toThrow(FeedInputError);
+    expect(() => parseNetworks("atproto")).toThrow(FeedInputError);
     expect(() => parseNetworks("sample")).toThrow(FeedInputError);
   });
 });

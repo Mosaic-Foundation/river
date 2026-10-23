@@ -22,6 +22,12 @@ describe("framePlan", () => {
     }
   });
 
+  it("Bluesky posts stay in the feed like fediverse posts: never framed or checked (ADR-009)", () => {
+    const post = item("https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur/post/3myi3k45jh22z", "atproto");
+    expect(framePlan(post)).toEqual({ kind: "none" });
+    expect(cardOpen(post, "https://bsky.app/profile/did:plc:z72i7hdynmk6r22z27h6tvur/post/3myi3k45jh22z")).toBe("none");
+  });
+
   it("other live https pages are checked; samples and pages without https read in the reader", () => {
     expect(framePlan(item("https://longmont.civic.social/process/p1"))).toEqual({ kind: "check" });
     expect(framePlan(item("https://synthetic-podcast.example/episodes/3", "rss"))).toEqual({ kind: "check" });

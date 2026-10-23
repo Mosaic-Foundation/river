@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { FeedItem } from "../../../ui/src/lib/api";
-import { boostedPost, boosterName } from "../../../ui/src/lib/boost";
+import { boostedPost, boosterName, boostVerb } from "../../../ui/src/lib/boost";
 
 // Spec 4.3: a boost whose post the refresh read from the post's own host reads as the original
 // post, under "{booster} boosted". Text that only the booster's server vouches for never does.
@@ -61,5 +61,13 @@ describe("boosterName", () => {
   it("is the boosting account's name, else the space's", () => {
     expect(boosterName(boost())).toBe("W3C");
     expect(boosterName(boost({ author: null }))).toBe("W3C space");
+  });
+});
+
+describe("boostVerb", () => {
+  it("a Bluesky repost is 'reposted', a fediverse boost 'boosted' (ADR-009)", () => {
+    const space = { id: "s", name: "Bluesky", iconUrl: null, category: "person" };
+    expect(boostVerb({ space: { ...space, adapter: "atproto" } })).toBe("reposted");
+    expect(boostVerb({ space: { ...space, adapter: "fediverse" } })).toBe("boosted");
   });
 });
