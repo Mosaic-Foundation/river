@@ -1,0 +1,13 @@
+{
+  "url": "https://plc.directory/did:plc:plla3i7zproko3ekdnkoykhe",
+  "status": 200,
+  "headers": {
+    "access-control-allow-origin": "*",
+    "content-length": "558",
+    "content-type": "application/did+ld+json; charset=utf-8",
+    "etag": "W/\"22e-Qtqh0sH9hsbR3BzsRz8PFh7xEsc\"",
+    "vary": "Accept-Encoding",
+    "x-powered-by": "Express"
+  },
+  "body": "{\"@context\":[\"https://www.w3.org/ns/did/v1\",\"https://w3id.org/security/multikey/v1\",\"https://w3id.org/security/suites/secp256k1-2019/v1\"],\"id\":\"did:plc:plla3i7zproko3ekdnkoykhe\",\"alsoKnownAs\":[\"at://wikipedia.org\"],\"verificationMethod\":[{\"id\":\"did:plc:plla3i7zproko3ekdnkoykhe#atproto\",\"type\":\"Multikey\",\"controller\":\"did:plc:plla3i7zproko3ekdnkoykhe\",\"publicKeyMultibase\":\"zQ3shuNB3WEyLUrzw5tSg8b4s1asbZfMR1FzCWhr3Pa4tn7a1\"}],\"service\":[{\"id\":\"#atproto_pds\",\"type\":\"AtprotoPersonalDataServer\",\"serviceEndpoint\":\"https://amanita.us-east.host.bsky.network\"}]}"
+}

@@ -20,6 +20,33 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Bluesky reading, step 2: the adapter — 2026-10-23
+
+- Branch / PR: claude/bluesky-adapter → PR (self-merge after ADR-009's PR merges)
+- Migrations: none (`atproto` was already a `spaces.adapter` value).
+
+**What it does.** Adds `src/river/adapters/bluesky/` (ADR-009, `docs/spec/bluesky-1.md` item
+2). The follow box takes `@handle`, `name.bsky.social`, a bsky.app profile URL, a DID or an
+`at://` URI; it resolves the handle (AppView, then the handle's well-known document), checks the
+DID document names it back, and previews name, avatar and bio. Spaces are keyed by DID
+(`at://{did}`). Refresh reads `getAuthorFeed` (no replies): posts, photos with alt text,
+galleries, video thumbnails, link cards and quotes (kept in `raw.embed`), and reposts as boost
+cards under the original author. The Following page groups Bluesky accounts under "Bluesky".
+
+**Keys.** None.
+
+**Tests.** Unit `tests/unit/bluesky/` (input, map, adapter) on new recordings; API
+`bluesky.test.ts`; `media.test.ts` expects the preview's new `description`. `npm run check`:
+45 files, 664 tests. API: 160 passed. e2e: 118 passed, with `revisions4`'s hub card scrolled into
+view first (it failed on main after about 11:30 UTC; fixed on the ADR branch).
+
+### Follow-ups
+- The spec review found that malformed percent-encoding (`did:%`) gave a 500; fixed in both the
+  Bluesky and fediverse input parsers, with unit and API tests.
+- The feed doesn't return link cards and quotes yet, and Bluesky cards still get the framing
+  check: the next PR (network filter and cards) does both.
+- "Import from Bluesky" and the refresh cap for large lists come after.
+
 ## Bluesky reading, step 1: ADR-009 — 2026-10-23
 
 - Branch / PR: claude/hopeful-planck-thcj8d → PR (needs-adam: a new ADR and new outbound hosts)

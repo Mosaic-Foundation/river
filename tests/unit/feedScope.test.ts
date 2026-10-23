@@ -199,7 +199,7 @@ describe("followed names to stored spaces", () => {
     ["urn:mosaic:sample:okafor-family", { by: "canonical", value: "urn:mosaic:sample:okafor-family" }],
     ["https://Demosville.civic.social", { by: "canonical", value: "https://demosville.civic.social" }],
     ["floyd.civic.social/process/proc_1", { by: "canonical", value: "https://floyd.civic.social" }],
-    ["@W3C@w3c.social", { by: "handle", value: "@w3c@w3c.social" }],
+    ["@W3C@w3c.social", { by: "handle", value: "@w3c@w3c.social", adapter: "fediverse" }],
     ["https://mastodon.social/@eff", { by: "profile", value: "https://mastodon.social/@eff" }],
   ])("%s", (input, key) => {
     expect(spaceKeyFor(input)).toEqual(key);

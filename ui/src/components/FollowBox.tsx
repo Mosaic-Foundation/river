@@ -135,6 +135,11 @@ export function FollowBox({
                 {shown.kind} · {shown.address}
                 {shown.stream && ` · this link is one stream${shown.stream.title ? `: ${shown.stream.title}` : ""}`}
               </p>
+              {shown.description && (
+                <p className="follow-preview-bio" data-testid="follow-preview-bio">
+                  {shown.description}
+                </p>
+              )}
             </div>
           </div>
 

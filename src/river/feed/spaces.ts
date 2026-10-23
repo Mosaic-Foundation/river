@@ -2,6 +2,7 @@
 // in the follow box, or an instance's seed follow) finds its stored space.
 import type { Db } from "../../db/context.js";
 import type { AdapterName, SpaceCategory, SpaceRecord } from "../../shared/items/index.js";
+import { canonicalUrlFor, parseInput as parseBlueskyInput } from "../adapters/bluesky/index.js";
 import { civicHubAdapter } from "../adapters/civicHub/index.js";
 import { formatHandle, parseInput as parseFediverseInput } from "../adapters/fediverse/index.js";
 import { parseHubInput } from "../adapters/civicHub/index.js";
@@ -54,22 +55,28 @@ export const SAMPLE_PREFIX = "urn:mosaic:sample:";
 /**
  * How a followed name is found among stored spaces without a request: a sample by its URN, a hub
  * by its origin (the hub adapter's canonical URL), a fediverse handle by the handle the adapter
- * cached in the manifest, and a fediverse profile URL by the actor id or profile URL.
+ * cached in the manifest, a fediverse profile URL by the actor id or profile URL, and a Bluesky
+ * account by its DID (`at://{did}`) or by the handle cached in the manifest (ADR-009 item 3).
  */
 export type SpaceKey =
   | { by: "canonical"; value: string }
-  | { by: "handle"; value: string }
+  | { by: "handle"; value: string; adapter: "fediverse" | "atproto" }
   | { by: "profile"; value: string };
 
 export function spaceKeyFor(input: string): SpaceKey | undefined {
   const text = input.trim();
   if (text.startsWith(SAMPLE_PREFIX)) return { by: "canonical", value: text };
+  const bluesky = parseBlueskyInput(text);
+  if (bluesky?.kind === "did") return { by: "canonical", value: canonicalUrlFor(bluesky.did) };
+  if (bluesky?.kind === "handle") return { by: "handle", value: `@${bluesky.handle}`, adapter: "atproto" };
   if (civicHubAdapter.accepts(text)) {
     const url = parseHubInput(text);
     if (url) return { by: "canonical", value: `https://${url.host.toLowerCase()}` };
   }
   const fedi = parseFediverseInput(text);
-  if (fedi?.kind === "handle") return { by: "handle", value: formatHandle(fedi.name, fedi.server).toLowerCase() };
+  if (fedi?.kind === "handle") {
+    return { by: "handle", value: formatHandle(fedi.name, fedi.server).toLowerCase(), adapter: "fediverse" };
+  }
   if (fedi?.kind === "url") return { by: "profile", value: fedi.url };
   return undefined;
 }
@@ -93,7 +100,7 @@ export async function findSpaces(db: Db, inputs: readonly string[]): Promise<Map
        FROM river.spaces
       WHERE canonical_url = ANY($1::text[])
          OR home_url = ANY($1::text[])
-         OR (adapter = 'fediverse' AND lower(manifest -> 'actor' ->> 'handle') = ANY($2::text[]))`,
+         OR (adapter IN ('fediverse', 'atproto') AND lower(manifest -> 'actor' ->> 'handle') = ANY($2::text[]))`,
     [canonical, handles],
   );
   for (const input of inputs) {
@@ -104,7 +111,7 @@ export async function findSpaces(db: Db, inputs: readonly string[]): Promise<Map
         ? undefined
         : rows.find((r) =>
             key.by === "handle"
-              ? r.adapter === "fediverse" && r.handle === key.value
+              ? r.adapter === key.adapter && r.handle === key.value
               : r.canonical_url === key.value || (key.by === "profile" && r.home_url === key.value),
           ));
     if (row) {

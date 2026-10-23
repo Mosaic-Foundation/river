@@ -1,9 +1,11 @@
 // The adapters the River can follow and refresh (spec 4.1). Order matters for what is typed in the
-// follow box: the Civic Hub adapter is tried first for URLs, a fediverse profile URL
+// follow box: the Bluesky adapter (ADR-009) comes first because it takes only Bluesky shapes
+// (`@name.bsky.social`, a bsky.app profile URL, a DID) that the hub adapter would also take as a
+// web address; then the Civic Hub adapter for URLs, a fediverse profile URL
 // (https://server/@name) falls to the fediverse adapter (the hub adapter doesn't accept it), and
 // the feed adapter (RSS, Atom, podcasts; M12) comes last because it takes any https URL.
 // Sample spaces (adapter "sample") are seeded by migration and never fetched, so they have no
-// entry here; rep_space_v01 and atproto are stubs for later milestones.
+// entry here; rep_space_v01 is a stub for a later milestone.
 import {
   AdapterError,
   ADAPTER_MESSAGES,
@@ -12,11 +14,12 @@ import {
   type FetchContext,
   type SpacePreview,
 } from "../../shared/items/index.js";
+import { blueskyAdapter } from "./bluesky/index.js";
 import { civicHubAdapter } from "./civicHub/index.js";
 import { fediverseAdapter } from "./fediverse/index.js";
 import { rssAdapter } from "./rss/index.js";
 
-export const ADAPTER_REGISTRY: readonly Adapter[] = [civicHubAdapter, fediverseAdapter, rssAdapter];
+export const ADAPTER_REGISTRY: readonly Adapter[] = [blueskyAdapter, civicHubAdapter, fediverseAdapter, rssAdapter];
 
 /** The adapter that refreshes a stored space, or undefined (samples, stubs). */
 export function adapterNamed(name: AdapterName | string): Adapter | undefined {
@@ -28,9 +31,11 @@ export function adapterFor(input: string): Adapter | undefined {
   return ADAPTER_REGISTRY.find((adapter) => adapter.accepts(input));
 }
 
-/** Every adapter that takes the input, in registry order. */
+/** Every adapter that takes the input, in registry order; only an exclusive one when it takes it. */
 export function adaptersFor(input: string, registry: readonly Adapter[] = ADAPTER_REGISTRY): Adapter[] {
-  return registry.filter((adapter) => adapter.accepts(input));
+  const candidates = registry.filter((adapter) => adapter.accepts(input));
+  const exclusive = candidates.find((adapter) => adapter.exclusive === true);
+  return exclusive ? [exclusive] : candidates;
 }
 
 /**
@@ -64,4 +69,4 @@ export async function resolveWith(
   throw notASpace;
 }
 
-export { civicHubAdapter, fediverseAdapter, rssAdapter };
+export { blueskyAdapter, civicHubAdapter, fediverseAdapter, rssAdapter };

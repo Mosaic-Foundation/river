@@ -1,0 +1,27 @@
+{
+  "url": "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=did%3Aplc%3Aywdrhkssnvgtfyujsz45jnlb",
+  "status": 200,
+  "headers": {
+    "access-control-allow-origin": "*",
+    "atproto-content-labelers": "did:plc:ar7c4by46qjdydhdevvrndac;redact",
+    "cache-control": "public, max-age=30",
+    "cdn-cache": "HIT",
+    "cdn-cachedat": "10/23/2026 17:14:23",
+    "cdn-edgestorageid": "1232",
+    "cdn-proxyver": "1.71",
+    "cdn-pullzone": "1816608",
+    "cdn-requestcountrycode": "US",
+    "cdn-requestid": "1ffcf2976b55cabc4a8a6fc12e3144f2",
+    "cdn-requestpullcode": "200",
+    "cdn-requestpullsuccess": "True",
+    "cdn-requesttime": "0",
+    "cdn-status": "200",
+    "content-length": "1491",
+    "content-type": "application/json; charset=utf-8",
+    "server": "BunnyCDN-IL1-940",
+    "strict-transport-security": "max-age=63072000",
+    "vary": "Accept-Encoding",
+    "x-powered-by": "Express"
+  },
+  "body": "{\"did\":\"did:plc:ywdrhkssnvgtfyujsz45jnlb\",\"handle\":\"publicdomainrev.bsky.social\",\"displayName\":\"The Public Domain Review\",\"avatar\":\"https://cdn.bsky.app/img/avatar/plain/did:plc:ywdrhkssnvgtfyujsz45jnlb/bafkreigtz7lbvhqvih62hxp2syig7aov6wowgjh3tg2dfswm3dwcizitvq\",\"associated\":{\"lists\":0,\"feedgens\":0,\"starterPacks\":0,\"labeler\":false,\"chat\":{\"allowIncoming\":\"none\"},\"activitySubscription\":{\"allowSubscriptions\":\"followers\"}},\"labels\":[],\"createdAt\":\"2023-11-14T10:34:21.743Z\",\"verification\":{\"verifications\":[{\"issuer\":\"did:plc:z72i7hdynmk6r22z27h6tvur\",\"issuerDisplayName\":\"Bluesky\",\"issuerHandle\":\"bsky.app\",\"uri\":\"at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.graph.verification/3mrs4qzpdfo2b\",\"isValid\":true,\"createdAt\":\"2026-07-29T14:22:04.134Z\"}],\"verifiedStatus\":\"valid\",\"trustedVerifierStatus\":\"none\"},\"description\":\"Online journal and not-for-profit project dedicated to curious and compelling works from the history of art, literature, and ideas. Featuring 300+ essays — ✍️ submissions welcome. We also have a mighty fine prints shop. \\n\\nhttps://publicdomainreview.org\",\"indexedAt\":\"2026-10-14T14:21:58.853Z\",\"banner\":\"https://cdn.bsky.app/img/banner/plain/did:plc:ywdrhkssnvgtfyujsz45jnlb/bafkreigykpqw4tvh6oivt7wswewcg7ztucidipgakja44l6n7kalaea3ay\",\"followersCount\":27537,\"followsCount\":131,\"postsCount\":2132,\"pinnedPost\":{\"cid\":\"bafyreidhnmsc4wgjids6wew2whycxwxfubgs5ktlealala5ge5l3377uzm\",\"uri\":\"at://did:plc:ywdrhkssnvgtfyujsz45jnlb/app.bsky.feed.post/3mxtqdniauc2h\"}}"
+}

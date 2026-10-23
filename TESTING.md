@@ -64,6 +64,16 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-23, Bluesky adapter (ADR-009): real recordings from `public.api.bsky.app` and
+  `plc.directory` (`npm run record-fixtures -- --bluesky`; four accounts, see
+  `tests/fixtures/http/README.md`). Unit `bluesky/input` (what the follow box takes, routing),
+  `bluesky/map` (text and facets by byte offset, link cards, photos and galleries with alt text,
+  video as a thumbnail, quotes and unavailable quotes, reposts as boost cards, hidden replies,
+  adult labels and `!no-unauthenticated`, every recorded entry), `bluesky/adapter` (resolve by
+  handle, profile URL and DID with the DID document check, the well-known fallback, refusals,
+  429; fetchNew paging, stop rules, handle change). API `bluesky.test.ts` (preview with bio;
+  follow and see posts and reposts; handle, URL and DID reach one space; malformed input is a 422). `revisions4.spec.ts` scrolls
+  its hub card into view before the framing check. Unit 664, API 160, e2e 118.
 - 2026-10-23, UI revisions 6 (mobile filter sheet): new e2e `revisions6.spec.ts` (11 tests at
   390x844: the button, its count and one-line summary; the sheet's height, handle, content and
   wrapping pills; live updates behind it; Show results, Back, a tap outside and a swipe down keep

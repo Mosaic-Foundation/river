@@ -8,7 +8,10 @@ import type { FetchGuard } from "../fetch/index.js";
 export const ITEM_KINDS = ["post", "article", "podcast", "video", "photo", "event", "civic"] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
 
-/** spaces.adapter. `rss` (RSS, Atom and podcast feeds) arrived in M12 (ADR-007). */
+/**
+ * spaces.adapter. `rss` (RSS, Atom and podcast feeds) arrived in M12 (ADR-007); `atproto` reads
+ * Bluesky accounts (ADR-009).
+ */
 export const ADAPTERS = ["civic_hub", "fediverse", "sample", "rep_space_v01", "atproto", "rss"] as const;
 export type AdapterName = (typeof ADAPTERS)[number];
 
@@ -51,6 +54,29 @@ export interface BoostRef {
    * embeds, or a REST reblog carries, came from the booster's server.
    */
   fetched?: boolean;
+}
+
+/**
+ * What a post shows inside itself: a link card or a quoted post (Bluesky, ADR-009 item 4). Kept in
+ * the item's `raw.embed` (items has no column for it); the feed reads it back with readEmbed().
+ * Text is plain text, never HTML; every URL is https.
+ */
+export interface ItemEmbed {
+  link?: { url: string; title?: string; description?: string; thumb?: string };
+  quote?: QuotedPost;
+}
+
+export interface QuotedPost {
+  /** The quoted post's page. */
+  url?: string;
+  author?: ItemAuthor;
+  text?: string;
+  /** ISO 8601. */
+  publishedAt?: string;
+  /** Images (thumbnails) the quoted post carries. */
+  media?: MediaRef[];
+  /** The quoted post can't be shown: deleted, blocked, detached, or hidden from signed-out readers. */
+  unavailable?: boolean;
 }
 
 /** items.civic. */
@@ -99,6 +125,8 @@ export interface SpacePreview {
   name: string;
   /** Null means the UI draws initials of `name`. */
   iconUrl?: string;
+  /** The account's bio, plain text, when the source has one (the follow preview shows it). */
+  description?: string;
   homeUrl?: string;
   feedUrl?: string;
   actorId?: string;
@@ -179,6 +207,11 @@ export interface Adapter {
   name: AdapterName;
   /** True if this adapter is the one to try for what was typed in the follow box. */
   accepts(input: string): boolean;
+  /**
+   * True when what this adapter accepts is its alone: no other adapter is tried for it, even when
+   * this one says it isn't a Space (a bsky.app profile URL is never a hub or a feed).
+   */
+  exclusive?: boolean;
   resolve(input: string, ctx: Pick<FetchContext, "guard" | "now">): Promise<SpacePreview>;
   fetchNew(space: SpaceRecord, ctx: FetchContext): Promise<FetchResult>;
 }

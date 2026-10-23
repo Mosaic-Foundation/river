@@ -64,6 +64,7 @@ export function kindLabel(adapter: string, network: string | null | undefined, c
     if (key === "peertube" && category === "video") return "PeerTube channel";
     return `${NETWORK_NAMES[key] ?? "Fediverse"} account`;
   }
+  if (adapter === "atproto") return "Bluesky account";
   if (adapter === "rss") {
     if (category === "podcast") return "Podcast feed";
     return network === "atom" ? "Atom feed" : "RSS feed";
@@ -81,10 +82,12 @@ export function addressOf(space: {
 }): string {
   const canonical = space.canonical_url ?? space.canonicalUrl ?? "";
   if (space.adapter === "sample") return "Sample entries";
-  if (space.adapter === "fediverse") {
+  if (space.adapter === "fediverse" || space.adapter === "atproto") {
     const actor = (space.manifest?.actor ?? undefined) as { handle?: unknown } | undefined;
     if (typeof actor?.handle === "string") return actor.handle;
   }
+  // A Bluesky account without a handle that verifies is written as its DID.
+  if (space.adapter === "atproto" && canonical.startsWith("at://")) return canonical.slice("at://".length);
   try {
     return new URL(canonical).host;
   } catch {
@@ -98,6 +101,8 @@ export interface PreviewView {
   name: string;
   /** Null: the UI draws initials of the name. */
   iconUrl: string | null;
+  /** The account's bio (Bluesky), plain text; null when the source has none. */
+  description: string | null;
   kind: string;
   category: SpaceCategory | null;
   address: string;
@@ -121,6 +126,7 @@ export function previewView(preview: SpacePreview): PreviewView {
     adapter: preview.adapter,
     name: toPlainText(preview.name).slice(0, 200) || preview.canonicalUrl,
     iconUrl: httpsOnly(preview.iconUrl),
+    description: toPlainText(preview.description).slice(0, 500) || null,
     kind: kindLabel(preview.adapter, preview.network, preview.category),
     category: preview.category ?? null,
     address: addressOf({ adapter: preview.adapter, canonicalUrl: preview.canonicalUrl, manifest: preview.manifest }),

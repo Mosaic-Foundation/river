@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { ADAPTER_REGISTRY, adapterFor, adapterNamed, adaptersFor } from "../../src/river/adapters/index.js";
 
 describe("adapter registry", () => {
-  it("lists the hub adapter, then the fediverse adapter, then the feed adapter (M12)", () => {
-    expect(ADAPTER_REGISTRY.map((a) => a.name)).toEqual(["civic_hub", "fediverse", "rss"]);
+  it("lists the Bluesky adapter (ADR-009), the hub adapter, the fediverse adapter, then the feed adapter (M12)", () => {
+    expect(ADAPTER_REGISTRY.map((a) => a.name)).toEqual(["atproto", "civic_hub", "fediverse", "rss"]);
   });
 
   it.each([
@@ -13,6 +13,9 @@ describe("adapter registry", () => {
     ["@w3c@w3c.social", "fediverse"],
     ["https://mastodon.social/@eff", "fediverse"],
     ["@trail_films@synthetic-tube.example", "fediverse"],
+    ["@bsky.app", "atproto"],
+    ["https://bsky.app/profile/publicdomainrev.bsky.social", "atproto"],
+    ["did:plc:ewvi7nxzyoun6zhxrhs64oiz", "atproto"],
   ])("routes %s to %s", (input, name) => {
     expect(adapterFor(input)?.name).toBe(name);
   });

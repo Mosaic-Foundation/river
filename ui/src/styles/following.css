@@ -202,6 +202,14 @@
   overflow-wrap: anywhere;
 }
 
+/* A Bluesky account's bio in the follow preview (ADR-009). */
+.follow-preview-bio {
+  margin: var(--space-xs) 0 0;
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
 .follow-scope {
   display: flex;
   flex-direction: column;

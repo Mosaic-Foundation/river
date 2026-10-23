@@ -7,6 +7,8 @@ export interface Preview {
   name: string;
   /** Null: draw the name's initials. */
   iconUrl: string | null;
+  /** The account's bio (Bluesky), plain text; null when there is none. */
+  description: string | null;
   kind: string;
   category: string | null;
   address: string;
@@ -136,6 +138,7 @@ export const CIRCLE_COLORS: ReadonlyArray<{ value: string; label: string }> = [
 export const GROUPS: ReadonlyArray<{ adapter: string; title: string }> = [
   { adapter: "civic_hub", title: "Civic Hubs" },
   { adapter: "fediverse", title: "Fediverse" },
+  { adapter: "atproto", title: "Bluesky" },
   { adapter: "rss", title: "Feeds and podcasts" },
   { adapter: "sample", title: "Samples" },
 ];
