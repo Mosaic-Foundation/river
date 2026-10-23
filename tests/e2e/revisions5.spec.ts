@@ -95,6 +95,18 @@ test.describe("item 2: Citizen Dashboard in Civic mode", () => {
     await expect(page).toHaveTitle("Everything · Mosaic River");
   });
 
+  test("on a narrow desktop it overlaps neither side of the bar", async ({ page }) => {
+    for (const width of [900, 1000, 1100]) {
+      await openFeed(page, "/?mode=civic", { width, height: 800 });
+      const box = (await page.getByTestId("topbar-title").boundingBox())!;
+      const start = (await page.locator(".topbar-start").boundingBox())!;
+      const actions = (await page.locator(".topbar-actions").boundingBox())!;
+      expect(box.x, `${width}px`).toBeGreaterThanOrEqual(start.x + start.width);
+      expect(box.x + box.width, `${width}px`).toBeLessThanOrEqual(actions.x);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    }
+  });
+
   test("at phone width it has its own line in the bar, with no sideways scroll", async ({ page }) => {
     await openFeed(page, "/?mode=civic", PHONE);
     const title = page.getByTestId("topbar-title");
