@@ -26,7 +26,7 @@ import { Header, TabBar, YouPanel } from "./components/Chrome";
 import { TAB_PLACEHOLDERS, type Tab } from "./lib/tabs";
 import { FeedCard } from "./components/FeedCard";
 import { ActiveFilters, FilterChips, FilterSidebar, SearchField, type FilterState } from "./components/Filters";
-import { CLEARED } from "./lib/filters";
+import { CLEARED, toggleCircle } from "./lib/filters";
 import { InfoDialog } from "./components/InfoDialog";
 import { NotFound } from "./components/NotFound";
 import { CirclesPanel } from "./components/CirclesPanel";
@@ -76,7 +76,8 @@ function filtersFromUrl(): FilterState {
   const params = new URLSearchParams(window.location.search);
   return {
     mode: modeFromSearch(window.location.search),
-    circle: params.get("circle") || "All",
+    // One `circle` per circle (ui-revisions-4 item 1); "All" or an empty one means every circle.
+    circles: [...new Set(params.getAll("circle").filter((c) => c !== "" && c.toLowerCase() !== "all"))],
     types: parseList(params.get("type"), CONTENT_TYPES),
     networks: parseList(params.get("network"), NETWORKS),
     q: params.get("q") ?? "",
@@ -86,7 +87,7 @@ function filtersFromUrl(): FilterState {
 function filtersToUrl(filters: FilterState): void {
   const params = new URLSearchParams();
   if (filters.mode) params.set("mode", filters.mode);
-  if (filters.circle !== "All") params.set("circle", filters.circle);
+  for (const circle of filters.circles) params.append("circle", circle);
   if (filters.types.length > 0) params.set("type", filters.types.join(","));
   if (filters.networks.length > 0) params.set("network", filters.networks.join(","));
   if (filters.q) params.set("q", filters.q);
@@ -283,13 +284,13 @@ export function River() {
     filtersToUrl(filters);
     const controller = new AbortController();
     loadFeed(
-      { mode: filters.mode, circle: filters.circle, types: filters.types, networks: filters.networks, q: filters.q },
+      { mode: filters.mode, circles: filters.circles, types: filters.types, networks: filters.networks, q: filters.q },
       controller.signal,
     )
       .then((result) => {
         if (result.status === "bad_circle") {
           // A circle from another view (a visitor's circle name after sign-in): show All.
-          setFilters((current) => ({ ...current, circle: "All" }));
+          setFilters((current) => ({ ...current, circles: [] }));
           return;
         }
         if (result.status === "bad_mode") {
@@ -348,9 +349,12 @@ export function River() {
   const changeMode = (next: string) => {
     setTab("feed");
     const patch: Partial<FilterState> = { mode: load.status === "ok" && next === load.defaultMode ? "" : next };
-    // Civic mode lists only the civic circle (ui-revisions-1 item 5): another circle falls back to All.
-    if (next === "civic" && filters.circle !== "All" && !civicCircles(circles).some((c) => c.id === filters.circle)) {
-      patch.circle = "All";
+    // Civic mode lists only the civic circle (ui-revisions-1 item 5): other circles are dropped,
+    // and with none left the feed shows All.
+    if (next === "civic") {
+      const civic = civicCircles(circles);
+      const kept = filters.circles.filter((id) => civic.some((c) => c.id === id));
+      if (kept.length !== filters.circles.length) patch.circles = kept;
     }
     setFilter(patch);
   };
@@ -407,7 +411,9 @@ export function River() {
   const filterProps = {
     circles: shownCircles,
     value: filters,
-    onCircle: (circle: string) => setFilter({ circle }),
+    // "All" clears the circles; any other circle toggles (ui-revisions-4 item 1).
+    onCircle: (circle: string) =>
+      setFilter({ circles: circle === "All" ? [] : toggleCircle(filters.circles, circle, shownCircles) }),
     onType: (type: string) => setFilter({ types: toggleValue(filters.types, type, CONTENT_TYPES) }),
     onNetwork: (network: string) => setFilter({ networks: toggleValue(filters.networks, network, NETWORKS) }),
     onSearch: (q: string) => setFilter({ q: q.trim() }),

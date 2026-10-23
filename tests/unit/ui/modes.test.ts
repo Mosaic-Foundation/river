@@ -37,7 +37,7 @@ describe("mode switch and links", () => {
   });
 
   it("sends the mode to the feed API", () => {
-    expect(feedSearch({ mode: "civic", circle: "All", types: [] })).toBe("?mode=civic");
+    expect(feedSearch({ mode: "civic", circles: [], types: [] })).toBe("?mode=civic");
     expect(feedSearch({ mode: "", types: ["events"] })).toBe("?type=events");
   });
 

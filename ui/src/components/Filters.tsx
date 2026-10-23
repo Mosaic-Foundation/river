@@ -1,5 +1,5 @@
-// Filters (spec F5, ui-revisions-1 items 2-4): circle (one at a time, "All" default) AND content
-// types AND networks (toggle pills, several at once, none means all), plus search. Desktop:
+// Filters (spec F5, ui-revisions-1 items 2-4, ui-revisions-4 item 1): circles AND content types AND
+// networks (each toggles, several at once, none means all; "All" clears the circles), plus search. Desktop:
 // everything in the left column, each section collapsible. Phone: a chip row (content types,
 // networks, then circles); search sits behind the header's search button. Above the feed, a chip
 // per active filter with its own ✕, and "Clear all"; on a desktop "Clear all" also sits at the top
@@ -15,6 +15,7 @@ export type { FilterState };
 export interface FiltersProps {
   circles: FeedCircle[];
   value: FilterState;
+  /** "All" clears the circle selection; any other id toggles that circle. */
   onCircle: (circle: string) => void;
   onType: (type: string) => void;
   onNetwork: (network: string) => void;
@@ -104,6 +105,11 @@ function allCircles(circles: FeedCircle[]): Array<Pick<FeedCircle, "id" | "name"
   return [{ id: "All", name: "All", color: null }, ...circles];
 }
 
+/** "All" is on when no circle is; a circle is on when it is selected. */
+function circlePressed(value: FilterState, id: string): boolean {
+  return id === "All" ? value.circles.length === 0 : value.circles.includes(id);
+}
+
 export function FilterSidebar({
   circles,
   value,
@@ -139,11 +145,12 @@ export function FilterSidebar({
               <button
                 type="button"
                 className="filter-option"
-                aria-pressed={value.circle === c.id}
+                aria-pressed={circlePressed(value, c.id)}
                 onClick={() => onCircle(c.id)}
               >
                 <span className="circle-swatch" style={swatch(c.color)} aria-hidden="true" />
-                {c.name}
+                <span className="filter-option-name">{c.name}</span>
+                {circlePressed(value, c.id) && <CheckIcon className="pill-check filter-option-check" />}
               </button>
             </li>
           ))}
@@ -202,9 +209,10 @@ export function FilterChips({ circles, value, onCircle, onType, onNetwork }: Omi
             <button
               type="button"
               className="chip"
-              aria-pressed={value.circle === c.id}
+              aria-pressed={circlePressed(value, c.id)}
               onClick={() => onCircle(c.id)}
             >
+              {circlePressed(value, c.id) && <CheckIcon className="pill-check" />}
               {c.color && <span className="circle-swatch" style={swatch(c.color)} aria-hidden="true" />}
               {c.name}
             </button>
@@ -224,9 +232,9 @@ export interface ActiveFiltersProps {
 /** One chip per active filter, each with an ✕, plus "Clear all" (ui-revisions-1 item 3). */
 export function ActiveFilters({ circles, value, onChange }: ActiveFiltersProps) {
   const chips: Array<{ key: string; label: string; remove: Partial<FilterState> }> = [];
-  if (value.circle !== "All") {
-    const name = circles.find((c) => c.id === value.circle)?.name ?? value.circle;
-    chips.push({ key: "circle", label: `Circle: ${name}`, remove: { circle: "All" } });
+  for (const id of value.circles) {
+    const name = circles.find((c) => c.id === id)?.name ?? id;
+    chips.push({ key: `circle-${id}`, label: `Circle: ${name}`, remove: { circles: value.circles.filter((c) => c !== id) } });
   }
   for (const t of CONTENT_TYPES.filter((t) => value.types.includes(t.value))) {
     chips.push({ key: `type-${t.value}`, label: t.label, remove: { types: value.types.filter((v) => v !== t.value) } });

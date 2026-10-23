@@ -169,11 +169,13 @@ describe("card helpers", () => {
 });
 
 describe("feed query string", () => {
-  it("leaves out All and empty values, and encodes the rest", () => {
-    expect(feedSearch({ circle: "All", types: [], networks: [], q: "  " })).toBe("");
-    expect(feedSearch({ circle: "News and ideas", types: ["podcasts"], q: " budget ", cursor: "abc" })).toBe(
+  it("leaves out empty values, and encodes the rest", () => {
+    expect(feedSearch({ circles: [], types: [], networks: [], q: "  " })).toBe("");
+    expect(feedSearch({ circles: ["News and ideas"], types: ["podcasts"], q: " budget ", cursor: "abc" })).toBe(
       "?circle=News+and+ideas&type=podcasts&q=budget&cursor=abc",
     );
+    // One circle parameter per circle (ui-revisions-4 item 1), so a name may hold a comma.
+    expect(feedSearch({ circles: ["Family", "News, ideas"] })).toBe("?circle=Family&circle=News%2C+ideas");
     expect(feedSearch({ types: ["posts", "videos"], networks: ["hubs", "fediverse"] })).toBe(
       "?type=posts%2Cvideos&network=hubs%2Cfediverse",
     );

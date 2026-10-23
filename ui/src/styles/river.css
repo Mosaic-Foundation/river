@@ -286,6 +286,19 @@ main.feed:focus {
   font-weight: var(--font-weight-bold);
 }
 
+/* Circles toggle like the pills, with a check mark at the end when on (ui-revisions-4 item 1). */
+.filter-option-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filter-option-check {
+  flex: none;
+}
+
 .circle-swatch {
   width: var(--size-swatch);
   height: var(--size-swatch);
