@@ -1,0 +1,27 @@
+{
+  "url": "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=did%3Aplc%3Alr36xv2l64jwtnyoaqem6z2z",
+  "status": 200,
+  "headers": {
+    "access-control-allow-origin": "*",
+    "atproto-content-labelers": "did:plc:ar7c4by46qjdydhdevvrndac;redact",
+    "cache-control": "public, max-age=30",
+    "cdn-cache": "EXPIRED",
+    "cdn-cachedat": "10/23/2026 17:39:13",
+    "cdn-edgestorageid": "718",
+    "cdn-proxyver": "1.71",
+    "cdn-pullzone": "1816608",
+    "cdn-requestcountrycode": "US",
+    "cdn-requestid": "eac5468dca6981d548b7858107bac12f",
+    "cdn-requestpullcode": "200",
+    "cdn-requestpullsuccess": "True",
+    "cdn-requesttime": "0",
+    "cdn-status": "200",
+    "content-length": "2678",
+    "content-type": "application/json; charset=utf-8",
+    "server": "BunnyCDN-IL1-941",
+    "strict-transport-security": "max-age=63072000",
+    "vary": "Accept-Encoding",
+    "x-powered-by": "Express"
+  },
+  "body": "{\"did\":\"did:plc:lr36xv2l64jwtnyoaqem6z2z\",\"handle\":\"eff.org\",\"displayName\":\"Electronic Frontier Foundation\",\"avatar\":\"https://cdn.bsky.app/img/avatar/plain/did:plc:lr36xv2l64jwtnyoaqem6z2z/bafkreihlbzz2uphfrnukxznnhm6ygczohwvt747fakp76dx5qbrihzbu44\",\"associated\":{\"lists\":4,\"feedgens\":0,\"starterPacks\":3,\"labeler\":false,\"chat\":{\"allowIncoming\":\"none\",\"allowGroupInvites\":\"none\"},\"activitySubscription\":{\"allowSubscriptions\":\"followers\"}},\"labels\":[],\"createdAt\":\"2023-04-25T23:17:38.490Z\",\"verification\":{\"verifications\":[{\"issuer\":\"did:plc:z72i7hdynmk6r22z27h6tvur\",\"issuerDisplayName\":\"Bluesky\",\"issuerHandle\":\"bsky.app\",\"uri\":\"at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.graph.verification/3lvc2x5zttu2s\",\"isValid\":true,\"createdAt\":\"2025-07-31T21:21:41.079Z\"}],\"verifiedStatus\":\"valid\",\"trustedVerifierStatus\":\"none\"},\"status\":{\"uri\":\"at://did:plc:lr36xv2l64jwtnyoaqem6z2z/app.bsky.actor.status/self\",\"cid\":\"bafyreigxemzfhk45epr7gqeqb74fqqehajwj25fow5scem32ftdiivv2ia\",\"record\":{\"$type\":\"app.bsky.actor.status\",\"createdAt\":\"2026-09-17T17:59:43.270Z\",\"durationMinutes\":60,\"embed\":{\"$type\":\"app.bsky.embed.external\",\"external\":{\"$type\":\"app.bsky.embed.external#external\",\"description\":\"The Electronic Frontier Foundation (EFF) is the first line of defense when your rights in the digital world come under attack. Comments are welcome, but uncivil or off-topic posts may be deleted. — EF...\",\"thumb\":{\"$type\":\"blob\",\"ref\":{\"$link\":\"bafkreialwkuxysksy4vonto6vjprb5mftkcfavbmntrbuis75rfcev6kfm\"},\"mimeType\":\"image/jpeg\",\"size\":14223},\"title\":\"EFFLive - Twitch\",\"uri\":\"https://www.twitch.tv/efflive\"}},\"status\":\"app.bsky.actor.status#live\"},\"status\":\"app.bsky.actor.status#live\",\"embed\":{\"external\":{\"uri\":\"https://www.twitch.tv/efflive\",\"title\":\"EFFLive - Twitch\",\"description\":\"The Electronic Frontier Foundation (EFF) is the first line of defense when your rights in the digital world come under attack. Comments are welcome, but uncivil or off-topic posts may be deleted. — EF...\",\"thumb\":\"https://cdn.bsky.app/img/feed_thumbnail/plain/did:plc:lr36xv2l64jwtnyoaqem6z2z/bafkreialwkuxysksy4vonto6vjprb5mftkcfavbmntrbuis75rfcev6kfm\"},\"$type\":\"app.bsky.embed.external#view\"},\"labels\":[],\"expiresAt\":\"2026-09-17T18:59:43.270Z\",\"isActive\":false},\"description\":\"We're the Electronic Frontier Foundation. We're a nonprofit that fights for your privacy and free speech online. Find all of EFF's social media accounts at eff.org/social.\",\"indexedAt\":\"2026-09-17T18:44:49.460Z\",\"banner\":\"https://cdn.bsky.app/img/banner/plain/did:plc:lr36xv2l64jwtnyoaqem6z2z/bafkreifit22baijxddhdla3ls5dy4cvtoo4cpnasa5fnpabjqapjnasx6y\",\"followersCount\":166406,\"followsCount\":263,\"postsCount\":5711}"
+}

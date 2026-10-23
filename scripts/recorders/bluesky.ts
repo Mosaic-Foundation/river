@@ -1,6 +1,7 @@
 // Bluesky recorder (ADR-009): runs the Bluesky adapter itself through a guard that saves every
 // response, so the fixtures hold exactly the requests the adapter sends: resolveHandle, the DID
-// document (plc.directory), getProfile and getAuthorFeed's pages.
+// document (plc.directory), getProfile and getAuthorFeed's pages. For "Import from Bluesky" it also
+// records app.bsky.graph.getFollows for one account, every page.
 //
 //   npm run record-fixtures -- --bluesky
 //
@@ -8,7 +9,7 @@
 // /.well-known/atproto-did is not needed for these accounts (the AppView resolves them all).
 import { createFetchGuard, fixtureFromResponse, saveFixture, type FetchGuard } from "../../src/shared/fetch/index.js";
 import type { SpaceRecord } from "../../src/shared/items/index.js";
-import { blueskyAdapter } from "../../src/river/adapters/bluesky/index.js";
+import { blueskyAdapter, followsUrl, readFollows } from "../../src/river/adapters/bluesky/index.js";
 
 /**
  * The recorded accounts, each for what it shows: `@bsky.app` a custom-domain handle with reposts
@@ -24,6 +25,9 @@ export const BLUESKY_ACCOUNTS = [
   "did:plc:ewvi7nxzyoun6zhxrhs64oiz",
   "https://bsky.app/profile/publicdomainrev.bsky.social",
 ] as const;
+
+/** The account whose follows the import fixtures list (263 accounts on 2026-10-23: three pages). */
+export const BLUESKY_IMPORT_ACCOUNT = "@eff.org";
 
 const HOSTS = new Set(["public.api.bsky.app", "plc.directory"]);
 
@@ -59,6 +63,16 @@ async function recordAccount(input: string, outDir: string, now: Date): Promise<
   return written;
 }
 
+async function recordFollows(outDir: string): Promise<string[]> {
+  const written: string[] = [];
+  const guard = recordingGuard(outDir, written);
+  const listing = await readFollows(guard, BLUESKY_IMPORT_ACCOUNT);
+  console.log(
+    `  follows of ${BLUESKY_IMPORT_ACCOUNT}: ${listing.accounts.length} accounts (${listing.skipped} skipped) from ${followsUrl(listing.account.did)}`,
+  );
+  return written;
+}
+
 export const blueskyRecorder = {
   name: "bluesky",
   async record(outDir: string): Promise<string[]> {
@@ -71,6 +85,7 @@ export const blueskyRecorder = {
         console.log(`  ${input}: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`);
       }
     }
+    written.push(...(await recordFollows(outDir)));
     return [...new Set(written)];
   },
 };
