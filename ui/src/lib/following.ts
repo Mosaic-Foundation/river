@@ -183,6 +183,22 @@ export const CIRCLE_COLORS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "#5B6270", label: "Slate" },
 ];
 
+/**
+ * The color a circle made from a row's circles menu gets (ui-revisions-7 item 1): the first color
+ * no circle uses yet, else the list again in turn. The menu has no color picker; the Circles panel
+ * recolors it (DECISIONS.md "A circle made from a row's menu").
+ */
+export function nextCircleColor(circles: ReadonlyArray<Pick<CircleView, "color">>): string {
+  const used = new Set(circles.map((c) => c.color?.toUpperCase()));
+  const free = CIRCLE_COLORS.find((c) => !used.has(c.value));
+  return (free ?? CIRCLE_COLORS[circles.length % CIRCLE_COLORS.length]!).value;
+}
+
+/** The ids with `id` added, or removed when it was there. */
+export function toggleId(ids: readonly string[], id: string): string[] {
+  return ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+}
+
 /** The Following page's groups (spec F7 "grouped by kind"), in order. */
 export const GROUPS: ReadonlyArray<{ adapter: string; title: string }> = [
   { adapter: "civic_hub", title: "Civic Hubs" },

@@ -348,8 +348,7 @@
 
 .space-list,
 .stream-list,
-.circle-list,
-.space-row-circles {
+.circle-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -389,21 +388,234 @@
   font-style: italic;
 }
 
-.space-row-circles {
+/* A row's circles menu (ui-revisions-7): a button showing its circles, a menu under it, and a
+   small bottom sheet below 56rem. */
+.circles-menu {
+  position: relative;
+}
+
+.circles-button {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  min-height: calc(var(--size-control) * 0.85);
+  padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-md);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-xs);
+  text-align: left;
+  cursor: pointer;
+}
+
+.circles-button[aria-expanded="true"] {
+  border-color: var(--color-primary);
+}
+
+.circles-button-circle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.circles-button-empty {
+  color: var(--color-text-muted);
+}
+
+.circles-button-chevron {
+  width: var(--size-icon);
+  height: var(--size-icon);
+  color: var(--color-text-muted);
+}
+
+.circles-menu-popup {
+  position: absolute;
+  top: calc(100% + var(--space-xs));
+  right: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  width: max-content;
+  min-width: calc(var(--layout-row-text) * 1.25);
+  max-width: min(var(--layout-dialog), calc(100vw - var(--space-xl)));
+  padding: var(--space-sm);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-overlay, var(--shadow-card));
+}
+
+.circles-menu-backdrop,
+.circles-menu-grip {
+  display: none;
+}
+
+.circles-menu-title {
+  padding: 0 var(--space-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.circles-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: calc(var(--size-control) * 6.5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.circles-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  min-height: var(--size-control);
+  padding: 0 var(--space-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.circles-menu-item:hover,
+.circles-menu-item:focus-visible {
+  background: var(--color-surface-alt);
+}
+
+/* Inside the list's scroll box, so the ring is drawn inside the item where it isn't clipped. */
+.circles-menu-item:focus-visible {
+  outline-offset: calc(var(--border-width) * -3);
+}
+
+.circles-menu-check {
+  display: inline-flex;
+  flex: none;
+  width: var(--size-icon);
+  height: var(--size-icon);
+  color: var(--color-primary);
+}
+
+.circles-menu-check .icon {
+  width: 100%;
+  height: 100%;
+}
+
+.circles-menu-name {
+  overflow-wrap: anywhere;
+}
+
+.circles-menu-new {
+  border-top: var(--border-width) solid var(--color-border);
+  border-radius: 0;
+  color: var(--color-link);
+  font-weight: var(--font-weight-semibold);
+}
+
+.circles-menu-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: 0 var(--space-sm);
+  font-size: var(--font-size-sm);
+}
+
+.circles-menu-form-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-xs);
 }
 
-.tag {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-alt);
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
+.circles-menu-error {
+  padding: 0 var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+.circles-menu > .circles-menu-error {
+  padding: var(--space-xs) 0 0;
+}
+
+.circles-menu-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-xs) var(--space-sm) 0;
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+/* Phones: a small bottom sheet over a backdrop, like the mobile filter (ui-revisions-6). */
+@media (max-width: 55.99rem) {
+  .circles-menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    background: var(--color-text);
+    opacity: 0.35;
+  }
+
+  .circles-menu-popup {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 40;
+    width: 100%;
+    max-width: 100%;
+    max-height: 70vh;
+    max-height: 70dvh;
+    padding: 0 var(--space-md) calc(var(--space-sm) + env(safe-area-inset-bottom, 0px));
+    border: 0;
+    border-radius: var(--radius-xl, var(--radius-lg)) var(--radius-xl, var(--radius-lg)) 0 0;
+    animation: circles-sheet-in 0.2s ease-out;
+  }
+
+  .circles-menu-grip {
+    display: block;
+    flex: none;
+    align-self: center;
+    width: calc(var(--size-control) * 1.1);
+    height: var(--space-xs);
+    margin: var(--space-sm) 0;
+    border-radius: var(--radius-pill);
+    background: var(--color-border);
+  }
+
+  .circles-menu-title {
+    font-size: var(--font-size-sm);
+  }
+
+  .circles-menu-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .circles-menu-done {
+    width: 100%;
+    min-height: var(--size-control);
+  }
+}
+
+@keyframes circles-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .circles-menu-popup {
+    animation: none;
+  }
 }
 
 .space-row-actions {
