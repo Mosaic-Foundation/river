@@ -1,15 +1,15 @@
 // Filters (spec F5, ui-revisions-1 items 2-4, ui-revisions-4 item 1): circles AND content types AND
 // networks (each toggles, several at once, none means all; "All" clears the circles), plus search.
 // Desktop: everything in the left column under "Filter your River", each section collapsible, the
-// circles scrolling after six (ui-revisions-4 items 2-3). Phone: a chip row (content types,
-// networks, then circles); search sits behind the header's search button. A compact "Clear all"
-// shows while a filter is on: below search in the column (ui-revisions-3 item 5), first in the
-// phone's chip row (ui-revisions-4 items 4-5; the chips above the feed are gone).
+// circles scrolling after six (ui-revisions-4 items 2-3). Phone: one "Filter your River" button
+// that opens a bottom sheet with the same content as wrapping pills (ui-revisions-6). A compact
+// "Clear all" shows while a filter is on, below search in the column and in the sheet
+// (ui-revisions-3 item 5, ui-revisions-4 item 4).
 import { useEffect, useId, useRef, useState } from "react";
 import type { FeedCircle } from "../lib/api";
-import { hasActiveFilter, type FilterState } from "../lib/filters";
+import { activeFilterCount, filterSummary, hasActiveFilter, type FilterState } from "../lib/filters";
 import { circleColor, CONTENT_TYPES, NETWORKS } from "../lib/format";
-import { CheckIcon, ChevronIcon, SearchIcon } from "./Icons";
+import { CheckIcon, ChevronIcon, FilterIcon, SearchIcon } from "./Icons";
 
 export type { FilterState };
 
@@ -68,10 +68,24 @@ export function SearchField({ id, value, onSearch }: { id: string; value: string
 }
 
 /** A toggle pill: pressed shows a dark fill and a check mark (ui-revisions-1 item 2). */
-function Pill({ label, pressed, onToggle, title }: { label: string; pressed: boolean; onToggle: () => void; title?: string }) {
+function Pill({
+  label,
+  pressed,
+  onToggle,
+  title,
+  color,
+}: {
+  label: string;
+  pressed: boolean;
+  onToggle: () => void;
+  title?: string;
+  /** A circle's color, shown as its swatch (the phone sheet's circle pills). */
+  color?: string | null;
+}) {
   return (
     <button type="button" className="pill" aria-pressed={pressed} onClick={onToggle} title={title}>
       {pressed && <CheckIcon className="pill-check" />}
+      {color && <span className="circle-swatch" style={swatch(color)} aria-hidden="true" />}
       {label}
     </button>
   );
@@ -226,62 +240,187 @@ export function FilterSidebar({
   );
 }
 
-export function FilterChips({
-  circles,
-  value,
-  onCircle,
-  onType,
-  onNetwork,
-  onClearAll,
-}: Omit<FiltersProps, "onSearch"> & { onClearAll: () => void }) {
-  const rowRef = useRef<HTMLDivElement>(null);
+export interface FilterButtonProps {
+  circles: FeedCircle[];
+  value: FilterState;
+  expanded: boolean;
+  onOpen: (trigger: HTMLButtonElement) => void;
+}
+
+/**
+ * The phone's one filter button (ui-revisions-6 item 1): "Filter your River", with a count and a
+ * one-line summary of what's on when any filter is.
+ */
+export function FilterButton({ circles, value, expanded, onOpen }: FilterButtonProps) {
+  const count = activeFilterCount(value);
+  const summary = filterSummary(value, circles, { types: CONTENT_TYPES, networks: NETWORKS });
   return (
-    <div className="chip-row" role="group" aria-label="Filters" ref={rowRef}>
-      {hasActiveFilter(value) && (
-        <ClearAll
-          testId="chips-clear"
-          onClear={() => {
-            onClearAll();
-            // The button goes away with the filters; focus moves to the row's first chip.
-            window.setTimeout(() => rowRef.current?.querySelector<HTMLButtonElement>("button")?.focus(), 0);
+    <button
+      type="button"
+      className="filter-button"
+      data-testid="filter-button"
+      aria-haspopup="dialog"
+      aria-expanded={expanded}
+      onClick={(e) => onOpen(e.currentTarget)}
+    >
+      <FilterIcon className="filter-button-icon" />
+      <span className="filter-button-text">
+        <span className="filter-button-title" data-testid="filter-button-title">
+          Filter your River
+          {count > 0 && (
+            <>
+              {" · "}
+              <span data-testid="filter-count">{count}</span>
+              <span className="visually-hidden">{count === 1 ? " filter on" : " filters on"}</span>
+            </>
+          )}
+        </span>
+        {summary && (
+          <span className="filter-button-summary" data-testid="filter-summary">
+            {summary}
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+/** Pixels the handle must travel down before letting go closes the sheet. */
+const SWIPE_CLOSE = 80;
+
+export interface FilterSheetProps extends FiltersProps {
+  open: boolean;
+  /** Called once the sheet has closed (by any route); the selections stay. */
+  onClose: () => void;
+  onClearAll: () => void;
+}
+
+/**
+ * The phone's filter sheet (ui-revisions-6 items 2-4): a modal bottom sheet on the native
+ * <dialog> (showModal() traps focus, Escape closes it), with the desktop column's content as
+ * wrapping pills. Filters apply as they're toggled. "Show results", the drag handle (a tap or a
+ * swipe down), a tap outside, Escape and the back gesture all close it.
+ */
+export function FilterSheet({ circles, value, onCircle, onType, onNetwork, onSearch, open, onClose, onClearAll }: FilterSheetProps) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const drag = useRef<{ start: number; moved: number } | null>(null);
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      setOffset(0);
+      dialog.showModal();
+    }
+    if (!open && dialog.open) dialog.close();
+  }, [open]);
+
+  const close = () => ref.current?.close();
+
+  return (
+    <dialog
+      ref={ref}
+      className="filter-sheet"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      data-testid="filter-sheet"
+      // The handle's drag moves the sheet down (set through the CSSOM, so CSP allows it).
+      style={offset > 0 ? ({ "--sheet-drag": `${offset}px` } as React.CSSProperties) : undefined}
+      onClose={onClose}
+      onClick={(e) => {
+        // A tap on the backdrop (the dialog element itself, outside its panel) closes it.
+        if (e.target === e.currentTarget) close();
+      }}
+    >
+      <div className="filter-sheet-panel">
+        <button
+          type="button"
+          className="filter-sheet-handle"
+          aria-label="Close filters"
+          data-testid="filter-sheet-handle"
+          onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            drag.current = { start: e.clientY, moved: 0 };
           }}
-        />
-      )}
-      <ul className="chip-list" aria-label="Content type">
-        {CONTENT_TYPES.map((t) => (
-          <li key={t.value}>
-            <Pill label={t.label} pressed={value.types.includes(t.value)} onToggle={() => onType(t.value)} />
-          </li>
-        ))}
-      </ul>
-      <ul className="chip-list" aria-label="Networks">
-        {NETWORKS.map((n) => (
-          <li key={n.value}>
-            <Pill
-              label={n.label}
-              title={n.detail}
-              pressed={value.networks.includes(n.value)}
-              onToggle={() => onNetwork(n.value)}
+          onPointerMove={(e) => {
+            if (!drag.current) return;
+            drag.current.moved = Math.max(0, e.clientY - drag.current.start);
+            setOffset(drag.current.moved);
+          }}
+          onPointerUp={() => {
+            if ((drag.current?.moved ?? 0) >= SWIPE_CLOSE) close();
+            else setOffset(0);
+          }}
+          onPointerCancel={() => {
+            drag.current = null;
+            setOffset(0);
+          }}
+          onClick={() => {
+            // A tap (or Enter) closes; a short drag that snapped back doesn't.
+            const moved = drag.current?.moved ?? 0;
+            drag.current = null;
+            if (moved < 6) close();
+          }}
+        >
+          <span className="filter-sheet-grip" aria-hidden="true" />
+        </button>
+
+        <div className="filter-sheet-body">
+          <h2 className="sidebar-title" id={titleId}>
+            Filter your River
+          </h2>
+          <SearchField id="search-sheet" value={value.q} onSearch={onSearch} />
+          {hasActiveFilter(value) && (
+            <ClearAll
+              testId="sheet-clear"
+              onClear={() => {
+                onClearAll();
+                // The sheet stays open; focus moves to its search field as the button goes.
+                window.setTimeout(() => ref.current?.querySelector<HTMLInputElement>("input[type=search]")?.focus(), 0);
+              }}
             />
-          </li>
-        ))}
-      </ul>
-      <ul className="chip-list" aria-label="Circles">
-        {allCircles(circles).map((c) => (
-          <li key={c.id}>
-            <button
-              type="button"
-              className="chip"
-              aria-pressed={circlePressed(value, c.id)}
-              onClick={() => onCircle(c.id)}
-            >
-              {circlePressed(value, c.id) && <CheckIcon className="pill-check" />}
-              {c.color && <span className="circle-swatch" style={swatch(c.color)} aria-hidden="true" />}
-              {c.name}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+          )}
+
+          <FilterSection title="Circles">
+            <ul className="pill-list">
+              {allCircles(circles).map((c) => (
+                <li key={c.id}>
+                  <Pill label={c.name} pressed={circlePressed(value, c.id)} onToggle={() => onCircle(c.id)} color={c.color} />
+                </li>
+              ))}
+            </ul>
+          </FilterSection>
+
+          <FilterSection title="Content type">
+            <ul className="pill-list">
+              {CONTENT_TYPES.map((t) => (
+                <li key={t.value}>
+                  <Pill label={t.label} pressed={value.types.includes(t.value)} onToggle={() => onType(t.value)} />
+                </li>
+              ))}
+            </ul>
+          </FilterSection>
+
+          <FilterSection title="Networks">
+            <ul className="pill-list">
+              {NETWORKS.map((n) => (
+                <li key={n.value}>
+                  <Pill label={n.label} pressed={value.networks.includes(n.value)} onToggle={() => onNetwork(n.value)} />
+                  {n.detail && <span className="pill-detail">{n.detail}</span>}
+                </li>
+              ))}
+            </ul>
+          </FilterSection>
+        </div>
+
+        <div className="filter-sheet-footer">
+          <button type="button" className="button button-primary filter-sheet-done" onClick={close}>
+            Show results
+          </button>
+        </div>
+      </div>
+    </dialog>
   );
 }
