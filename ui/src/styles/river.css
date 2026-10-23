@@ -190,13 +190,16 @@ html[data-view="external"] {
   }
 }
 
+/* Three columns: the outer two share the width left over, so the title sits at the centre; when
+   one side needs more than its share it takes it, and the title moves over rather than overlap. */
 @media (min-width: 56rem) {
-  .topbar-title {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    max-width: 30%;
-    pointer-events: none;
+  .topbar-titled {
+    display: grid;
+    grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr);
+  }
+
+  .topbar-titled .topbar-actions {
+    justify-self: end;
   }
 }
 
