@@ -121,7 +121,7 @@ test.describe("item 2: the bottom sheet", () => {
       "Neighborhood",
     ]);
     await expect(section(page, "Content type").getByRole("list").getByRole("button")).toHaveCount(7);
-    await expect(section(page, "Networks").getByRole("list").getByRole("button")).toHaveText(["Civic Hubs", "Fediverse"]);
+    await expect(section(page, "Networks").getByRole("list").getByRole("button")).toHaveText(["Civic Hubs", "Fediverse", "Bluesky"]);
 
     // Nothing scrolls sideways; the pills wrap onto several lines.
     const sideways = await sheet(page).evaluate((root) =>

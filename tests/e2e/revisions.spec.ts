@@ -149,7 +149,7 @@ test.describe("item 4: networks, and collapsible sections", () => {
     const headings = sidebar(page).getByRole("heading", { level: 3 });
     await expect(headings).toHaveText(["Circles", "Content type", "Networks"]);
     const networks = sidebar(page).getByRole("navigation", { name: "Networks" });
-    await expect(networks.getByRole("list").getByRole("button")).toHaveText(["Civic Hubs", "Fediverse"]);
+    await expect(networks.getByRole("list").getByRole("button")).toHaveText(["Civic Hubs", "Fediverse", "Bluesky"]);
     await expect(networks).toContainText("Mastodon and compatible");
 
     await networks.getByRole("button", { name: "Fediverse" }).click();
