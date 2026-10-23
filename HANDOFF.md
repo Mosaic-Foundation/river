@@ -20,6 +20,23 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Deps: zod override for the npm audit failure — 2026-10-23
+
+- Branch / PR: claude/zod-audit-override → PR (self-merge when `ci` is green)
+- Migrations: none.
+
+**What it does.** Overrides `zod` to `^4.6.6` under `@vercel/cli-config`, which pins 4.1.11
+(GHSA-mrhx-c7xc-m3w5, high). `ci`'s `npm audit --audit-level=high` failed on every branch
+without it. Details in DECISIONS.md.
+
+**Keys.** None.
+
+**Tests.** No test changes. `npm audit --audit-level=high`: 0 vulnerabilities (root and `ui/`).
+`npm run check`: 48 files, 685 tests passed; UI built.
+
+### Follow-ups
+- Drop the override when `@vercel/cli-config` ships a fixed `zod`.
+
 ## Bluesky reading, step 4: Import from Bluesky and the refresh rotation — 2026-10-23
 
 - Branch / PR: claude/bluesky-import → PR (self-merge after ADR-009's PR and the two before it)
