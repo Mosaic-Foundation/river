@@ -64,6 +64,13 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-23, UI revisions 4 items 2-5 (filter column): e2e `revisions4.spec.ts` items 2-5 (8
+  tests: six rows then scroll with a hint, none at six, using stand-in circles added to the feed's
+  answer; the title in both modes; Clear all compact and primary in both modes; no chips, the
+  summary line stays; Clear all first in the phone chip row). `revisions.spec.ts` item 3 removed
+  (chips gone), headings are the title's `h2` and the sections' `h3`, and the collapse test takes
+  the circles' second list; `themes.spec.ts` checks Clear all's Civic colour instead of a chip's;
+  `filterClear.spec.ts` counts the title before search.
 - 2026-10-23, UI revisions 4 item 1 (multi-select circles): unit `feedScope` (several circles,
   "All" among them, an unknown one refuses the list), `ui/filters` (`toggleCircle`) and
   `ui/format` (one `circle` parameter per circle); API `feed.test.ts` (two circles are the union,

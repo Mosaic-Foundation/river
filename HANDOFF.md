@@ -20,9 +20,31 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 4, items 2-5: the filter column — 2026-10-23
+
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #32) → PR (self-merge; not
+  needs-adam)
+- Migrations: none.
+
+**What it does.** The filter column opens with the title "Filter your River" (`h2`; the
+sections' headings are now `h3`). "All" sits above the circle list, which shows six circles and
+scrolls inside the section after that, with "Scroll for more circles" below it while it
+overflows. "Clear all" is a compact outlined button in the theme's primary colour (one line,
+about 25 px tall), below search, and first in the phone's chip row. The active-filter chips
+above the feed (`ActiveFilters`) and their CSS are removed; the unread count and sort line stay.
+
+**Keys.** None.
+
+**Tests.** e2e `revisions4.spec.ts` items 2-5 (8 tests); `revisions`, `themes` and `filterClear`
+specs updated. `npm run check`: 42 files, 587 tests. e2e: 99 passed (vite preview, as CI).
+
+### Follow-ups
+- The six-circle checks use stand-in circles added to the feed's answer (visitors have five); a
+  member with seven real circles would prove the same with more setup.
+
 ## UI revisions 4, item 1: circles are multi-select — 2026-10-23
 
-- Branch / PR: claude/dreamy-ride-w3nd4z → PR (self-merge; not needs-adam)
+- Branch / PR: claude/dreamy-ride-w3nd4z → #32 (merged)
 - Migrations: none.
 
 **What it does.** Adds `docs/spec/ui-revisions-4.md` (Adam's five items). Circles toggle like the
