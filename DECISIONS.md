@@ -376,6 +376,16 @@ Places where the spec looked contradictory or wrong, and the reading that was us
     `<dialog>`, because it stays a menu. The backdrop closes it on its own click, so a tap can't
     fall through to what's under it.
 
+## 2026-10-23 — Override zod under @vercel/cli-config (npm audit)
+- Decision: `package.json` overrides `zod` to `^4.6.6` for `@vercel/cli-config` only.
+- Why: GHSA-mrhx-c7xc-m3w5 (high: zod below 4.6.6 can exhaust memory while validating oversized
+  constrained collections) made `ci`'s `npm audit --audit-level=high` fail on every branch.
+  `@vercel/functions` → `@vercel/oidc` → `@vercel/cli-config` pins `zod` 4.1.11 exactly, in
+  every release up to 0.3.3, so no upgrade fixes it, and `npm audit fix --force` would downgrade
+  `@vercel/functions` to 3.6.1. 4.6.x is the same major. The River uses `@vercel/functions` only
+  for `waitUntil`.
+- Revisit: drop the override once `@vercel/cli-config` ships a fixed `zod`.
+
 ## 2026-10-23 — Refreshing hundreds of Bluesky accounts (Import from Bluesky)
 - Decision: each feed open refreshes a capped, rotating subset of the reader's Bluesky spaces
   (`src/river/feed/rotation.ts`); hubs, fediverse accounts and feeds are claimed as before.
