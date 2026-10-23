@@ -220,21 +220,6 @@ export async function saveReadState(change: { read?: string[]; unread?: string[]
   }
 }
 
-/** A member's "Mark all read" for the current view (its mode, circles, types, networks and search). */
-export async function saveAllRead(query: Omit<FeedQuery, "cursor">): Promise<boolean> {
-  const body: Record<string, string | string[]> = {};
-  if (query.mode) body.mode = query.mode;
-  if (query.circles?.length) body.circle = query.circles;
-  if (query.types?.length) body.type = query.types.join(",");
-  if (query.networks?.length) body.network = query.networks.join(",");
-  if (query.q?.trim()) body.q = query.q.trim();
-  try {
-    return (await post("/api/read-state/all", body)).ok;
-  } catch {
-    return false;
-  }
-}
-
 /** Ends the River session (spec F10). */
 export async function signOut(): Promise<boolean> {
   try {

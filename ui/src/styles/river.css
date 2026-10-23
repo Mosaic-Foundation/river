@@ -163,6 +163,43 @@ html[data-view="external"] {
   gap: var(--space-sm);
 }
 
+/* Civic mode's title, "Citizen Dashboard" (ui-revisions-5 item 2): centred in the bar on a
+   desktop; on a phone, its own line under the bar's controls. */
+.topbar-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-heading, var(--font-weight-bold));
+  color: var(--color-heading, var(--color-text));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 55.99rem) {
+  .topbar-titled {
+    flex-wrap: wrap;
+    row-gap: var(--space-xs);
+  }
+
+  .topbar-title {
+    order: 3;
+    flex-basis: 100%;
+    text-align: center;
+    font-size: var(--font-size-base);
+  }
+}
+
+@media (min-width: 56rem) {
+  .topbar-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 30%;
+    pointer-events: none;
+  }
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -493,26 +530,6 @@ main.feed:focus {
 }
 
 /* ---------- Feed ---------- */
-
-.feed-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-xs) var(--space-md);
-  margin-bottom: var(--space-md);
-}
-
-.feed-title {
-  margin: 0;
-  font-size: var(--font-size-3xl);
-  flex: 1 1 auto;
-}
-
-.feed-summary {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
 
 .feed-status {
   padding: var(--space-lg);
@@ -1050,10 +1067,6 @@ a.button {
 
   .brand-product {
     font-size: var(--font-size-lg);
-  }
-
-  .feed-title {
-    font-size: var(--font-size-2xl);
   }
 
   .card {
