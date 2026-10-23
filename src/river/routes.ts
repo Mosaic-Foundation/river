@@ -32,11 +32,21 @@ function param(req: Request, name: string): string | undefined {
 function paramList(req: Request, name: string): string[] | undefined {
   const value = req.query[name];
   if (value === undefined) return undefined;
-  const values = Array.isArray(value) ? value : [value];
+  const values = Array.isArray(value) ? value : typeof value === "object" ? indexed(value) : [value];
   if (!values.every((v): v is string => typeof v === "string")) {
     throw new FeedInputError(name as FeedInputError["field"], `${name} must be text`);
   }
   return values;
+}
+
+/**
+ * Express's query parser (qs) returns more than 20 repeats of a key as an object keyed "0", "1", ...
+ * rather than an array. Those keys, in order, are the list; any other key is a malformed request.
+ */
+function indexed(value: object): unknown[] {
+  const entries = Object.entries(value);
+  if (!entries.every(([key]) => /^\d+$/.test(key))) return [value];
+  return entries.sort(([a], [b]) => Number(a) - Number(b)).map(([, v]) => v);
 }
 
 /** A field of a JSON body that holds one string or a list of them (circles). */

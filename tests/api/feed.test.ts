@@ -192,6 +192,10 @@ describe("filters (check 5)", () => {
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toBe("bad_circle");
     expect((await fetch(`${API}/feed?circle[x]=Family`)).status).toBe(400);
+    // More than 20 repeats (Express's parser turns them into an object) still read as a list.
+    const many = Array.from({ length: 30 }, (_, n) => (n % 2 === 0 ? "Family" : "News and ideas"));
+    expect((await allItems({ circle: many })).map((i) => i.id)).toEqual(both.map((i) => i.id));
+    expect((await fetch(`${API}/feed?${search({ circle: [...many, "Bowling"] })}`)).status).toBe(400);
   });
 
   it("several types show any of those kinds; networks show only their adapters (ui-revisions-1)", async () => {
