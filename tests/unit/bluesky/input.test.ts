@@ -39,6 +39,9 @@ describe("parseInput", () => {
     ["@name.123", "a numeric TLD"],
     ["someone@example.org", "an email address"],
     ["@-bad.bsky.social", "a label starting with a hyphen"],
+    ["did:%", "malformed percent-encoding in a DID"],
+    ["at://%zz", "malformed percent-encoding in an at:// URI"],
+    ["https://bsky.app/profile/%E0", "malformed percent-encoding in a profile URL"],
   ])("refuses %s (%s)", (input) => {
     expect(parseInput(input)).toBeUndefined();
   });
@@ -59,6 +62,11 @@ describe("routing in the follow box", () => {
     ]) {
       expect(adaptersFor(input).map((a) => a.name), input).toEqual(["atproto"]);
     }
+  });
+
+  it("never throws on malformed input (the follow box asks every adapter)", () => {
+    expect(() => adaptersFor("https://bsky.app/profile/%E0")).not.toThrow();
+    expect(adaptersFor("did:%")).toEqual([]);
   });
 
   it("leaves fediverse handles and web addresses to the other adapters", () => {

@@ -46,7 +46,12 @@ export function didWebHost(did: string): string | undefined {
 }
 
 function handleOrDid(raw: string): BlueskyInput | undefined {
-  const text = decodeURIComponent(raw);
+  let text: string;
+  try {
+    text = decodeURIComponent(raw);
+  } catch {
+    return undefined; // malformed percent-encoding: not an address
+  }
   if (text.startsWith("did:")) {
     const did = normalizeDid(text);
     return did ? { kind: "did", did } : undefined;

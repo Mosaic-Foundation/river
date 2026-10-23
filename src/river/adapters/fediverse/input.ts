@@ -46,7 +46,12 @@ export function parseInput(input: string): FediverseInput | undefined {
   if (url.protocol !== "https:" || url.username || url.password) return undefined;
   const match = PROFILE_PATH.exec(url.pathname);
   if (!match) return undefined;
-  const name = decodeURIComponent(match[1] ?? "");
+  let name: string;
+  try {
+    name = decodeURIComponent(match[1] ?? "");
+  } catch {
+    return undefined; // malformed percent-encoding: not a profile URL
+  }
   url.hash = "";
   return { kind: "url", url: url.toString(), ...(NAME.test(name) ? { name } : {}) };
 }
