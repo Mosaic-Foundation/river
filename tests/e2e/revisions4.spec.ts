@@ -296,6 +296,7 @@ test.describe("item 5: no active-filter chips above the feed", () => {
     await page.keyboard.press("Enter");
     await expect(page).not.toHaveURL(/circle=|type=/);
     await expect(clear).toHaveCount(0);
+    await expect(row.getByRole("button", { name: "Posts" })).toBeFocused();
     await expect(row.getByRole("list", { name: "Circles" }).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
 });
