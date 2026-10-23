@@ -99,6 +99,55 @@ export const previewFollow = (input: string) => request<{ preview: Preview }>("P
 export const confirmFollow = (input: string, scope: "space" | "stream", circleIds: string[]) =>
   request<{ spaceId: string; streamId: string | null }>("POST", "/follows", { input, scope, circleIds });
 
+/** "Import from Bluesky": the account and who it follows (docs/spec/bluesky-1.md item 4). */
+export interface ImportPreview {
+  account: { did: string; name: string; handle: string | null; iconUrl: string | null };
+  /** Accounts it follows that the River can follow. */
+  count: number;
+  /** Accounts left out because they hide from signed-out readers. */
+  skipped: number;
+  /** True when it follows more than the River reads in one import (1,000). */
+  truncated: boolean;
+  /** The first few, for the preview. */
+  accounts: Array<{ did: string; name: string; handle: string | null; iconUrl: string | null }>;
+}
+
+export interface ImportResult {
+  total: number;
+  followed: number;
+  alreadyFollowing: number;
+  skipped: number;
+  truncated: boolean;
+}
+
+export const previewBlueskyImport = (input: string) => request<ImportPreview>("POST", "/follow/bluesky/preview", { input });
+
+export const importBluesky = (input: string, circleIds: string[]) =>
+  request<ImportResult>("POST", "/follow/bluesky/import", { input, circleIds });
+
+function accountsCount(n: number): string {
+  return n === 1 ? "1 account" : `${n.toLocaleString("en-US")} accounts`;
+}
+
+/** "@eff.org follows 263 accounts." with what was left out. */
+export function importCountSentence(preview: ImportPreview): string {
+  const who = preview.account.handle ? `@${preview.account.handle}` : preview.account.name;
+  const parts = [`${who} follows ${accountsCount(preview.count)}${preview.truncated ? " (the first 1,000 are listed)" : ""}.`];
+  if (preview.skipped > 0) {
+    parts.push(`Left out: ${accountsCount(preview.skipped)} that show only to people signed in to Bluesky.`);
+  }
+  return parts.join(" ");
+}
+
+/** "You're now following 250 more accounts (13 you already followed), in Friends. …" */
+export function importDoneSentence(result: ImportResult, circle: string | null): string {
+  const already = result.alreadyFollowing > 0 ? ` (${result.alreadyFollowing.toLocaleString("en-US")} you already followed)` : "";
+  const where = circle ? `, in ${circle}` : "";
+  const n = result.followed;
+  const more = n === 1 ? "1 more account" : `${n.toLocaleString("en-US")} more accounts`;
+  return `You're now following ${more}${already}${where}. Their posts fill in over your next visits.`;
+}
+
 export const loadFollowing = () => request<FollowingPage>("GET", "/following");
 
 export const unfollowSpace = (spaceId: string) => request<void>("DELETE", `/following/spaces/${spaceId}`);

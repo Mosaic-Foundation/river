@@ -100,3 +100,34 @@ test("follow @bsky.app by handle, then filter the River by Bluesky", async ({ pa
   const serious = results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id);
   expect(serious).toEqual([]);
 });
+
+test("Import from Bluesky: list who @eff.org follows, choose a circle, follow them all", async ({ page }) => {
+  await signUp(page, "bluesky-import");
+  await page.goto("/following");
+  await expect(page.getByRole("heading", { level: 1, name: "Following" })).toBeVisible();
+
+  const box = page.getByRole("region", { name: "Import from Bluesky" });
+  await box.getByLabel("Bluesky handle").fill("@eff.org");
+  await box.getByRole("button", { name: "List follows" }).click();
+  const preview = box.getByTestId("import-preview");
+  await expect(preview).toBeVisible({ timeout: 30_000 });
+  await expect(preview.getByTestId("import-count")).toContainText(/^@eff\.org follows \d+ accounts\./);
+  await expect(preview.getByRole("list", { name: "Some of the accounts" }).getByRole("listitem")).toHaveCount(12);
+  const count = Number(/follows (\d+) accounts/.exec((await preview.getByTestId("import-count").textContent()) ?? "")?.[1]);
+  expect(count).toBeGreaterThan(200);
+
+  // One circle, chosen as a radio; "No circle" is the default.
+  const circles = preview.getByRole("group", { name: "Add them to a circle" });
+  await expect(circles.getByRole("radio", { name: "No circle" })).toBeChecked();
+  await circles.getByRole("radio", { name: "News and ideas" }).check();
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id)).toEqual([]);
+
+  await preview.getByRole("button", { name: `Follow all ${count}` }).click();
+  await expect(box.getByRole("status")).toContainText(`You're now following ${count} more accounts, in News and ideas.`, {
+    timeout: 30_000,
+  });
+
+  // They are under "Bluesky" on the Following page.
+  await expect(page.locator(".group-title", { hasText: /^Bluesky$/ })).toBeVisible({ timeout: 30_000 });
+});

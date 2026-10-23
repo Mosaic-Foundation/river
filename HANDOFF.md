@@ -20,6 +20,34 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Bluesky reading, step 4: Import from Bluesky and the refresh rotation — 2026-10-23
+
+- Branch / PR: claude/bluesky-import → PR (self-merge after ADR-009's PR and the two before it)
+- Migrations: none.
+
+**What it does.** The Following page gets "Import from Bluesky" (`ui/src/components/ImportBluesky.tsx`).
+A member types a handle; `POST /api/follow/bluesky/preview` lists who it follows
+(`app.bsky.graph.getFollows`, 100 a page, at most 10 pages) with a count and the first 12 names.
+The member picks one circle (or none), and `POST /api/follow/bluesky/import` follows them all:
+spaces keyed by DID, in bulk, never twice. Accounts that hide from signed-out readers are left out
+and counted. Each feed open now refreshes at most 12 Bluesky spaces, a rotating subset: most
+overdue first (recent posters have shorter intervals), with shares for just-imported accounts
+and the longest-waiting ones (`src/river/feed/rotation.ts`; design in DECISIONS.md).
+
+**Keys.** None.
+
+**Tests.** Unit `bluesky/follows` (paging, the 1,000 cap, a failing page, refusals),
+`blueskyRotation` (intervals, cap, rotation, the new-account share), `ui/following`
+(sentences); API `blueskyImport.test.ts` (members only, preview, import into a circle, re-import
+adds nothing, the feed's capped refresh, errors); e2e `bluesky.spec.ts` import test. New
+recordings: `@eff.org`'s profile, DID document and three pages of follows. Counts in TESTING.md.
+
+### Follow-ups
+- The spec review found that ordering by recency alone starved all but the 12 busiest accounts;
+  fixed (overdue order plus a round-robin share), with a simulation test of 300 accounts.
+- Importing again later adds accounts followed since; unfollows on Bluesky aren't mirrored (an
+  import only adds).
+
 ## Bluesky reading, step 3: the Bluesky network and its cards — 2026-10-23
 
 - Branch / PR: claude/bluesky-network → PR (self-merge after ADR-009's PR and the adapter PR)
