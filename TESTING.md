@@ -64,6 +64,15 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-23, Import from Bluesky and the refresh rotation: new recordings of `@eff.org`'s
+  follows (three pages of `getFollows`, 259 accounts, 25 hiding from signed-out readers). Unit
+  `bluesky/follows` (every page, each account once, the 1,000 cap, a failing later or first page,
+  refusals, the space an account becomes), `blueskyRotation` (intervals by quiet time, the cap of
+  12 from 300, rotation between opens, the share for just-imported accounts, nothing due),
+  `ui/following` (the import's sentences). API `blueskyImport.test.ts` (members only and Origin;
+  the preview stores nothing; import into a circle, a re-import adds nothing; a feed open claims
+  at most 12 Bluesky spaces; errors). e2e `bluesky.spec.ts` adds the import from the Following
+  page (count, names, a circle as a radio, axe, the result). Unit 684, API 161, e2e 120.
 - 2026-10-23, Bluesky network and cards: new e2e `bluesky.spec.ts` (a member follows `@bsky.app`
   by handle: preview with name, bio and the avatar attempted from cdn.bsky.app; filters by
   Bluesky; only Bluesky cards; no framing check, the body opens nothing, Open ↗ to bsky.app;

@@ -341,6 +341,48 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-23 — Refreshing hundreds of Bluesky accounts (Import from Bluesky)
+- Decision: each feed open refreshes a capped, rotating subset of the reader's Bluesky spaces
+  (`src/river/feed/rotation.ts`); hubs, fediverse accounts and feeds are claimed as before.
+  - **Cap.** At most 12 Bluesky spaces per open (`BLUESKY_REFRESH_CAP`). Each is one AppView
+    request (two on its first fetch), and the guard sends at most 2 at a time to one host. 12
+    accounts at about 0.3-0.5 s a request fit the 6 s response budget, and what runs past the
+    budget finishes under `waitUntil`, well inside the function's `maxDuration` of 60 s.
+    `vercel.json` is unchanged.
+  - **Due.** A space is due when it was never fetched, or when its last fetch is older than an
+    interval that grows with how long the account has been quiet:
+    - posted within a day: 2 minutes (the River's floor, spec 4.5);
+    - within a week: 15 minutes;
+    - within 30 days: 1 hour;
+    - quieter than that: 6 hours.
+  - **Order (recency first).** Due spaces that were fetched before come first, most recent
+    poster first (`newest_item_at`), then whichever has waited longest. Spaces never fetched
+    (just imported) come after, in getFollows' order (most recently followed first).
+  - **Share.** At most 4 of the 12 slots go to never-fetched spaces, so an import of hundreds
+    fills in over the next opens without crowding out the accounts already posting. A group
+    that doesn't need its slots leaves them to the other.
+  - **Rotation.** A refreshed space isn't due again until its interval passes, so the next open
+    reaches the next ones. The 120 s claim (spec 4.5) still stops two readers fetching the same
+    space twice.
+  - **The clock.** Rotation compares against the real time, because `last_fetched_at` is
+    stamped by the database's clock, not the adapters' `TEST_CLOCK_NOW`.
+  - **The import.** It reads at most 10 pages of `getFollows` (1,000 accounts). It stores the
+    spaces and follows in a few statements whatever their number (`upsertSpaces`,
+    `followSpaces`), then refreshes the same capped few as a feed open.
+  - **Handles.** Imported accounts take the AppView's handle without a DID-document check each.
+    That check would be one PLC request per account. `handle.invalid` reads as no handle, and
+    the refresh keeps handles current.
+  - **One circle.** The import's circle is a radio: "No circle" or one circle, as item 4 says
+    "a circle".
+- Why: `docs/spec/bluesky-1.md` item 4 asks for a capped, rotating subset per visit, prioritized
+  by recency, within Vercel's limits; ADR-009 item 6 sets the cap.
+- Alternatives:
+  - A scheduled job: spec 4.5 keeps `pg_cron` SQL-only, and Vercel Hobby crons run once a day.
+  - `app.bsky.feed.getTimeline`: it needs the member's Bluesky sign-in.
+  - Refreshing every followed account on each open: hundreds of requests per open.
+  - Pure round-robin by `last_fetched_at`: quiet accounts would take as many turns as busy ones.
+- Thread / PR: Import from Bluesky
+
 ## 2026-10-23 — Bluesky cards (Bluesky reading, step 3)
 - Decision: "Bluesky" is a third Networks pill (value `bluesky`, adapter `atproto`), after
   Fediverse. Bluesky cards behave as fediverse cards do (ui-revisions-3 item 1): the body opens
