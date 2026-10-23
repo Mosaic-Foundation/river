@@ -129,43 +129,8 @@ test.describe("item 2: content types are toggle pills", () => {
   });
 });
 
-test.describe("item 3: active filter chips", () => {
-  test("a chip per filter, each ✕ removes its filter, Clear all removes every one", async ({ page }) => {
-    await openFeed(page);
-    const active = page.getByRole("group", { name: "Active filters" });
-    await expect(active).toHaveCount(0);
-    await expect(page.getByTestId("active-filters").getByRole("button", { name: "Clear all" })).toHaveCount(0);
-
-    await sidebar(page).getByRole("navigation", { name: "Circles" }).getByRole("button", { name: "Civic" }).click();
-    await sidebar(page).getByRole("navigation", { name: "Content type" }).getByRole("button", { name: "Civic activity" }).click();
-    await sidebar(page).getByRole("navigation", { name: "Networks" }).getByRole("button", { name: "Civic Hubs" }).click();
-    const search = sidebar(page).getByRole("searchbox", { name: "Search your River" });
-    await search.fill("vote");
-    await search.press("Enter");
-    await expect(active.getByTestId("active-filter")).toHaveText([
-      "Circle: Civic",
-      "Civic activity",
-      "Civic Hubs",
-      "Search: “vote”",
-    ]);
-    await expect(page).toHaveURL(/q=vote/);
-
-    // Each ✕ removes only its own filter.
-    await active.getByRole("button", { name: "Remove filter: Search: “vote”" }).click();
-    await expect(page).not.toHaveURL(/q=/);
-    await expect(search).toHaveValue("");
-    await active.getByRole("button", { name: "Remove filter: Civic Hubs" }).click();
-    await expect(page).not.toHaveURL(/network=/);
-    await expect(sidebar(page).getByRole("button", { name: "Civic Hubs" })).toHaveAttribute("aria-pressed", "false");
-    await expect(active.getByTestId("active-filter")).toHaveText(["Circle: Civic", "Civic activity"]);
-
-    await page.getByTestId("active-filters").getByRole("button", { name: "Clear all" }).click();
-    await expect(active).toHaveCount(0);
-    await expect(page).not.toHaveURL(/circle=|type=/);
-    await expect(sidebar(page).getByRole("button", { name: "All", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await expect(cards(page).first()).toBeVisible();
-  });
-});
+// Item 3 (active filter chips) was removed by ui-revisions-4 item 5; revisions4.spec.ts proves the
+// chips are gone and filterClear.spec.ts covers "Clear all".
 
 test.describe("item 4: networks, and collapsible sections", () => {
   async function adapters(page: Page): Promise<Set<string>> {
@@ -175,7 +140,9 @@ test.describe("item 4: networks, and collapsible sections", () => {
 
   test("Networks sits below Content type; Fediverse, Civic Hubs and both filter by network", async ({ page }) => {
     await openFeed(page);
-    const headings = sidebar(page).getByRole("heading", { level: 2 });
+    // The sections sit under the column's title (ui-revisions-4 item 3).
+    await expect(sidebar(page).getByRole("heading", { level: 2 })).toHaveText(["Filter your River"]);
+    const headings = sidebar(page).getByRole("heading", { level: 3 });
     await expect(headings).toHaveText(["Circles", "Content type", "Networks"]);
     const networks = sidebar(page).getByRole("navigation", { name: "Networks" });
     await expect(networks.getByRole("list").getByRole("button")).toHaveText(["Civic Hubs", "Fediverse"]);
@@ -196,15 +163,16 @@ test.describe("item 4: networks, and collapsible sections", () => {
     await openFeed(page);
     for (const name of ["Circles", "Content type", "Networks"]) {
       const toggle = sidebar(page).getByRole("button", { name, exact: true });
-      const section = sidebar(page).getByRole("navigation", { name });
+      // Circles has two lists: All, then the circles that scroll after six (ui-revisions-4 item 2).
+      const list = sidebar(page).getByRole("navigation", { name }).getByRole("list").last();
       await expect(toggle).toHaveAttribute("aria-expanded", "true");
-      await expect(section.getByRole("list")).toBeVisible();
+      await expect(list).toBeVisible();
       await toggle.click();
       await expect(toggle).toHaveAttribute("aria-expanded", "false");
-      await expect(section.getByRole("list")).toBeHidden();
+      await expect(list).toBeHidden();
       await toggle.press("Enter");
       await expect(toggle).toHaveAttribute("aria-expanded", "true");
-      await expect(section.getByRole("list")).toBeVisible();
+      await expect(list).toBeVisible();
     }
   });
 });

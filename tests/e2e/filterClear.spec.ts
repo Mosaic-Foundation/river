@@ -32,7 +32,8 @@ test.describe("item 5: Clear all in the filter column", () => {
     const circlesBox = (await sidebar.getByRole("navigation", { name: "Circles" }).boundingBox())!;
     expect(clearBox.y).toBeGreaterThan(searchBox.y + searchBox.height);
     expect(clearBox.y + clearBox.height).toBeLessThan(circlesBox.y);
-    expect(await sidebar.evaluate((el) => el.children[1]?.getAttribute("data-testid"))).toBe("sidebar-clear");
+    // The title, search, then Clear all (ui-revisions-4 item 3).
+    expect(await sidebar.evaluate((el) => el.children[2]?.getAttribute("data-testid"))).toBe("sidebar-clear");
 
     await clear.click();
     await expect(page).toHaveURL(/\/$/);
