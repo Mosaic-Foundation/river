@@ -16,6 +16,15 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-23 — Bluesky in v1 (Bluesky reading, step 1)
+- Question: `river-v1.md` section 5 lists "atproto (stub adapter)" as out of scope and 4.1 keeps
+  an atproto stub; Adam's Phase 2 plan (2026-10-23, `docs/spec/bluesky-1.md`) asks for a working
+  Bluesky adapter.
+- Reading used: `bluesky-1.md` wins (it is newer); the adapter is `atproto`, the value 3.1
+  already reserves, so no schema change.
+- Proposed change: 4.1 "and atproto (Bluesky; ADR-009)"; drop atproto from section 5.
+- Thread / PR: Bluesky adapter
+
 ### 2026-10-23 — The mobile filter arrived as "ui-revisions-5.md"
 - Question: Adam asked for the mobile filter to be added as `docs/spec/ui-revisions-5.md`; that
   file already holds the feed-top revision merged the same day.
@@ -331,6 +340,40 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-23 — The Bluesky adapter's calls the plan didn't settle (ADR-009)
+- Decision:
+  - **What the follow box takes.** `@handle` for any handle (`@name.bsky.social`,
+    `@example.com`), a bare `name.bsky.social`, `https://bsky.app/profile/{handle or DID}`, a
+    `did:plc:` or `did:web:` DID, and `at://{did or handle}`. A bare custom domain stays a web
+    address (hub, then feed adapter), since `example.com` is more often a website than a handle.
+    Bluesky's shapes go to the Bluesky adapter alone (`exclusive` in the registry), so a bsky.app
+    URL that isn't an account never makes the hub adapter ask bsky.app for `civic.json`.
+  - **Verification.** A handle counts only when its DID document names it back (atproto handle
+    spec); a DID typed directly takes the profile's handle only when the document claims it,
+    otherwise the space has no handle and is written as its DID.
+  - **Link cards and quotes are stored in `raw.embed`.** Items have no column for them, and a new
+    column on `items` is a schema change to an existing table (`needs-adam`). `raw` keeps the
+    AppView's entry as received under `feedViewPost`, next to `embed` (plain text and https URLs
+    only); the feed reads `embed` back through `readEmbed()`, which re-checks every value.
+  - **Video** is its thumbnail only (kind `video`): the playlist is HLS, which browsers other
+    than Safari can't play without a script library; "Open ↗" plays it on bsky.app.
+  - **Labels.** Posts labelled `porn`, `sexual`, `nudity` or `graphic-media` (and `!hide`,
+    `!takedown`) are stored hidden; an account labelled `!no-unauthenticated` can't be followed,
+    and reposts and quotes of such accounts are hidden or shown as unavailable. Other labels are
+    ignored (spec 5: no content-warning handling).
+  - **Times.** An item's time is the record's `createdAt`, but never later than when the AppView
+    indexed it (clients set `createdAt`). A repost's time is when it was indexed.
+  - **Paging.** 30 entries a page, at most 2 pages, stopping at the first stored entry or one
+    older than 90 days (retention would remove it).
+  - **Handle changes** reach the space from the feed itself (its own posts' `author`, its
+    reposts' `by`): `manifest.actor` has the fediverse CachedActor shape, so the stored name,
+    handle and icon update the same way, with no extra request.
+- Why: ADR-009 and `docs/spec/bluesky-1.md` item 2; the ADR names the hosts, these are the
+  details.
+- Alternatives: resolving every handle through DNS in the River (a guard change); a new `embed`
+  column (`needs-adam`); playing video with hls.js (a new dependency and a CSP change).
+- Thread / PR: Bluesky adapter
 
 ## 2026-10-23 — The phone's filter sheet, in detail (UI revisions 6)
 - Decision: the sheet is the native `<dialog>` opened with `showModal()` (the browser traps
