@@ -139,7 +139,7 @@ test("check 10: sign-up makes an account with a did login method, the seeds copi
   expect(again).toEqual({ follows: seeds.length, circles: defaults.length, accounts: 1 });
 });
 
-test("check 23: a member's Mark read, Mark unread, opened links and Mark all read persist across reload", async ({ page, context }) => {
+test("check 23: a member's Mark read, Mark unread and opened links persist across reload", async ({ page, context }) => {
   await signUpFromRiver(page, "check23");
   const account = await riverAccount(context);
   const reads = async () =>
@@ -177,18 +177,8 @@ test("check 23: a member's Mark read, Mark unread, opened links and Mark all rea
   await expect.poll(reads).toEqual([liveId]);
   await page.reload();
   await expect(page.locator(`[data-item-id="${firstId}"]`).getByRole("button", { name: "Mark read" })).toBeVisible({ timeout: 30_000 });
-
-  // Mark all read covers the view, including items not loaded yet.
-  await page.getByRole("button", { name: "Mark all read" }).click();
-  await expect(page.getByTestId("unread-dot")).toHaveCount(0);
-  await page.reload();
-  await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByTestId("unread-dot")).toHaveCount(0);
-  await expect(page.getByText(/^0 unread/)).toBeVisible();
-  const total = await withAdmin(async (client) =>
-    (await client.query("SELECT count(*)::int AS n FROM river.read_state WHERE account_id = $1", [account])).rows[0].n,
-  );
-  expect(total).toBeGreaterThan(await cards(page).count());
+  // "Mark all read" is gone from the page (ui-revisions-5 item 1).
+  await expect(page.getByRole("button", { name: "Mark all read" })).toHaveCount(0);
 });
 
 test("sign out (F10) clears the River session; the page is a visitor's again", async ({ page, context }) => {

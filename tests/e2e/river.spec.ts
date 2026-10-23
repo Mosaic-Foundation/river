@@ -211,7 +211,7 @@ test.describe("filters and empty state", () => {
 });
 
 test.describe("read state (visitor)", () => {
-  test("Mark read, opening an item and Mark all read stay in this browser, with no server write", async ({ page }) => {
+  test("Mark read and opening an item stay in this browser, with no server write", async ({ page }) => {
     const apiCalls: string[] = [];
     page.on("request", (req) => {
       if (new URL(req.url()).pathname.startsWith("/api/")) apiCalls.push(`${req.method()} ${new URL(req.url()).pathname}`);
@@ -235,12 +235,10 @@ test.describe("read state (visitor)", () => {
     await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
     await expect(cards(page).first().getByTestId("unread-dot")).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Mark all read" }).click();
-    await expect(page.getByTestId("unread-dot")).toHaveCount(0);
+    // "Mark all read" is gone (ui-revisions-5 item 1); the two marks are in this browser only.
+    await expect(page.getByRole("button", { name: "Mark all read" })).toHaveCount(0);
     const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("mosaic-river:read") ?? "[]") as string[]);
-    // Every loaded item, including those folded into grouped hub cards (ui-revisions-1 item 7).
-    const loaded = await cards(page).evaluateAll((els) => els.reduce((n, el) => n + Number(el.getAttribute("data-group-size")), 0));
-    expect(stored.length).toBe(loaded);
+    expect(stored.sort()).toEqual([(await cards(page).first().getAttribute("data-item-id"))!, liveId].sort());
 
     expect(apiCalls.length).toBeGreaterThan(0);
     // Reads only: the feed (a Mastodon post needs no framing check, ui-revisions-2 item 2).

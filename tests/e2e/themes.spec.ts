@@ -45,7 +45,7 @@ test("Mosaic is the default theme, Civic swaps the tokens, fonts are self-hosted
   });
 
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toBeAttached();
   await expect(page.getByTestId("feed-card").first()).toBeVisible({ timeout: 30_000 });
   expect(await page.locator("html").getAttribute("data-theme")).toBe("mosaic");
   expect(await token(page, "--color-primary")).toBe("#14335f");
@@ -125,7 +125,8 @@ test("Civic mode wears the Civic Hub theme on every surface, at AA contrast", as
   expect(await style(sidebar, "box-shadow")).toBe("rgba(15, 27, 45, 0.06) 0px 1px 2px 0px");
 
   // Type: Libre Franklin headings, Inter body, no Newsreader anywhere in Civic mode.
-  const title = page.getByRole("heading", { level: 1, name: "Civic" });
+  // Civic mode's title sits in the top bar (ui-revisions-5 item 2).
+  const title = page.getByTestId("topbar-title");
   expect(await style(title, "font-family")).toMatch(/^"Libre Franklin"/);
   expect(await style(title, "color")).toBe(CIVIC.heading);
   expect(await style(page.locator("body"), "font-family")).toMatch(/^Inter\b/);
