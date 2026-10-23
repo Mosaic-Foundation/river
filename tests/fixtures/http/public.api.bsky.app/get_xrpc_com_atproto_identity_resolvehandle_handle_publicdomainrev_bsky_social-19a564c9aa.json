@@ -1,0 +1,25 @@
+{
+  "url": "https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=publicdomainrev.bsky.social",
+  "status": 200,
+  "headers": {
+    "access-control-allow-origin": "*",
+    "cache-control": "public, max-age=30",
+    "cdn-cache": "HIT",
+    "cdn-cachedat": "10/23/2026 15:36:08",
+    "cdn-edgestorageid": "1234",
+    "cdn-proxyver": "1.71",
+    "cdn-pullzone": "1816608",
+    "cdn-requestcountrycode": "US",
+    "cdn-requestid": "57d12c8c5cb2c7dc15fcac0863df1777",
+    "cdn-requestpullcode": "200",
+    "cdn-requestpullsuccess": "True",
+    "cdn-requesttime": "0",
+    "cdn-status": "200",
+    "content-length": "42",
+    "content-type": "application/json; charset=utf-8",
+    "server": "BunnyCDN-IL1-940",
+    "strict-transport-security": "max-age=63072000",
+    "x-powered-by": "Express"
+  },
+  "body": "{\"did\":\"did:plc:ywdrhkssnvgtfyujsz45jnlb\"}"
+}

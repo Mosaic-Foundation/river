@@ -1,0 +1,27 @@
+{
+  "url": "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=did%3Aplc%3Aplla3i7zproko3ekdnkoykhe",
+  "status": 200,
+  "headers": {
+    "access-control-allow-origin": "*",
+    "atproto-content-labelers": "did:plc:ar7c4by46qjdydhdevvrndac;redact",
+    "cache-control": "public, max-age=30",
+    "cdn-cache": "EXPIRED",
+    "cdn-cachedat": "10/23/2026 17:20:03",
+    "cdn-edgestorageid": "1346",
+    "cdn-proxyver": "1.71",
+    "cdn-pullzone": "1816608",
+    "cdn-requestcountrycode": "US",
+    "cdn-requestid": "a6a27fcbce241ffb244f0f4c4d9dd7f0",
+    "cdn-requestpullcode": "200",
+    "cdn-requestpullsuccess": "True",
+    "cdn-requesttime": "0",
+    "cdn-status": "200",
+    "content-length": "1094",
+    "content-type": "application/json; charset=utf-8",
+    "server": "BunnyCDN-IL1-940",
+    "strict-transport-security": "max-age=63072000",
+    "vary": "Accept-Encoding",
+    "x-powered-by": "Express"
+  },
+  "body": "{\"did\":\"did:plc:plla3i7zproko3ekdnkoykhe\",\"handle\":\"wikipedia.org\",\"displayName\":\"Wikipedia\",\"avatar\":\"https://cdn.bsky.app/img/avatar/plain/did:plc:plla3i7zproko3ekdnkoykhe/bafkreicyfwjn36d7xbnswu3xa3jhqvv3x3zi42iapzkpddvykte7hiyrqa\",\"associated\":{\"lists\":0,\"feedgens\":0,\"starterPacks\":0,\"labeler\":false,\"activitySubscription\":{\"allowSubscriptions\":\"followers\"}},\"labels\":[],\"createdAt\":\"2023-05-19T15:32:47.121Z\",\"verification\":{\"verifications\":[{\"issuer\":\"did:plc:z72i7hdynmk6r22z27h6tvur\",\"issuerDisplayName\":\"Bluesky\",\"issuerHandle\":\"bsky.app\",\"uri\":\"at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.graph.verification/3luodduavu427\",\"isValid\":true,\"createdAt\":\"2025-07-24T00:58:42.084Z\"}],\"verifiedStatus\":\"valid\",\"trustedVerifierStatus\":\"none\"},\"description\":\"Maybe the real treasure was the citations we made along the way.\\n\\ndonate.wikipedia.org\",\"indexedAt\":\"2026-10-09T16:33:23.656Z\",\"banner\":\"https://cdn.bsky.app/img/banner/plain/did:plc:plla3i7zproko3ekdnkoykhe/bafkreibnj4kdlu63sgik4x7dmzig7onihytumdn7ujafxdxqhv7fmr6wsq\",\"followersCount\":57573,\"followsCount\":4,\"postsCount\":1722}"
+}

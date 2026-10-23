@@ -88,6 +88,7 @@ describe("a podcast feed (M12, SYNTHETIC fixtures)", () => {
       adapter: "rss",
       name: "Synthetic Commons Radio",
       iconUrl: "https://synthetic-podcast.example/art/cover-3000.jpg",
+      description: null,
       kind: "Podcast feed",
       category: "podcast",
       address: "synthetic-podcast.example",

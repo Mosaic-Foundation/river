@@ -1,0 +1,13 @@
+{
+  "url": "https://plc.directory/did:plc:ywdrhkssnvgtfyujsz45jnlb",
+  "status": 200,
+  "headers": {
+    "access-control-allow-origin": "*",
+    "content-length": "572",
+    "content-type": "application/did+ld+json; charset=utf-8",
+    "etag": "W/\"23c-XzuapuYtyPqPYC7ti6W+52iDV7U\"",
+    "vary": "Accept-Encoding",
+    "x-powered-by": "Express"
+  },
+  "body": "{\"@context\":[\"https://www.w3.org/ns/did/v1\",\"https://w3id.org/security/multikey/v1\",\"https://w3id.org/security/suites/secp256k1-2019/v1\"],\"id\":\"did:plc:ywdrhkssnvgtfyujsz45jnlb\",\"alsoKnownAs\":[\"at://publicdomainrev.bsky.social\"],\"verificationMethod\":[{\"id\":\"did:plc:ywdrhkssnvgtfyujsz45jnlb#atproto\",\"type\":\"Multikey\",\"controller\":\"did:plc:ywdrhkssnvgtfyujsz45jnlb\",\"publicKeyMultibase\":\"zQ3shQogR3bfthtWMc1Rn2jNNZg6BEN5SQqrYPcNnYgoRmezS\"}],\"service\":[{\"id\":\"#atproto_pds\",\"type\":\"AtprotoPersonalDataServer\",\"serviceEndpoint\":\"https://porcini.us-east.host.bsky.network\"}]}"
+}

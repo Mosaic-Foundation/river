@@ -1,0 +1,13 @@
+{
+  "url": "https://plc.directory/did:plc:z72i7hdynmk6r22z27h6tvur",
+  "status": 200,
+  "headers": {
+    "access-control-allow-origin": "*",
+    "content-length": "554",
+    "content-type": "application/did+ld+json; charset=utf-8",
+    "etag": "W/\"22a-UdJWjvZrrsNeBUQ5siC/Jy+nm2E\"",
+    "vary": "Accept-Encoding",
+    "x-powered-by": "Express"
+  },
+  "body": "{\"@context\":[\"https://www.w3.org/ns/did/v1\",\"https://w3id.org/security/multikey/v1\",\"https://w3id.org/security/suites/secp256k1-2019/v1\"],\"id\":\"did:plc:z72i7hdynmk6r22z27h6tvur\",\"alsoKnownAs\":[\"at://bsky.app\"],\"verificationMethod\":[{\"id\":\"did:plc:z72i7hdynmk6r22z27h6tvur#atproto\",\"type\":\"Multikey\",\"controller\":\"did:plc:z72i7hdynmk6r22z27h6tvur\",\"publicKeyMultibase\":\"zQ3shQo6TF2moaqMTrUZEM1jeuYRQXeHEx4evX9751y2qPqRA\"}],\"service\":[{\"id\":\"#atproto_pds\",\"type\":\"AtprotoPersonalDataServer\",\"serviceEndpoint\":\"https://puffball.us-east.host.bsky.network\"}]}"
+}

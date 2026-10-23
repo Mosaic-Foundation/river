@@ -77,6 +77,27 @@ the check; the bodies are kept as recorded.
 Mastodon posts are framed through their `/embed` page and never checked, so nothing is recorded for
 them; mastodon.social and w3c.social served `/embed` with neither header on 2026-10-22 (ADR-008).
 
+## Bluesky (ADR-009)
+
+Recorded on 2026-10-23 by `npm run record-fixtures -- --bluesky` (`scripts/recorders/bluesky.ts`),
+which runs the Bluesky adapter itself through a saving guard that allows only ADR-009's hosts:
+`com.atproto.identity.resolveHandle`, the DID document on `plc.directory`,
+`app.bsky.actor.getProfile`, and two pages of `app.bsky.feed.getAuthorFeed`
+(`filter=posts_no_replies`, 30 a page), all unauthenticated, from `public.api.bsky.app`.
+
+- `@bsky.app`: a custom-domain handle (resolved by the AppView: its HTTPS well-known answers
+  404, so it uses DNS). Its own posts with videos, images and quotes (one quoting a post that
+  isn't available, one quoting a starter pack), and reposts of posts with images, video, link
+  cards, quotes and a quote with media. Two reposted authors carry `!no-unauthenticated`.
+- `@publicdomainrev.bsky.social`: a bsky.social handle, posts with images (one with alt text).
+- `@wikipedia.org`: galleries (`app.bsky.embed.gallery`) with alt text, and videos.
+- `did:plc:ewvi7nxzyoun6zhxrhs64oiz` (`@atproto.com`), followed by DID: link cards and quotes.
+- `https://bsky.app/profile/publicdomainrev.bsky.social`: the same account as the handle.
+
+A handle's own `https://{handle}/.well-known/atproto-did` is not recorded: the AppView resolved
+every recorded handle, and this sandbox's proxy refuses `*.bsky.social`. The unit tests derive
+that case (and replies, adult labels, a 429, a takedown) from recorded responses at run time.
+
 ## SYNTHETIC: media sources (M12)
 
 `synthetic-tube.example/` and `synthetic-podcast.example/` are **not recordings**. The M12 thread's

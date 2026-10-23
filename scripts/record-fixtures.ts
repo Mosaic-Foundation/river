@@ -11,6 +11,10 @@
 //
 // ui-revisions-2: `npm run record-fixtures -- --frames` records only the framing check's pages
 // (scripts/recorders/frames.ts).
+//
+// ADR-009: `npm run record-fixtures -- --bluesky` records only the Bluesky accounts
+// (scripts/recorders/bluesky.ts).
+import { blueskyRecorder } from "./recorders/bluesky.js";
 import { civicHubRecorders } from "./recorders/civicHub.js";
 import { fediverseRecorder } from "./recorders/fediverse.js";
 import { framesRecorder } from "./recorders/frames.js";
@@ -26,8 +30,10 @@ interface Recorder {
 const OUT_DIR = "tests/fixtures/http";
 
 const args = process.argv.slice(2);
-const media = mediaInputs(args.filter((a) => a !== "--frames"));
-const recorders: Recorder[] = args.includes("--frames")
+const media = mediaInputs(args.filter((a) => a !== "--frames" && a !== "--bluesky"));
+const recorders: Recorder[] = args.includes("--bluesky")
+  ? [blueskyRecorder]
+  : args.includes("--frames")
   ? [framesRecorder]
   : media.length > 0
     ? [mediaRecorder(media)]
