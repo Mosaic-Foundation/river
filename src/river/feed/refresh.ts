@@ -3,7 +3,9 @@
 //
 //   1. A followed name with no stored space yet (a seed follow on first visit) is resolved through
 //      its adapter and stored.
-//   2. Each stale space is claimed with the one-statement UPDATE of spec 4.5. Only claimed spaces
+//   2. Bluesky spaces are first narrowed to a capped, rotating subset (rotation.ts), so a member
+//      who imported hundreds of accounts still gets an answer within the budget.
+//      Each stale space is claimed with the one-statement UPDATE of spec 4.5. Only claimed spaces
 //      are fetched, so two visitors (or members) opening the River within 120 s cause one upstream
 //      fetch (check 24), and no space is fetched more often than every 120 s (spec 4.3).
 //   3. Claimed spaces are fetched in parallel through the adapters and the fetch guard (6 s per
@@ -31,6 +33,7 @@ import {
   storeItems,
   upsertSpace,
 } from "./store.js";
+import { chooseForRefresh } from "./rotation.js";
 import { checkWithdrawnStreams } from "./withdrawn.js";
 
 /** The response budget (spec 4.5). */
@@ -47,6 +50,11 @@ export interface RefreshDeps {
   sleep?: (ms: number) => Promise<void>;
   /** Keeps work alive after the response (Vercel); a no-op elsewhere. */
   waitUntil?: (promise: Promise<unknown>) => void;
+  /**
+   * The real time in ms, for the Bluesky rotation: it compares with last_fetched_at, which the
+   * database stamps with its own clock (not the adapters' TEST_CLOCK_NOW).
+   */
+  wallClock?: () => number;
   /** Adapter lookups, for tests. */
   adapterNamed?: (name: string) => Adapter | undefined;
   adapterFor?: (input: string) => Adapter | undefined;
@@ -80,6 +88,7 @@ function withDefaults(deps: RefreshDeps): FullDeps {
     budgetMs: deps.budgetMs ?? RESPONSE_BUDGET_MS,
     sleep: deps.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))),
     waitUntil: deps.waitUntil ?? ((promise) => vercelWaitUntil(promise)),
+    wallClock: deps.wallClock ?? Date.now,
     adapterNamed: deps.adapterNamed ?? adapterNamed,
     adaptersFor: injected
       ? (input) => {
@@ -127,12 +136,16 @@ class Run {
     this.report.finished.push(row.id);
   }
 
-  /** Claims the stale ones among stored spaces (one transaction) and starts fetching them. */
+  /**
+   * Claims the stale ones among stored spaces (one transaction) and starts fetching them. Bluesky
+   * spaces are first narrowed to a capped, rotating subset (rotation.ts).
+   */
   async addStored(rows: readonly SpaceRow[]): Promise<void> {
     const unique = [...new Map(rows.map((row) => [row.id, row])).values()].filter(
       (row) => this.deps.adapterNamed(row.adapter) !== undefined,
     );
-    for (const row of await claimAll(this.instanceId, unique, this.deps)) {
+    const chosen = chooseForRefresh(unique, this.deps.wallClock());
+    for (const row of await claimAll(this.instanceId, chosen, this.deps)) {
       this.report.claimed.push(row.id);
       this.track(row.id, this.fetchClaimed(row));
     }

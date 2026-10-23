@@ -4,6 +4,8 @@
 //
 //   POST   /follow/preview                 { input }                  → { preview }
 //   POST   /follows                        { input, scope, circleIds } → { spaceId, streamId, refresh }
+//   POST   /follow/bluesky/preview         { input }                  → { account, count, accounts, … }
+//   POST   /follow/bluesky/import          { input, circleIds }       → { total, followed, alreadyFollowing, … }
 //   GET    /following                                                 → FollowingPage
 //   DELETE /following/spaces/:spaceId                                  unfollow a space
 //   PUT    /following/streams/:streamId    { rule: follow | mute }     a stream rule
@@ -18,11 +20,14 @@
 // Visitors get 401 "sign_in_required"; the UI shows them a sign-up prompt instead.
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { forAccount, type RiverDb } from "../../db/context.js";
+import { getFetchGuard } from "../../shared/fetch/index.js";
 import { AdapterError } from "../../shared/items/index.js";
+import { previewForAccount, readFollows, type FollowsListing } from "../adapters/bluesky/index.js";
 import type { Viewer } from "../accounts.js";
 import { readSession, requireMember } from "../auth/session.js";
 import { riverNow } from "../clock.js";
 import { refreshSpaces, type RefreshDeps } from "../feed/refresh.js";
+import { upsertSpaces } from "../feed/store.js";
 import { requireInstance, type Instance } from "../instances.js";
 import { addCircleMember, createCircle, deleteCircle, removeCircleMember, updateCircle } from "./circles.js";
 import { followErrorMessage, previewView, resolveInput } from "./resolve.js";
@@ -30,6 +35,7 @@ import {
   FollowingError,
   followingPage,
   followPreview,
+  followSpaces,
   isUuid,
   removeRule,
   setStreamRule,
@@ -40,6 +46,29 @@ import {
 
 /** Most circles one follow can add the space to. */
 const MAX_CIRCLE_IDS = 50;
+/** Accounts the import preview lists by name (the rest are counted). */
+const IMPORT_PREVIEW_NAMES = 12;
+
+/** What the import preview shows (docs/spec/bluesky-1.md item 4): who, how many, the first names. */
+function importView(listing: FollowsListing) {
+  const { account, accounts } = listing;
+  return {
+    account: { did: account.did, name: account.name, handle: account.handle ?? null, iconUrl: account.iconUrl ?? null },
+    count: accounts.length,
+    skipped: listing.skipped,
+    truncated: listing.truncated,
+    accounts: accounts
+      .slice(0, IMPORT_PREVIEW_NAMES)
+      .map((a) => ({ did: a.did, name: a.name, handle: a.handle ?? null, iconUrl: a.iconUrl ?? null })),
+  };
+}
+
+/** The handle, profile URL or DID typed in the import box. */
+function importInput(raw: Record<string, unknown>): string {
+  const input = typeof raw.input === "string" ? raw.input.trim() : "";
+  if (input === "" || input.length > 500) throw new AdapterError("not_a_space", "That address isn't a Space we can follow");
+  return input;
+}
 
 function member(res: Response): { instance: Instance; viewer: Viewer } {
   return { instance: res.locals.instance as Instance, viewer: res.locals.viewer as Viewer };
@@ -131,6 +160,47 @@ export function followingRoutes(deps: RefreshDeps = {}): Router {
           spaceId: result.space.id,
           streamId: result.streamId,
           ruleId: result.ruleId,
+          refresh: { claimed: refresh.claimed, pending: refresh.pending },
+        });
+    }),
+  );
+
+  // "Import from Bluesky" (docs/spec/bluesky-1.md item 4): who the account follows, counted.
+  router.post(
+    "/follow/bluesky/preview",
+    ...members,
+    route(async (req, res) => {
+      const listing = await readFollows(deps.guard ?? getFetchGuard(), importInput(body(req)));
+      res.set("Cache-Control", "no-store").json(importView(listing));
+    }),
+  );
+
+  // Follow them all: read the list again (the preview stored nothing), store the spaces and the
+  // follows in a few statements, then refresh the first few within the feed's budget; the rest
+  // fill in over the next opens (rotation.ts).
+  router.post(
+    "/follow/bluesky/import",
+    ...members,
+    route(async (req, res) => {
+      const raw = body(req);
+      const { circleIds } = parseFollowRequest({ circleIds: raw.circleIds });
+      const listing = await readFollows(deps.guard ?? getFetchGuard(), importInput(raw));
+      const now = deps.now ?? riverNow();
+      const previews = listing.accounts.map((a) => previewForAccount(a, now));
+      const { spaces, followed } = await inAccount(res, async (db) => {
+        const rows = await upsertSpaces(db, previews);
+        return { spaces: rows, followed: await followSpaces(db, rows.map((r) => r.id), circleIds) };
+      });
+      const refresh = await refreshSpaces(member(res).instance.id, spaces, deps);
+      res
+        .status(201)
+        .set("Cache-Control", "no-store")
+        .json({
+          total: spaces.length,
+          followed,
+          alreadyFollowing: spaces.length - followed,
+          skipped: listing.skipped,
+          truncated: listing.truncated,
           refresh: { claimed: refresh.claimed, pending: refresh.pending },
         });
     }),

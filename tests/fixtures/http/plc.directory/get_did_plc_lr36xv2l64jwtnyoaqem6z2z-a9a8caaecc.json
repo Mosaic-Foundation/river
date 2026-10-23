@@ -1,0 +1,13 @@
+{
+  "url": "https://plc.directory/did:plc:lr36xv2l64jwtnyoaqem6z2z",
+  "status": 200,
+  "headers": {
+    "access-control-allow-origin": "*",
+    "content-length": "552",
+    "content-type": "application/did+ld+json; charset=utf-8",
+    "etag": "W/\"228-D93kIiOzt7wPh5Tp4+rgim/jrbU\"",
+    "vary": "Accept-Encoding",
+    "x-powered-by": "Express"
+  },
+  "body": "{\"@context\":[\"https://www.w3.org/ns/did/v1\",\"https://w3id.org/security/multikey/v1\",\"https://w3id.org/security/suites/secp256k1-2019/v1\"],\"id\":\"did:plc:lr36xv2l64jwtnyoaqem6z2z\",\"alsoKnownAs\":[\"at://eff.org\"],\"verificationMethod\":[{\"id\":\"did:plc:lr36xv2l64jwtnyoaqem6z2z#atproto\",\"type\":\"Multikey\",\"controller\":\"did:plc:lr36xv2l64jwtnyoaqem6z2z\",\"publicKeyMultibase\":\"zQ3shUtBxYt7Yv5d7bT9c99wUEz9YAWGGw4ixCvRyHocyk2XF\"}],\"service\":[{\"id\":\"#atproto_pds\",\"type\":\"AtprotoPersonalDataServer\",\"serviceEndpoint\":\"https://shimeji.us-east.host.bsky.network\"}]}"
+}

@@ -7,6 +7,7 @@ import { SIGN_IN_URL } from "./lib/api";
 import { modeFromSearch, themeForMode, withMode } from "./lib/modes";
 import { Brand } from "./components/Chrome";
 import { CirclesPanel } from "./components/CirclesPanel";
+import { ImportBluesky } from "./components/ImportBluesky";
 import { FollowBox } from "./components/FollowBox";
 import { FollowingList } from "./components/FollowingList";
 import { useFollowing } from "./components/useFollowing";
@@ -82,6 +83,7 @@ export function FollowingPage() {
           {state.status === "ok" && (
             <>
               <FollowBox circles={state.page.circles} onFollowed={reload} />
+              <ImportBluesky circles={state.page.circles} onImported={reload} />
               <FollowingList page={state.page} run={run} busy={busy} />
             </>
           )}
