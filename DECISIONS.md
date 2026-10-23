@@ -353,17 +353,21 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   - **New circle in one step.** The menu calls `createCircle`, then `addToCircle`. There is no
     combined endpoint, so no API change. If the add is refused after the create, the circle stays
     (it shows on the next load), and the add's error shows.
-  - **Shown at once.** A click changes the row and the check before the save returns. Several
-    clicks can be on the way at once. A refused save undoes only its own circle, and its sentence
-    shows in the menu (or under the button once the menu is closed). When nothing is on the way,
-    the page's reload is what shows.
+  - **Shown at once.** A click changes the row and the check before the save returns. Saves for
+    different circles can be on the way at once, but only one per circle: a click on a circle
+    whose save hasn't returned is ignored (the item is `aria-disabled` meanwhile), so two quick
+    clicks can't reach the server in the wrong order. A refused save undoes only its own circle,
+    and its sentence shows in the menu (or under the button once the menu is closed). When
+    nothing is on the way, the page's reload is what shows. A circle made from the menu shows
+    until the next page load, which then decides (so one deleted meanwhile doesn't come back).
   - **Menu semantics.** The button is a menu button (`aria-haspopup="menu"`, `aria-expanded`).
     The menu is a `role="menu"` list of `menuitemcheckbox` circles plus a "New circle…"
     `menuitem`, with a roving tabindex. The keys are Up, Down (both wrap), Home and End, and Space
     or Enter toggles. The new circle's name field and Done sit outside the `menu` role, in the
     same popup, because a menu may only hold menu items. Escape, Done and a click outside close
-    it, and focus goes back to the button (after a click outside, only if the click didn't focus
-    something else). Tabbing out of the popup closes it and leaves focus where it went.
+    it, and focus goes back to the button (after a click outside, unless the click focused another
+    control; a container that only takes focus from script, like `<main tabIndex={-1}>`, doesn't
+    count). Tabbing out of the popup closes it and leaves focus where it went.
   - **The button's name is its text.** It reads "Circles for {name}: Family, News and ideas" (or
     "…: none" under a visible "Circles"), with the prefix and commas visually hidden. An
     `aria-label` would fail axe's label-in-name check.
