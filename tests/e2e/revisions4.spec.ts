@@ -109,6 +109,9 @@ test.describe("item 1: circles are multi-select", () => {
     for (const id of await shownIds(page)) expect(both.has(id)).toBe(true);
 
     const hub = page.locator('[data-testid="feed-card"][data-adapter="civic_hub"]').first();
+    // A card is checked once it comes into view; the samples above it (stamped relative to the
+    // seed time) can push it below the fold.
+    await hub.scrollIntoViewIfNeeded();
     await expect(hub).toHaveAttribute("data-open", "frame");
     const id = (await hub.getAttribute("data-item-id"))!;
     await hub.locator(".card-source").click();

@@ -37,9 +37,12 @@ cards under the original author. The Following page groups Bluesky accounts unde
 
 **Tests.** Unit `tests/unit/bluesky/` (input, map, adapter) on new recordings; API
 `bluesky.test.ts`; `media.test.ts` expects the preview's new `description`. `npm run check`:
-45 files, 660 tests. API: 160 passed.
+45 files, 664 tests. API: 160 passed. e2e: 118 passed, with `revisions4`'s hub card scrolled into
+view first (it failed on main after about 11:30 UTC; fixed on the ADR branch).
 
 ### Follow-ups
+- The spec review found that malformed percent-encoding (`did:%`) gave a 500; fixed in both the
+  Bluesky and fediverse input parsers, with unit and API tests.
 - The feed doesn't return link cards and quotes yet, and Bluesky cards still get the framing
   check: the next PR (network filter and cards) does both.
 - "Import from Bluesky" and the refresh cap for large lists come after.

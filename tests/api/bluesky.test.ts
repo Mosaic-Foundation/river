@@ -145,9 +145,15 @@ describe("following a Bluesky account (ADR-009)", () => {
     expect((await call("DELETE", `/circles/${circleId}`)).status).toBe(204);
   });
 
-  it("answers in the follow box's words for an account it can't reach", async () => {
+  it("answers in the follow box's words for an account it can't reach, or malformed input", async () => {
     const res = await call("POST", "/follow/preview", { input: "@nobody-recorded.bsky.social" });
     expect(res.status).toBe(422);
     expect(((await res.json()) as { message: string }).message).toBe("We couldn't reach that address");
+    // Malformed percent-encoding is an answer in F6's words, never a 500. A bsky.app URL that
+    // isn't an account is a web address for the other adapters (unrecorded here: unreachable).
+    const bad = await call("POST", "/follow/preview", { input: "did:%" });
+    expect(bad.status).toBe(422);
+    expect(((await bad.json()) as { message: string }).message).toBe("That address isn't a Space we can follow");
+    expect((await call("POST", "/follow/preview", { input: "https://bsky.app/profile/%E0" })).status).toBe(422);
   });
 });
