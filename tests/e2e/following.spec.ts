@@ -119,7 +119,7 @@ test("check 13: following Demosville previews its name and initials, and its ite
 
   const row = spaceRow(page, "Demosville Civic Hub");
   await expect(row).toContainText("Whole space · demosville.civic.social");
-  await expect(row.getByRole("list", { name: "Circles" })).toContainText("Civic");
+  await expect(row.getByRole("button", { name: /^Circles for Demosville Civic Hub:/ })).toContainText("Civic");
 
   // Back on the River, its items show.
   await page.getByRole("link", { name: "Back to your River" }).click();
@@ -297,7 +297,7 @@ test("circles (F8): create, recolor, rename, add a space, filter by it, delete; 
   await row.getByRole("button", { name: "Save" }).click();
   const readers = circles.getByTestId("circle-row").filter({ hasText: "Readers" });
   await expect(readers).toContainText("1 space");
-  await expect(spaceRow(page, "Demosville Civic Hub").getByRole("list", { name: "Circles" })).toContainText("Readers");
+  await expect(spaceRow(page, "Demosville Civic Hub").getByRole("button", { name: /^Circles for Demosville Civic Hub:/ })).toContainText("Readers");
   await expectNoSeriousAxeIssues(page);
 
   // The Civic circle keeps its role when renamed and has no Delete.

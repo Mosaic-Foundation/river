@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { importCountSentence, importDoneSentence, type ImportPreview } from "../../../ui/src/lib/following";
+import {
+  CIRCLE_COLORS,
+  importCountSentence,
+  importDoneSentence,
+  nextCircleColor,
+  toggleId,
+  type ImportPreview,
+} from "../../../ui/src/lib/following";
 
 // "Import from Bluesky" (docs/spec/bluesky-1.md item 4): the preview's count and the result's sentence.
 const preview: ImportPreview = {
@@ -37,5 +44,25 @@ describe("importDoneSentence", () => {
     expect(importDoneSentence({ ...result, followed: 1, alreadyFollowing: 0 }, null)).toBe(
       "You're now following 1 more account. Their posts fill in over your next visits.",
     );
+  });
+});
+
+// A Following row's circles menu (docs/spec/ui-revisions-7.md).
+describe("circles menu helpers", () => {
+  it("toggleId adds an id that's missing and removes one that's there", () => {
+    expect(toggleId(["a", "b"], "c")).toEqual(["a", "b", "c"]);
+    expect(toggleId(["a", "b"], "a")).toEqual(["b"]);
+    expect(toggleId([], "a")).toEqual(["a"]);
+  });
+
+  it("a new circle gets the first color no circle uses, ignoring case", () => {
+    expect(nextCircleColor([])).toBe("#2F6FA8");
+    expect(nextCircleColor([{ color: "#2f6fa8" }, { color: null }, { color: "#7A5AA6" }])).toBe("#C2603A");
+  });
+
+  it("once every color is used, the list goes round again", () => {
+    const all = CIRCLE_COLORS.map((c) => ({ color: c.value }));
+    expect(nextCircleColor(all)).toBe(CIRCLE_COLORS[0]!.value);
+    expect(nextCircleColor([...all, { color: null }])).toBe(CIRCLE_COLORS[1]!.value);
   });
 });

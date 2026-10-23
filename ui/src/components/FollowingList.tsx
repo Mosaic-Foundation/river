@@ -2,9 +2,9 @@
 // by kind and collapsed; a hub space expands to its streams, each Following or Muted "until the
 // process ends", or neither, with actions to mute, unmute, follow just that stream or stop. Quiet
 // lists followed spaces with no new item in 90 days (never samples) and offers "Unfollow all quiet
-// spaces"; Ended lists stream rules whose process ended, cleared after 90 days.
+// spaces"; Ended lists stream rules whose process ended, cleared after 90 days. Each followed row
+// has a circles menu (ui-revisions-7).
 import { useId, useState } from "react";
-import { circleColor } from "../lib/format";
 import {
   groupSpaces,
   quietSentence,
@@ -17,17 +17,13 @@ import {
   type SpaceView,
   type StreamView,
 } from "../lib/following";
+import { CirclesMenu } from "./CirclesMenu";
 import { SourceIcon } from "./SourceIcon";
 import { useLocalRun, type Run as SharedRun } from "./useFollowing";
 
 type TabId = "spaces" | "quiet" | "ended";
 
 export const UNFOLLOW_QUIET = "Unfollow all quiet spaces";
-
-function swatch(color: string | null): React.CSSProperties | undefined {
-  const value = circleColor(color);
-  return value ? ({ "--circle-color": value } as React.CSSProperties) : undefined;
-}
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" });
 
@@ -40,6 +36,8 @@ interface Actions {
   /** Runs a change, then reloads the page and the feed; shows the server's sentence on failure. */
   run: (change: () => Promise<Result<unknown>>) => Promise<boolean>;
   busy: boolean;
+  /** The page's own run(), for the circles menu: it shows its own errors (ui-revisions-7). */
+  save: SharedRun;
 }
 
 function StreamRow({ stream, actions }: { stream: StreamView; actions: Actions }) {
@@ -106,7 +104,8 @@ function StreamRow({ stream, actions }: { stream: StreamView; actions: Actions }
 function SpaceRow({ space, page, actions }: { space: SpaceView; page: FollowingPage; actions: Actions }) {
   const [open, setOpen] = useState(false);
   const streamsId = useId();
-  const circles = page.circles.filter((c) => space.circleIds.includes(c.id));
+  // Only a followed space can be in a circle (the API refuses the rest), as in the circle editor.
+  const followed = space.following || space.streams.some((s) => s.rule === "follow");
   const ruled = space.streams.filter((s) => s.rule !== null).length;
   return (
     <li className="space-row" data-testid="space-row" data-space-id={space.id}>
@@ -119,14 +118,7 @@ function SpaceRow({ space, page, actions }: { space: SpaceView; page: FollowingP
           </p>
           {space.lastError && <p className="space-row-error">{space.lastError}</p>}
         </div>
-        <ul className="space-row-circles" aria-label="Circles">
-          {circles.map((c) => (
-            <li key={c.id} className="tag">
-              <span className="circle-swatch" style={swatch(c.color)} aria-hidden="true" />
-              {c.name}
-            </li>
-          ))}
-        </ul>
+        {followed && <CirclesMenu space={space} circles={page.circles} run={actions.save} />}
         <div className="space-row-actions">
           {space.streams.length > 0 && (
             <button
@@ -188,7 +180,7 @@ function QuietBanner({ count, actions, onReview }: { count: number; actions: Act
 export function FollowingList({ page, run: shared, busy }: { page: FollowingPage; run: SharedRun; busy: boolean }) {
   const { run, error } = useLocalRun(shared);
   const [tab, setTab] = useState<TabId>("spaces");
-  const actions: Actions = { run, busy };
+  const actions: Actions = { run, busy, save: shared };
   const quiet = page.spaces.filter((s) => page.quiet.includes(s.id));
   const tabs: Array<{ id: TabId; label: string; count: number }> = [
     { id: "spaces", label: "Spaces", count: page.spaces.length },

@@ -341,6 +341,41 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-23 — A Following row's circles menu, in detail (UI revisions 7)
+- Decision: the details `ui-revisions-7.md` left open.
+  - **Which rows.** Every followed row in Spaces and Quiet: a whole space, or a space with a
+    followed stream. A space with only a muted stream gets no control, because the API refuses to
+    put an unfollowed space in a circle (the Circles panel's editor lists the same rows).
+  - **A new circle's color.** "New circle…" asks only for a name. The circle gets the first color
+    from the panel's list that no circle uses yet, else the list again in turn
+    (`nextCircleColor`). The Circles panel recolors it. A color picker in a small menu would crowd
+    the phone's sheet.
+  - **New circle in one step.** The menu calls `createCircle`, then `addToCircle`. There is no
+    combined endpoint, so no API change. If the add is refused after the create, the circle stays
+    (it shows on the next load), and the add's error shows.
+  - **Shown at once.** A click changes the row and the check before the save returns. Saves for
+    different circles can be on the way at once, but only one per circle: a click on a circle
+    whose save hasn't returned is ignored (the item is `aria-disabled` meanwhile), so two quick
+    clicks can't reach the server in the wrong order. A refused save undoes only its own circle,
+    and its sentence shows in the menu (or under the button once the menu is closed). When
+    nothing is on the way, the page's reload is what shows. A circle made from the menu shows
+    until the next page load, which then decides (so one deleted meanwhile doesn't come back).
+  - **Menu semantics.** The button is a menu button (`aria-haspopup="menu"`, `aria-expanded`).
+    The menu is a `role="menu"` list of `menuitemcheckbox` circles plus a "New circle…"
+    `menuitem`, with a roving tabindex. The keys are Up, Down (both wrap), Home and End, and Space
+    or Enter toggles. The new circle's name field and Done sit outside the `menu` role, in the
+    same popup, because a menu may only hold menu items. Escape, Done and a click outside close
+    it, and focus goes back to the button (after a click outside, unless the click focused another
+    control; a container that only takes focus from script, like `<main tabIndex={-1}>`, doesn't
+    count). Tabbing out of the popup closes it and leaves focus where it went.
+  - **The button's name is its text.** It reads "Circles for {name}: Family, News and ideas" (or
+    "…: none" under a visible "Circles"), with the prefix and commas visually hidden. An
+    `aria-label` would fail axe's label-in-name check.
+  - **Phones.** Below 56rem the same popup is pinned to the bottom, full width, at most 70% of the
+    height, over a backdrop, and slides in unless reduced motion is on. It is not a modal
+    `<dialog>`, because it stays a menu. The backdrop closes it on its own click, so a tap can't
+    fall through to what's under it.
+
 ## 2026-10-23 — Override zod under @vercel/cli-config (npm audit)
 - Decision: `package.json` overrides `zod` to `^4.6.6` for `@vercel/cli-config` only.
 - Why: GHSA-mrhx-c7xc-m3w5 (high: zod below 4.6.6 can exhaust memory while validating oversized
