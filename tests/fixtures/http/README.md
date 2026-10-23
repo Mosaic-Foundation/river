@@ -93,9 +93,6 @@ which runs the Bluesky adapter itself through a saving guard that allows only AD
 - `@wikipedia.org`: galleries (`app.bsky.embed.gallery`) with alt text, and videos.
 - `did:plc:ewvi7nxzyoun6zhxrhs64oiz` (`@atproto.com`), followed by DID: link cards and quotes.
 - `https://bsky.app/profile/publicdomainrev.bsky.social`: the same account as the handle.
-- `@eff.org` for "Import from Bluesky": its handle, DID document and profile, and all three pages
-  of `app.bsky.graph.getFollows` (100 a page; 259 accounts, 25 of them labelled
-  `!no-unauthenticated`).
 
 A handle's own `https://{handle}/.well-known/atproto-did` is not recorded: the AppView resolved
 every recorded handle, and this sandbox's proxy refuses `*.bsky.social`. The unit tests derive

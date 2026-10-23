@@ -16,16 +16,6 @@ export const blueskyAdapter: Adapter = {
 
 export { APPVIEW, PLC_DIRECTORY, xrpcUrl } from "./http.js";
 export { authorFeedUrl, MAX_AGE_MS, MAX_PAGES, PAGE_LIMIT } from "./fetch.js";
-export {
-  accountFrom,
-  FOLLOWS_PAGE_LIMIT,
-  followsUrl,
-  MAX_FOLLOW_PAGES,
-  previewForAccount,
-  readFollows,
-  type FollowedAccount,
-  type FollowsListing,
-} from "./follows.js";
 export { readDidDocument, resolveHandle, resolveVerifiedHandle, type DidDocument } from "./identity.js";
 export {
   BSKY_APP,

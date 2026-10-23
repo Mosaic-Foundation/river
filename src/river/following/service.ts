@@ -95,30 +95,6 @@ export async function addToCircles(db: Db, spaceId: string, circleIds: readonly 
   return rowCount ?? 0;
 }
 
-/**
- * Follows many whole spaces at once (an import), adding each to the circles these ids name.
- * Returns how many were newly followed; spaces already followed keep their rule and gain circles.
- */
-export async function followSpaces(db: Db, spaceIds: readonly string[], circleIds: readonly string[]): Promise<number> {
-  if (spaceIds.length === 0) return 0;
-  const { rowCount } = await db.query(
-    `INSERT INTO river.follows (space_id, stream_id, rule)
-     SELECT s, NULL, 'follow' FROM unnest($1::uuid[]) AS s
-     ON CONFLICT (account_id, space_id, stream_id) DO NOTHING`,
-    [[...spaceIds]],
-  );
-  if (circleIds.length > 0) {
-    await db.query(
-      `INSERT INTO river.circle_members (circle_id, space_id)
-       SELECT c.id, s FROM river.circles c CROSS JOIN unnest($1::uuid[]) AS s
-        WHERE c.id = ANY($2::uuid[])
-       ON CONFLICT (circle_id, space_id) DO NOTHING`,
-      [[...spaceIds], [...circleIds]],
-    );
-  }
-  return rowCount ?? 0;
-}
-
 export interface FollowRequest {
   scope: "space" | "stream";
   circleIds: string[];
