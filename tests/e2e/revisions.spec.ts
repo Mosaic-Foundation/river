@@ -144,8 +144,8 @@ test.describe("item 4: networks, and collapsible sections", () => {
 
   test("Networks sits below Content type; Fediverse, Civic Hubs and both filter by network", async ({ page }) => {
     await openFeed(page);
-    // The sections sit under the column's title (ui-revisions-4 item 3).
-    await expect(sidebar(page).getByRole("heading", { level: 2 })).toHaveText(["Filter your River"]);
+    // The sections sit under search and the wide filter button (ui-revisions-10 item 1).
+    await expect(sidebar(page).getByTestId("sidebar-filter-action")).toHaveText("Filter your River");
     const headings = sidebar(page).getByRole("heading", { level: 3 });
     await expect(headings).toHaveText(["Circles", "Content type", "Networks"]);
     const networks = sidebar(page).getByRole("navigation", { name: "Networks" });

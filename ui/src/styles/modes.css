@@ -209,6 +209,8 @@
   /* Edge to edge (ui-revisions-8 item 3): filters left, Coming up right, the feed centred between. */
   .layout-panel {
     grid-template-columns: var(--layout-sidebar) minmax(0, 1fr) var(--layout-panel);
+    /* Narrow gaps near the 80rem breakpoint, full ones from 88rem (ui-revisions-10 item 2). */
+    column-gap: clamp(var(--space-sm), (100vw - 80rem) / 4, var(--space-xl));
   }
 
   .layout-panel > .desktop-only {

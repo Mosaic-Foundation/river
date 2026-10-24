@@ -64,6 +64,17 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-24, UI revisions 10 (one filter button, narrowing gaps):
+  - New e2e `revisions10.spec.ts`:
+    - the wide button in Everything and Civic: no title or Clear all, as wide as search, turns
+      at a type and at a network;
+    - the column gap: 32 px at 1440 and under 16 at 1310 (three columns), 32 at 1100 and under
+      16 at 930 (two).
+  - `filterClear.spec.ts` covers "Clear the filter": it clears everything, focus stays on the
+    button, the mode stays, and with nothing on the button opens the sections and focuses the
+    first pill.
+  - `revisions4` items 3-4 are removed (superseded). `revisions` and `themes` read the button.
+
 - 2026-10-24, UI revisions 9 (profile menu, My information, dark mode):
   - Unit:
     - `ui/colorScheme` (saved choice, device fallback, blocked storage);

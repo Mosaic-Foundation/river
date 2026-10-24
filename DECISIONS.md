@@ -341,6 +341,20 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-24 — One filter button and narrowing gaps, in detail (UI revisions 10)
+- **What "Filter your River" does.** A button should do something, so with no filter on it opens
+  any collapsed section and puts focus on the first filter (Circles' first pill). It works as a
+  "go to the filters" for keyboard users. With a filter on it clears them all, keeping the mode,
+  and focus stays on it as it turns back.
+- **Its look.** Quiet (surface, border) while nothing is on; filled in the primary colour with a
+  ✕ while a filter is on, so the clear action stands out.
+- **The phone sheet keeps its title and compact Clear all.** The request was about the desktop
+  column, and the sheet's title is the dialog's accessible name. The phone's own
+  "Filter your River" button that opens the sheet is unchanged.
+- **The gaps.** `column-gap: clamp(0.5rem, (100vw - breakpoint) / 4, 2rem)`, with the breakpoint
+  at 80rem for three columns and 56rem for two. The gaps reach 0.5rem as the window nears the
+  breakpoint and are full from 8rem above it, so the feed keeps its width longer.
+
 ## 2026-10-24 — The profile menu and dark mode, in detail (UI revisions 9)
 - **Where the choice lives.**
   - It is in `localStorage` (`river:color-scheme`), per browser, not on the account. Visitors
