@@ -64,6 +64,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-24, UI revisions 11 item 1 (no Following link in the bar): `profile.spec.ts` checks the
+  menu's items (My information, Following, Settings, Sign out) and no Following link in the
+  bar; `modes.spec.ts` opens Following from the menu with Civic kept.
 - 2026-10-24, UI revisions 10 (one filter button, narrowing gaps):
   - New e2e `revisions10.spec.ts`:
     - the wide button in Everything and Civic: no title or Clear all, as wide as search, turns

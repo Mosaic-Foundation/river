@@ -57,7 +57,9 @@ test.describe("item 1: the profile menu", () => {
     await button.click();
     await expect(button).toHaveAttribute("aria-expanded", "true");
     const menu = page.getByRole("menu", { name: "Your profile and settings" });
-    await expect(menu.getByRole("menuitem")).toHaveText(["My information", "Settings", "Sign out"]);
+    await expect(menu.getByRole("menuitem")).toHaveText(["My information", "Following", "Settings", "Sign out"]);
+    // The bar itself has no Following link any more (ui-revisions-11 item 1): Follow and the menu go there.
+    await expect(bar.getByRole("link", { name: "Following", exact: true })).toHaveCount(0);
     await expect(menu.getByRole("menuitem", { name: "My information" })).toBeFocused();
 
     await menu.getByRole("menuitem", { name: "My information" }).click();
