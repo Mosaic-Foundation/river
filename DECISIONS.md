@@ -341,6 +341,38 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-24 — The profile menu and dark mode, in detail (UI revisions 9)
+- **Where the choice lives.**
+  - It is in `localStorage` (`river:color-scheme`), per browser, not on the account. Visitors
+    need it too, and a phone and a laptop often want different schemes.
+  - With no choice saved, the device's `prefers-color-scheme` decides and is followed live.
+- **No flash.** `ui/public/color-scheme.js`, a plain same-origin script in `index.html`'s head,
+  sets `data-scheme` before the first paint. The CSP is `script-src 'self'`, so it can't be
+  inline, and `vercel.json` is unchanged.
+- **How the themes switch.**
+  - `data-scheme="dark"` on `<html>`, next to `data-theme`. Mosaic's dark block is
+    `:root:not([data-theme="civic"])[data-scheme="dark"]` so it never leaks into Civic. Civic's
+    is `[data-theme="civic"][data-scheme="dark"]`.
+  - Both set `color-scheme`, so native controls and scrollbars follow.
+  - The backdrops behind dialogs and sheets used the text color, which turns light in dark. They
+    now use a `--color-scrim` token.
+  - Civic's process colors turn light in dark, because its pills draw them as text on a tint of
+    themselves.
+  - Unit tests read both theme files and hold every text pair, light and dark, to AA.
+- **The menu.**
+  - It follows the circles menu's pattern (menu button, roving focus, Escape, a click outside,
+    focus back).
+  - Sign out moved into it, and a visitor keeps the Sign in link in the bar as well as in the
+    menu.
+  - My information and Settings are the existing `InfoDialog`, with a "Done" button.
+  - They render only while open, so the DID is in the page only while it's shown.
+  - The Following page has no profile menu yet: its header is a back link. Dark mode still
+    applies there.
+- **Wording.** The DID text says what a DID is (a W3C-standard identifier no company owns, with
+  public keys others can check). It says a Mosaic DID is a `did:webvh` at id.mosaic.social,
+  signed, verifiable and portable (ADR-002), and that the River knows the member by it, never by
+  email.
+
 ## 2026-10-24 — UI revisions 8, in detail
 - **Why Coming up went away.** Its plugin read the newest 500 items a member follows
   (`VIEW_ITEMS_LIMIT`). With Bluesky imports and busy fediverse and RSS feeds, those 500 were
