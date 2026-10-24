@@ -119,6 +119,14 @@ export interface SurfaceOutput {
   output: PluginOutput;
 }
 
+/** One source the Source filter offers: a followed space (ui-revisions-11 item 2). */
+export interface FeedSource {
+  id: string;
+  name: string;
+  /** Its network's adapter: civic_hub, fediverse, atproto, rss or sample. */
+  adapter: string;
+}
+
 export type Surface = "river.panel" | "river.mode-header" | "river.card-action";
 
 export interface ModeOption {
@@ -136,6 +144,8 @@ export interface FeedResponse {
   /** Plugin outputs per surface, on the first page; null on later pages. */
   surfaces: Partial<Record<Surface, SurfaceOutput[]>> | null;
   circles: FeedCircle[];
+  /** The mode's sources, by name, for the Source filter (ui-revisions-11 item 2). */
+  sources?: FeedSource[];
   items: FeedItem[];
   nextCursor: string | null;
   empty: boolean;
@@ -165,6 +175,8 @@ export interface FeedQuery {
   /** Networks; empty or undefined for every network. */
   networks?: string[];
   q?: string;
+  /** One source (a space id); empty or undefined for every source. */
+  source?: string;
   cursor?: string;
 }
 
@@ -176,6 +188,8 @@ export type FeedResult =
   | { status: "bad_circle" }
   /** The mode isn't enabled on this instance (e.g. an old link): the UI opens the default. */
   | { status: "bad_mode" }
+  /** The source isn't a source id (an edited link): the UI shows every source. */
+  | { status: "bad_source" }
   | { status: "error"; message: string };
 
 /** The query string for /api/feed; empty values are left out. */
@@ -188,6 +202,7 @@ export function feedSearch(query: FeedQuery): string {
   if (query.networks?.length) params.set("network", query.networks.join(","));
   const q = query.q?.trim();
   if (q) params.set("q", q);
+  if (query.source) params.set("source", query.source);
   if (query.cursor) params.set("cursor", query.cursor);
   const text = params.toString();
   return text ? `?${text}` : "";
@@ -211,6 +226,7 @@ export async function loadFeed(query: FeedQuery, signal?: AbortSignal): Promise<
   }
   if (res.status === 400 && error.error === "bad_circle") return { status: "bad_circle" };
   if (res.status === 400 && error.error === "bad_mode") return { status: "bad_mode" };
+  if (res.status === 400 && error.error === "bad_source") return { status: "bad_source" };
   if (!res.ok || !body) {
     return { status: "error", message: "The River couldn't load right now. Try again in a moment." };
   }
