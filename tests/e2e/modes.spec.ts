@@ -183,8 +183,10 @@ test("check 7, member: Civic reads the circle whose role is civic, renamed or no
   await expectCivicPanel(page);
   await expectOnlyFrom(page, civicNames);
 
-  // The Following link keeps the mode, and the page wears its theme.
-  await page.getByRole("link", { name: "Following", exact: true }).click();
+  // The profile menu's Following keeps the mode, and the page wears its theme (the bar's link
+  // moved into the menu, ui-revisions-11 item 1).
+  await page.getByRole("button", { name: "Your profile and settings" }).click();
+  await page.getByRole("menuitem", { name: "Following" }).click();
   await expect(page).toHaveURL(/\/following\?mode=civic$/);
   await expect(page.getByTestId("space-row").first()).toBeVisible({ timeout: 30_000 });
   await expectTheme(page, "civic");
