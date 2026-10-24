@@ -1283,16 +1283,23 @@ a.button {
   }
 
   .topbar {
-    padding: var(--space-sm) var(--space-xl);
+    padding: var(--space-sm) var(--space-md);
   }
 
+  /* The whole window (ui-revisions-8 item 3): the filter column against the left edge, the feed
+     centred in the space beside it at its reading width, and (modes.css) Coming up against the
+     right edge, the way Facebook lays out its home page. */
   .layout {
-    grid-template-columns: var(--layout-sidebar) minmax(0, var(--layout-feed));
-    justify-content: center;
-    padding: var(--space-lg) var(--space-xl);
+    grid-template-columns: var(--layout-sidebar) minmax(0, 1fr);
+    column-gap: var(--space-xl);
+    max-width: none;
+    padding: var(--space-lg) var(--space-md);
   }
 
   main.feed {
+    justify-self: center;
+    width: 100%;
+    max-width: var(--layout-feed);
     padding: 0;
   }
 

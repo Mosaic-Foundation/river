@@ -4,8 +4,8 @@
  * themes/civic.css) plus the layout tokens in theme.css. Civic mode wears civic.css through
  * data-theme="civic" on <html>; nothing here names a mode's colors.
  *
- * Desktop: the panel is a third column from 80rem, and sits above the feed (beside the filters)
- * from 56rem to 80rem. Phone: above the feed on the Feed tab.
+ * Desktop: the panel is a third column from 80rem, against the window's right edge, and sits above
+ * the feed (beside the filters) from 56rem to 80rem. Phone: above the feed on the Feed tab.
  */
 
 /* ---------- Header and mode switch ---------- */
@@ -194,6 +194,9 @@
   .layout-panel > .plugin-column {
     grid-column: 2;
     grid-row: 1;
+    justify-self: center;
+    width: 100%;
+    max-width: var(--layout-feed);
   }
 
   .layout-panel > main.feed {
@@ -203,9 +206,9 @@
 }
 
 @media (min-width: 80rem) {
+  /* Edge to edge (ui-revisions-8 item 3): filters left, Coming up right, the feed centred between. */
   .layout-panel {
-    grid-template-columns: var(--layout-sidebar) minmax(0, var(--layout-feed)) var(--layout-panel);
-    max-width: var(--layout-page-wide);
+    grid-template-columns: var(--layout-sidebar) minmax(0, 1fr) var(--layout-panel);
   }
 
   .layout-panel > .desktop-only {
@@ -220,6 +223,8 @@
   .layout-panel > .plugin-column {
     grid-column: 3;
     grid-row: 1;
+    justify-self: stretch;
+    max-width: none;
     align-self: start;
     position: sticky;
     top: calc(var(--size-control) + var(--space-lg) * 1.5);
@@ -233,8 +238,11 @@
     grid-row: 1;
   }
 
+  /* Edge to edge, the reader keeps a readable width: the old feed and Coming up columns side by
+     side, centred in the space beside the filters (ui-revisions-8 item 3). */
   .layout-reading > main.feed {
     grid-column: 2 / -1;
     grid-row: 1;
+    max-width: calc(var(--layout-feed) + var(--layout-panel) + var(--space-xl));
   }
 }
