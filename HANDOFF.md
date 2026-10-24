@@ -20,6 +20,24 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Deps: body-parser 1.20.9 for the npm audit failure — 2026-10-24
+
+- Branch / PR: claude/body-parser-audit → PR (self-merge when `ci` is green)
+- Migrations: none.
+
+**What it does.** `npm audit fix` moves Express's `body-parser` from 1.20.8 to 1.20.9
+(GHSA-27r3-jxmh-p828, high: a denial of service via trailing bytes after a compressed request
+body). It is a lockfile-only change within Express's own range. `ci`'s
+`npm audit --audit-level=high` failed on every branch without it.
+
+**Keys.** None.
+
+**Tests.** No test changes. `npm audit --audit-level=high`: 0 vulnerabilities (root and `ui/`).
+`npm run check`: 48 files, 688 tests passed; UI built.
+
+### Follow-ups
+- None.
+
 ## UI revisions 7: a circles menu on each Following row — 2026-10-23
 
 - Branch / PR: claude/following-circles-menu → PR (self-merge when `ci` is green)
