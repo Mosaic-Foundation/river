@@ -3,14 +3,14 @@
 // Desktop: everything in the left column under "Filter your River", each section collapsible, the
 // circles as wrapping pills like the content types, scrolling after four rows (ui-revisions-8
 // item 2; ui-revisions-4 items 2-3). Phone: one "Filter your River" button
-// that opens a bottom sheet with the same content as wrapping pills (ui-revisions-6). A compact
-// "Clear all" shows while a filter is on, below search in the column and in the sheet
-// (ui-revisions-3 item 5, ui-revisions-4 item 4).
+// that opens a bottom sheet with the same content as wrapping pills (ui-revisions-6). In the column,
+// one wide button under search reads "Filter your River", then "Clear the filter" once a filter is
+// on (ui-revisions-10 item 1); the sheet keeps its title and compact "Clear all" (ui-revisions-4).
 import { useEffect, useId, useRef, useState } from "react";
 import type { FeedCircle } from "../lib/api";
 import { activeFilterCount, filterSummary, hasActiveFilter, type FilterState } from "../lib/filters";
 import { circleColor, CONTENT_TYPES, NETWORKS } from "../lib/format";
-import { CheckIcon, ChevronIcon, FilterIcon, SearchIcon } from "./Icons";
+import { CheckIcon, ChevronIcon, CloseIcon, FilterIcon, SearchIcon } from "./Icons";
 
 export type { FilterState };
 
@@ -128,6 +128,25 @@ function circlePressed(value: FilterState, id: string): boolean {
   return id === "All" ? value.circles.length === 0 : value.circles.includes(id);
 }
 
+/**
+ * The column's one wide button under search (ui-revisions-10 item 1), in place of its title and
+ * "Clear all": "Filter your River" while nothing is on (it takes you to the first filter), and
+ * "Clear the filter" as soon as anything is (it clears every filter, keeping the mode).
+ */
+function FilterAction({ active, onClear, onStart }: { active: boolean; onClear: () => void; onStart: () => void }) {
+  return (
+    <button
+      type="button"
+      className={active ? "button-filter button-filter-active" : "button-filter"}
+      data-testid="sidebar-filter-action"
+      onClick={active ? onClear : onStart}
+    >
+      {active ? <CloseIcon className="button-filter-icon" /> : <FilterIcon className="button-filter-icon" />}
+      {active ? "Clear the filter" : "Filter your River"}
+    </button>
+  );
+}
+
 /** "Clear all": a compact button in the theme's primary colour (ui-revisions-4 item 4). */
 function ClearAll({ onClear, testId }: { onClear: () => void; testId: string }) {
   return (
@@ -168,18 +187,19 @@ export function FilterSidebar({
   const circlesScroll = useOverflows(circleScroll, circles.length);
   return (
     <aside className="sidebar" aria-label="Filters" ref={asideRef}>
-      <h2 className="sidebar-title">Filter your River</h2>
       <SearchField id="search-desktop" value={value.q} onSearch={onSearch} />
-      {hasActiveFilter(value) && (
-        <ClearAll
-          testId="sidebar-clear"
-          onClear={() => {
-            onClearAll();
-            // The button goes away with the filters; focus moves to the search field.
-            window.setTimeout(() => asideRef.current?.querySelector<HTMLInputElement>("input[type=search]")?.focus(), 0);
-          }}
-        />
-      )}
+      <FilterAction
+        active={hasActiveFilter(value)}
+        // The button stays, now reading "Filter your River", and keeps focus.
+        onClear={onClearAll}
+        onStart={() => {
+          // Open any collapsed section, then go to the first filter (Circles' first pill).
+          for (const toggle of asideRef.current?.querySelectorAll<HTMLButtonElement>(".filter-toggle[aria-expanded=false]") ?? []) {
+            toggle.click();
+          }
+          window.setTimeout(() => asideRef.current?.querySelector<HTMLButtonElement>(".filter-group .pill")?.focus(), 0);
+        }}
+      />
 
       <FilterSection title="Circles">
         <div

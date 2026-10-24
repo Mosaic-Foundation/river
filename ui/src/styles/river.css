@@ -255,8 +255,47 @@ main.feed:focus {
   color: var(--color-heading, var(--color-text));
 }
 
+/* The column's wide button under search (ui-revisions-10 item 1): "Filter your River", quiet,
+   while nothing is on; "Clear the filter", filled in the primary colour, once something is. */
+.button-filter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  min-height: var(--size-control);
+  padding: 0 var(--space-md);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control, var(--radius-pill));
+  background: var(--color-surface-alt);
+  color: var(--color-heading, var(--color-text));
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.button-filter:hover {
+  border-color: var(--color-primary);
+}
+
+.button-filter-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.button-filter-active:hover {
+  background: var(--color-primary-hover);
+}
+
+.button-filter-icon {
+  width: var(--size-icon);
+  height: var(--size-icon);
+}
+
 /* "Clear all": compact, on one line, outlined in the theme's primary colour (ui-revisions-4 item
-   4). Below search in the column (ui-revisions-3 item 5), first in the phone's chip row. */
+   4). In the phone's filter sheet (the column has the wide button above). */
 .button-clear {
   display: inline-flex;
   flex: none;

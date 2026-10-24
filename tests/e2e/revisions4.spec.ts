@@ -254,52 +254,16 @@ test.describe("item 2: circle pills, four rows, then the section scrolls", () =>
   });
 });
 
-test.describe("item 3: the filter column's title", () => {
-  for (const mode of ["everything", "civic"]) {
-    test(`"Filter your River" heads the column in ${mode}`, async ({ page }) => {
-      await openFeed(page, mode === "civic" ? "/?mode=civic" : "/");
-      const title = sidebar(page).getByRole("heading", { level: 2 });
-      await expect(title).toHaveText("Filter your River");
-      expect(await sidebar(page).evaluate((el) => el.children[0]?.textContent)).toBe("Filter your River");
-      const titleBox = (await title.boundingBox())!;
-      const searchBox = (await sidebar(page).getByRole("searchbox").boundingBox())!;
-      expect(titleBox.y + titleBox.height).toBeLessThanOrEqual(searchBox.y);
-    });
-  }
-});
-
-test.describe("item 4: a compact Clear all", () => {
-  for (const mode of ["everything", "civic"]) {
-    test(`one line, at most 32 px tall, in the primary colour, only with a filter on (${mode})`, async ({ page }) => {
-      await openFeed(page, mode === "civic" ? "/?mode=civic" : "/");
-      const clear = sidebar(page).getByRole("button", { name: "Clear all" });
-      await expect(clear).toHaveCount(0);
-      const pill = sidebar(page).getByRole("button", { name: "Articles" });
-      await pill.click();
-      await expect(clear).toBeVisible();
-      const box = (await clear.boundingBox())!;
-      expect(box.height).toBeLessThanOrEqual(32);
-      const lineHeight = await clear.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
-      const padding = await clear.evaluate((el) => parseFloat(getComputedStyle(el).paddingTop) * 2 + parseFloat(getComputedStyle(el).borderTopWidth) * 2);
-      expect(box.height).toBeLessThan(lineHeight * 2 + padding); // one line of text
-      // A pressed pill wears the primary colour; Clear all's border and text are that colour.
-      const primary = await pill.evaluate((el) => getComputedStyle(el).backgroundColor);
-      expect(await clear.evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(primary);
-      expect(await clear.evaluate((el) => getComputedStyle(el).color)).toBe(primary);
-
-      await clear.click();
-      await expect(page).toHaveURL(mode === "civic" ? /\/\?mode=civic$/ : /\/$/);
-      await expect(clear).toHaveCount(0);
-    });
-  }
-});
+// Items 3 and 4 (the column's title and its compact Clear all) gave way to one wide button under
+// search (ui-revisions-10 item 1): filterClear.spec.ts and revisions10.spec.ts. The phone's sheet
+// keeps its title and compact Clear all (below).
 
 test.describe("item 5: no active-filter chips above the feed", () => {
   test("filters on show no chips above the feed", async ({ page }) => {
     await openFeed(page, "/?circle=Family&circle=Civic&q=a");
     await sidebar(page).getByRole("button", { name: "Civic Hubs" }).click();
     await expect(page).toHaveURL(/network=hubs/);
-    await expect(sidebar(page).getByRole("button", { name: "Clear all" })).toBeVisible();
+    await expect(sidebar(page).getByRole("button", { name: "Clear the filter" })).toBeVisible();
     await expect(page.getByTestId("active-filters")).toHaveCount(0);
     await expect(page.getByRole("group", { name: "Active filters" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Remove filter/ })).toHaveCount(0);
