@@ -95,6 +95,8 @@
   --color-border: var(--civic-ink-200);
   --color-focus: var(--civic-primary-500);
   --color-selection: var(--civic-primary-100);
+  --color-scrim: var(--civic-ink-950);
+  color-scheme: light;
 
   /*
    * Process-type colors (the hub's ActivityColor keys) for civic cards' left edges and pills.
@@ -135,4 +137,59 @@
   --font-size-3xl: 2rem;
   --line-height-tight: 1.2;
   --line-height-normal: 1.5;
+}
+
+/*
+ * Dark (ui-revisions-9 item 2): the hub's navy and terracotta on night paper. Text pairs are AA
+ * or better (text 12:1, muted 7:1 on the darkest surface it sits on, on-primary 8:1). The
+ * process colors turn light, since the pills draw them as text on a tint of themselves.
+ */
+[data-theme="civic"][data-scheme="dark"] {
+  --civic-night-page: #0f1622;
+  --civic-night-card: #172030;
+  --civic-night-alt: #1e2838;
+  --civic-night-pressed: #28344a;
+  --civic-night-line: #33405a;
+
+  --color-bg: var(--civic-night-page);
+  --color-page: var(--civic-night-page);
+  --color-surface: var(--civic-night-card);
+  --color-surface-alt: var(--civic-night-alt);
+  --color-surface-pressed: var(--civic-night-pressed);
+  --color-text: #e4e8f0;
+  --color-text-muted: #a9b3c5;
+  --color-heading: #f3f5f9;
+  --color-primary: var(--civic-primary-300);
+  --color-primary-hover: var(--civic-primary-200);
+  --color-on-primary: var(--civic-primary-950);
+  --color-link: #a3bfe6;
+  --color-accent: var(--civic-accent-500);
+  --color-accent-soft: #3a281d;
+  --color-info-soft: #1f3354;
+  --color-danger: #f19a8c;
+  --color-danger-soft: #3d1f1a;
+  --color-success: #86d29b;
+  --color-success-soft: #183022;
+  --color-warning: var(--civic-warning-bright);
+  --color-warning-soft: #362c12;
+  --color-border: var(--civic-night-line);
+  --color-focus: var(--civic-primary-300);
+  --color-selection: #2a4268;
+  --color-scrim: #000000;
+
+  --color-process-vote: #a9c0e6;
+  --color-process-proposal: #c6b4ea;
+  --color-process-conversation: #7fd0d6;
+  --color-process-project: #8ab8f0;
+  --color-process-announcement: #e6ac88;
+  --color-process-meeting: #86d29b;
+  --color-process-brief: #e6ac88;
+  --color-process-wordcloud: #c3cf86;
+  --process-tint: 16%;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-focus: 0 0 0 3px rgba(143, 170, 206, 0.35);
+  color-scheme: dark;
 }

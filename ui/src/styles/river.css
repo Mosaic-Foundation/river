@@ -1031,7 +1031,7 @@ main.feed:focus {
 }
 
 .filter-sheet::backdrop {
-  background: var(--color-text);
+  background: var(--color-scrim, var(--color-text));
   opacity: 0.35;
 }
 
@@ -1115,7 +1115,7 @@ main.feed:focus {
 }
 
 .info-dialog::backdrop {
-  background: var(--color-text);
+  background: var(--color-scrim, var(--color-text));
   opacity: 0.35;
 }
 
