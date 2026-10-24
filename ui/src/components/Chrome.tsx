@@ -1,11 +1,13 @@
-// The River's frame: the header (logo, the mode switch, phone search toggle, sign-in or the
-// member's name and Sign out on desktop, a member's Following link, Follow) and the phone's bottom
-// tabs (spec 2, phone paragraph), plus the You panel. The mode switch shows the instance's modes
+// The River's frame: the header (logo, the mode switch, phone search toggle, Sign in on desktop
+// for a visitor, a member's Following link, Follow, and the profile menu with My information,
+// Settings and Sign out, ui-revisions-9) and the phone's bottom tabs (spec 2, phone paragraph),
+// plus the You panel. The mode switch shows the instance's modes
 // and hides when there is only one (spec F9, check 8).
 import { SIGN_IN_URL, viewerLabel, type ModeOption, type Viewer } from "../lib/api";
 import { showModeSwitch } from "../lib/modes";
 import type { Tab } from "../lib/tabs";
 import { CirclesIcon, FeedIcon, FollowingIcon, PlusIcon, SearchIcon, YouIcon } from "./Icons";
+import { ProfileMenu } from "./ProfileMenu";
 
 export function Brand({ link = true }: { link?: boolean }) {
   const parts = (
@@ -96,16 +98,6 @@ export function Header({ modes, mode, onMode, followingHref, searchOpen, onToggl
             Following
           </a>
         )}
-        {viewer && (
-          <div className="account desktop-inline">
-            <span className="account-name" title={viewer.did ?? undefined}>
-              {viewerLabel(viewer)}
-            </span>
-            <button type="button" className="button button-quiet" onClick={onSignOut}>
-              Sign out
-            </button>
-          </div>
-        )}
         <button
           type="button"
           className="icon-button phone-only"
@@ -125,6 +117,8 @@ export function Header({ modes, mode, onMode, followingHref, searchOpen, onToggl
           <PlusIcon />
           <span className="follow-label">Follow</span>
         </button>
+        {/* Who is signed in, their DID and Settings live in this menu, not the bar (ui-revisions-9). */}
+        {viewer !== undefined && <ProfileMenu viewer={viewer} onSignOut={onSignOut} />}
       </div>
     </header>
   );

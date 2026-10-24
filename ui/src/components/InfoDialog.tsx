@@ -10,9 +10,11 @@ export interface InfoDialogProps {
   children: React.ReactNode;
   onClose: () => void;
   testId?: string;
+  /** The closing button's label (default "Got it"). */
+  closeLabel?: string;
 }
 
-export function InfoDialog({ trigger, title, children, onClose, testId }: InfoDialogProps) {
+export function InfoDialog({ trigger, title, children, onClose, testId, closeLabel = "Got it" }: InfoDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const open = trigger !== null;
@@ -45,7 +47,7 @@ export function InfoDialog({ trigger, title, children, onClose, testId }: InfoDi
         </h2>
         {children}
         <button type="button" className="button button-primary" autoFocus onClick={() => ref.current?.close()}>
-          Got it
+          {closeLabel}
         </button>
       </div>
     </dialog>

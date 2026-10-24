@@ -71,8 +71,9 @@ test.describe("item 3: the whole window", () => {
     await openFeed(page, 1920);
     const right = await pageWidth(page);
     const brand = await box(page.locator(".topbar .brand"));
-    const follow = await box(page.getByRole("button", { name: "Follow", exact: true }));
+    // The last action is the profile menu's button (ui-revisions-9 item 1).
+    const last = await box(page.getByTestId("profile-button"));
     expect(brand.x).toBeLessThanOrEqual(16);
-    expect(right - (follow.x + follow.width)).toBeLessThanOrEqual(16);
+    expect(right - (last.x + last.width)).toBeLessThanOrEqual(16);
   });
 });
