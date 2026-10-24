@@ -5,7 +5,7 @@
 // a menu button, arrow keys, Escape, a click outside, focus back on the button.
 import { useEffect, useId, useRef, useState } from "react";
 import { SIGN_IN_URL, type Viewer } from "../lib/api";
-import { useColorScheme } from "../lib/colorScheme";
+import { useColorScheme } from "./useColorScheme";
 import { initials } from "../lib/format";
 import { YouIcon } from "./Icons";
 import { InfoDialog } from "./InfoDialog";
