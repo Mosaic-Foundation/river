@@ -315,7 +315,6 @@ main.feed:focus {
   color: var(--color-text-muted);
 }
 
-.filter-list,
 .chip-list,
 .feed-list,
 .tabbar-list,
@@ -325,59 +324,18 @@ main.feed:focus {
   padding: 0;
 }
 
-.filter-option {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  width: 100%;
-  min-height: calc(var(--size-control) * 0.85);
-  padding: 0 var(--space-sm);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--font-size-sm);
-  text-align: left;
-  cursor: pointer;
-}
-
-.filter-option:hover {
-  background: var(--color-surface-alt);
-}
-
-.filter-option:active {
-  background: var(--color-surface-pressed, var(--color-surface-alt));
-}
-
-.filter-option[aria-pressed="true"] {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  font-weight: var(--font-weight-bold);
-}
-
-/* Circles toggle like the pills, with a check mark at the end when on (ui-revisions-4 item 1). */
-.filter-option-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.filter-option-check {
-  flex: none;
-}
-
-/* Six circles show; more scroll inside the section, with a hint below (ui-revisions-4 item 2). The
-   rows don't wrap, so six of them are six times a row's height. */
+/* The circles are wrapping pills, like the content types (ui-revisions-8 item 2). Four rows show;
+   more scroll inside the section, with a hint below (after ui-revisions-4 item 2): four pill
+   heights and the three gaps between them, plus two borders' slack so exactly four rows aren't a
+   sub-pixel scroll box. Only a list that really scrolls keeps the wheel to itself; otherwise the
+   wheel over a pill scrolls the column (ui-revisions-3 item 4). */
 .circle-scroll {
-  max-height: calc(var(--size-control) * 0.85 * 6);
+  max-height: calc(var(--size-control) * 0.85 * 4 + var(--space-sm) * 3 + var(--border-width) * 2);
   overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .circle-scroll-more {
+  overscroll-behavior: contain;
   border-block: var(--border-width) solid var(--color-border);
 }
 

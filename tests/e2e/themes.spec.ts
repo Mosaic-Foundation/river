@@ -134,7 +134,8 @@ test("Civic mode wears the Civic Hub theme on every surface, at AA contrast", as
   expect(await token(page, "--font-heading")).not.toMatch(/newsreader/i);
 
   // Toggle pills: a pressed one is navy, an unpressed one sits on white with the ink border.
-  const pills = page.locator(".sidebar .pill");
+  // (The content types: the first circle pill, All, starts pressed.)
+  const pills = page.getByRole("navigation", { name: "Content type" }).locator(".pill");
   await expect(pills.first()).toBeVisible();
   expect(await style(pills.first(), "border-top-left-radius")).toBe("9999px");
   expect(await style(pills.first(), "background-color")).toBe(CIVIC.card);
