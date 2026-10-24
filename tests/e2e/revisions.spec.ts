@@ -129,7 +129,8 @@ test.describe("item 2: content types are toggle pills", () => {
       "true",
     );
     await expect(cards(page).first()).toHaveAttribute("data-kind", "photo");
-    await expect(page.locator("select")).toHaveCount(0);
+    // Pills, not a dropdown (the Source section's dropdown is ui-revisions-11 item 2).
+    await expect(types.locator("select")).toHaveCount(0);
   });
 });
 
@@ -147,7 +148,7 @@ test.describe("item 4: networks, and collapsible sections", () => {
     // The sections sit under search and the wide filter button (ui-revisions-10 item 1).
     await expect(sidebar(page).getByTestId("sidebar-filter-action")).toHaveText("Filter your River");
     const headings = sidebar(page).getByRole("heading", { level: 3 });
-    await expect(headings).toHaveText(["Circles", "Content type", "Networks"]);
+    await expect(headings).toHaveText(["Circles", "Content type", "Networks", "Source"]);
     const networks = sidebar(page).getByRole("navigation", { name: "Networks" });
     await expect(networks.getByRole("list").getByRole("button")).toHaveText(["Civic Hubs", "Fediverse", "Bluesky"]);
     await expect(networks).toContainText("Mastodon and compatible");

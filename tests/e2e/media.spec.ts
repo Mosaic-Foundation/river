@@ -87,7 +87,7 @@ test("M12: a podcast feed and a PeerTube channel show their kind, length, host a
   await expect(openEpisode).toHaveAttribute("rel", /noopener/);
   await expect(episode).toHaveAttribute("data-open", "tab");
   const popup = page.context().waitForEvent("page");
-  await episode.locator(".card-source").click();
+  await episode.locator(".card-kind").click();
   await (await popup).close();
   await expect(page).not.toHaveURL(/\/item\//);
 

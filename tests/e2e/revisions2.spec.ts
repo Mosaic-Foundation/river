@@ -102,7 +102,7 @@ test.describe("item 2: the CSP lets the embedded view frame https sources", () =
     expect(res!.headers()["content-security-policy"]).toMatch(/(^|; )frame-src https:(;|$)/);
     const card = cards(page).first();
     await expect(card).toHaveAttribute("data-open", "frame", { timeout: 30_000 });
-    await card.locator(".card-source").click();
+    await card.locator(".card-kind").click();
     await expect(page.frameLocator("[data-testid=external-frame]").getByTestId("stand-in")).toBeVisible();
     expect(violations).toEqual([]);
   });
