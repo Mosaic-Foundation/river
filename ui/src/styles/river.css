@@ -1328,9 +1328,12 @@ a.button {
   /* The whole window (ui-revisions-8 item 3): the filter column against the left edge, the feed
      centred in the space beside it at its reading width, and (modes.css) Coming up against the
      right edge, the way Facebook lays out its home page. */
+  /* The gaps between columns narrow as the window does, from 2rem down to 0.5rem, before the
+     layout drops a column (ui-revisions-10 item 2): a quarter of the width above the 56rem
+     breakpoint here, and modes.css does the same above 80rem for three columns. */
   .layout {
     grid-template-columns: var(--layout-sidebar) minmax(0, 1fr);
-    column-gap: var(--space-xl);
+    column-gap: clamp(var(--space-sm), (100vw - 56rem) / 4, var(--space-xl));
     max-width: none;
     padding: var(--space-lg) var(--space-md);
   }
