@@ -17,10 +17,12 @@ import {
   parseNetworks,
   markViewRead,
   queryFeed,
+  querySources,
   queryViewItems,
   type FeedFilter,
   type FeedItem,
   type FeedScope,
+  type SourceOption,
 } from "./query.js";
 import { memberView } from "./member.js";
 import { refreshFollowed, refreshSpaces, type RefreshDeps, type RefreshReport } from "./refresh.js";
@@ -38,6 +40,8 @@ export interface FeedParams {
   /** One or more networks, comma-separated: hubs, fediverse, bluesky (ui-revisions-1 item 4, ADR-009). */
   network?: string;
   q?: string;
+  /** One source only: a space id from `sources` (ui-revisions-11 item 2). */
+  source?: string;
   cursor?: string;
 }
 
@@ -54,6 +58,8 @@ export interface FeedResponse {
    */
   surfaces: Partial<Record<Surface, SurfaceOutput[]>> | null;
   circles: Array<{ id: string; name: string; color: string | null; role: "civic" | null }>;
+  /** The mode's sources, by name, for the Source filter (ui-revisions-11 item 2). */
+  sources: SourceOption[];
   items: FeedItem[];
   nextCursor: string | null;
   /** True when the first page has nothing: the UI shows `emptyMessage`. */
@@ -91,7 +97,7 @@ async function viewSurfaces(
   instance: Instance,
   mode: Mode,
   view: { scope: FeedScope; followed: () => FeedScope },
-  filter: Pick<FeedFilter, "kinds" | "adapters" | "q">,
+  filter: Pick<FeedFilter, "kinds" | "adapters" | "q" | "spaceId">,
   now: Date,
 ): Promise<Partial<Record<Surface, SurfaceOutput[]>>> {
   const definition = MODE_DEFINITIONS[mode];
@@ -106,6 +112,14 @@ async function viewSurfaces(
   return surfaces;
 }
 
+/** The Source filter: a space id, or none. A source outside the reader's scope just shows nothing. */
+function parseSource(raw: string | undefined): string | undefined {
+  if (raw === undefined || raw === "") return undefined;
+  const id = raw.toLowerCase();
+  if (!UUID.test(id)) throw new FeedInputError("source", "Unknown source");
+  return id;
+}
+
 /** Validates the parameters every feed request shares, before any work. */
 function parseCommon(instance: Instance, params: FeedParams) {
   const mode = parseMode(params.mode, instance);
@@ -113,7 +127,8 @@ function parseCommon(instance: Instance, params: FeedParams) {
   const adapters = parseNetworks(params.network);
   const cursor = decodeCursor(params.cursor);
   if (params.q !== undefined && params.q.length > 200) throw new FeedInputError("q", "Search is too long");
-  return { mode, cursor, filter: { kinds, adapters, q: params.q } };
+  const spaceId = parseSource(params.source);
+  return { mode, cursor, filter: { kinds, adapters, q: params.q, spaceId } };
 }
 
 export async function visitorFeed(
@@ -158,6 +173,7 @@ export async function visitorFeed(
         ...modeSummary(instance, mode),
         surfaces,
         circles: view.circles.map(({ id, name, color, role }) => ({ id, name, color, role })),
+        sources: await querySources(db, scopeFor(view, mode, undefined)),
         items: page.items,
         nextCursor: page.nextCursor,
         empty,
@@ -242,6 +258,7 @@ export async function memberFeed(
       ...modeSummary(instance, mode),
       surfaces,
       circles: view.circles.map(({ id, name, color, role }) => ({ id, name, color, role })),
+      sources: await querySources(db, scopeFor(view, mode, undefined)),
       items: page.items,
       nextCursor: page.nextCursor,
       empty,
