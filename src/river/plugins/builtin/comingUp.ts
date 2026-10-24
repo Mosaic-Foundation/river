@@ -1,12 +1,16 @@
 // Coming up (spec 4.7, ui-revisions-1 item 6): up to five upcoming dates from the items the mode
 // gives it (Civic: the current view; Everything: everything followed, whatever the filters), from hub
-// processes' civic.deadline (voting_closes_at) and events' start times, in date order. Hidden
-// when there are none. "Upcoming" means at or after the River's clock. One entry per process and
-// date: a hub announces the same deadline on several activities (Create, civic:Start), so the
-// newest item of each (stream, date) stands for it.
+// processes' civic.deadline (voting_closes_at) and events' start times, in date order. With
+// none, Civic hides it (its panel keeps the placeholder slots); Everything keeps its column and
+// says there's nothing yet (ui-revisions-8 item 1). "Upcoming" means at or after the River's
+// clock. One entry per process and date: a hub announces the same deadline on several activities
+// (Create, civic:Start), so the newest item of each (stream, date) stands for it.
 import type { DateEntry, PluginItem, ViewApi, ViewPlugin } from "../api.js";
 
 export const COMING_UP_LIMIT = 5;
+
+/** What Everything's Coming up says when nothing followed has an upcoming date. */
+export const COMING_UP_EMPTY = "Nothing coming up yet. Votes, meetings and events from what you follow show here.";
 
 function time(value: string | null): number | undefined {
   if (!value) return undefined;
@@ -59,7 +63,10 @@ export const comingUpPlugin: ViewPlugin = {
   },
   render(api) {
     const entries = comingUp(api);
-    if (entries.length === 0) return null;
+    if (entries.length === 0) {
+      if (api.reach !== "followed") return null;
+      return { type: "dates", intro: COMING_UP_EMPTY, entries };
+    }
     const intro = api.reach === "followed" ? "Dates from everything you follow." : "Dates from the items in this view.";
     return { type: "dates", intro, entries };
   },

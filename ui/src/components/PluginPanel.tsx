@@ -50,11 +50,13 @@ function PluginBlock({ plugin }: { plugin: SurfaceOutput }) {
       {output.type === "dates" && (
         <>
           <p className="plugin-intro">{output.intro}</p>
-          <ol className="plugin-dates" aria-label={`${plugin.title}, soonest first`}>
-            {output.entries.map((entry) => (
-              <DateRow key={`${entry.itemId}-${entry.what}`} entry={entry} />
-            ))}
-          </ol>
+          {output.entries.length > 0 && (
+            <ol className="plugin-dates" aria-label={`${plugin.title}, soonest first`}>
+              {output.entries.map((entry) => (
+                <DateRow key={`${entry.itemId}-${entry.what}`} entry={entry} />
+              ))}
+            </ol>
+          )}
         </>
       )}
       {output.type === "placeholder" && (
