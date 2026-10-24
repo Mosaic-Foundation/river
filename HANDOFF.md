@@ -48,7 +48,9 @@ Spec: `docs/spec/ui-revisions-11.md` item 2; details in DECISIONS.md.
 - New e2e `revisions11.spec.ts`: the dropdown, a card's name, and the phone sheet.
 - Older specs that clicked a card's source name to open the card now click its kind label.
   `filterColumn` scrolls to the dropdown as the column's last control.
-- `npm run check`: 50 files, 701 tests passed; UI built. API feed and modes tests: 32 passed.
+- `npm run check`: 50 files, 701 tests passed; UI built. `npm run test:api`: 17 files, 166
+  tests passed. Full e2e: 140 passed, 1 failed (identity check 37, which needs
+  `TEST_RECOVERY_KEY_FILE`, as always locally).
 
 ### Follow-ups
 - None.
