@@ -6,7 +6,8 @@
  *
  * Components use only the semantic tokens below (--color-*, --font-*, --radius-*, --shadow-*,
  * --space-*, --font-size-*); civic.css redefines the same names. Active on <html> by default
- * and with data-theme="mosaic".
+ * and with data-theme="mosaic". With data-scheme="dark" (ui-revisions-9 item 2) the block at the
+ * end redefines the colors: the same navy, sky and gold, on deep navy.
  */
 @import "@fontsource-variable/newsreader";
 @import "@fontsource-variable/nunito-sans";
@@ -46,6 +47,9 @@
   --color-border: var(--mosaic-line);
   --color-focus: var(--mosaic-blue);
   --color-selection: var(--mosaic-gold-soft);
+  /* Behind dialogs and sheets. */
+  --color-scrim: var(--mosaic-ink);
+  color-scheme: light;
 
   --font-heading: "Newsreader Variable", "Newsreader", Georgia, "Times New Roman", serif;
   --font-body: "Nunito Sans Variable", "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -72,4 +76,38 @@
   --space-md: 1rem;
   --space-lg: 1.5rem;
   --space-xl: 2rem;
+}
+
+/* Dark (ui-revisions-9 item 2). Every pair a component draws is at least AA: text on surface and
+   surface-alt 12:1 and up, muted text 7:1, links 8:1, on-primary on primary 9:1. */
+:root:not([data-theme="civic"])[data-scheme="dark"] {
+  --mosaic-night: #0f1520;
+  --mosaic-night-card: #172131;
+  --mosaic-night-alt: #1e2a3d;
+  --mosaic-night-line: #2c3a50;
+  --mosaic-sky-light: #8fc3ef;
+  --mosaic-sky-pale: #b9d9f4;
+
+  --color-bg: var(--mosaic-night);
+  --color-page: var(--mosaic-night);
+  --color-surface: var(--mosaic-night-card);
+  --color-surface-alt: var(--mosaic-night-alt);
+  --color-surface-pressed: var(--mosaic-night-line);
+  --color-text: #e6e9ef;
+  --color-text-muted: #a9b3c3;
+  --color-heading: #f2f5fa;
+  --color-primary: var(--mosaic-sky-light);
+  --color-primary-hover: var(--mosaic-sky-pale);
+  --color-on-primary: var(--mosaic-navy-deep);
+  --color-link: var(--mosaic-sky-light);
+  --color-accent: var(--mosaic-gold);
+  --color-accent-soft: #3a2f14;
+  --color-info-soft: #1c3550;
+  --color-danger: #f29a9a;
+  --color-border: var(--mosaic-night-line);
+  --color-focus: var(--mosaic-sky-light);
+  --color-selection: #2b4566;
+  --color-scrim: #000000;
+  --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
 }

@@ -74,6 +74,23 @@ Newest first: date, slice, tests added, counts.
     button, the mode stays, and with nothing on the button opens the sections and focuses the
     first pill.
   - `revisions4` items 3-4 are removed (superseded). `revisions` and `themes` read the button.
+
+- 2026-10-24, UI revisions 9 (profile menu, My information, dark mode):
+  - Unit:
+    - `ui/colorScheme` (saved choice, device fallback, blocked storage);
+    - `ui/mosaicTheme` (dark surfaces and text, AA pairs);
+    - `ui/civicTheme` now reads the light and dark blocks separately and holds both to AA.
+  - New e2e `profile.spec.ts`:
+    - the member's menu and My information with the DID, axe;
+    - no DID in the top bar;
+    - Sign out from the menu;
+    - the visitor's menu;
+    - the keyboard (Enter, arrows wrap, Escape, focus back);
+    - 390 px;
+    - dark on and off, kept across a reload, in Everything and Civic, with axe in dark;
+    - a dark-preferring browser opens dark.
+  - `signin.spec.ts` uses the menu. `revisions8` checks the profile button at the right edge.
+  - Unit 700, e2e 137 (136 locally; check 37 needs `TEST_RECOVERY_KEY_FILE`).
 - 2026-10-24, UI revisions 8 (Coming up back, circle pills, the whole window):
   - API `db/modes.test.ts`: Everything's Coming up finds a hub vote under 520 newer posts in
     another followed space. It reproduces the missing column on the old query.
