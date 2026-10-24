@@ -20,6 +20,44 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 8: Coming up back, circle pills, the whole window — 2026-10-24
+
+- Branch / PR: claude/layout-full-width → PR (self-merge when `ci` is green)
+- Migrations: none.
+
+**What it does.**
+- **Coming up is back in Everything.** Its plugin read only the newest 500 followed items, and
+  busy Bluesky, fediverse and RSS feeds had pushed the hub votes out of that window. The plugins
+  now also get the newest dated items (`queryViewItems`). Everything keeps the column when
+  nothing is coming up and says so.
+- **Circles as pills.** The filter column's circles are wrapping pills like the content types,
+  four rows and then scrolling.
+- **The whole window.** On a desktop the page spans the window like Facebook's: filters against
+  the left edge, Coming up against the right, the feed centred between. The reader is capped at
+  66rem.
+
+Spec: `docs/spec/ui-revisions-8.md`; details in DECISIONS.md.
+
+**Keys.** None.
+
+**Tests.**
+- API `db/modes.test.ts`: Everything's Coming up still finds the Longmont vote under 520 newer
+  posts. It fails on the old query.
+- Unit `plugins.test.ts`: Everything's empty state.
+- e2e:
+  - new `revisions8.spec.ts`: Coming up shown; edges at 1920 and 1440; the 1100 layout; the top
+    bar;
+  - `revisions4` item 2 rewritten for pills;
+  - `revisions2`'s reader check updated;
+  - `themes` reads a content-type pill, since the first circle pill, All, starts pressed.
+- `npm run check`: 48 files, 689 tests passed; UI built.
+- API: 17 files, 162 tests passed.
+- e2e: 130 passed. Check 37 needs `TEST_RECOVERY_KEY_FILE`, which this session doesn't have; it
+  runs in CI.
+
+### Follow-ups
+- The Following page keeps its centred layout. Say if it should go edge to edge too.
+
 ## UI revisions 7: a circles menu on each Following row — 2026-10-23
 
 - Branch / PR: claude/following-circles-menu → PR (self-merge when `ci` is green)
