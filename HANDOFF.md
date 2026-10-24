@@ -20,6 +20,44 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 9: a profile menu, My information, dark mode — 2026-10-24
+
+- Branch / PR: claude/profile-menu-dark-mode → PR (self-merge when `ci` is green)
+- Migrations: none.
+
+**What it does.**
+- **The profile menu.** A round profile button at the right of the top bar
+  (`ui/src/components/ProfileMenu.tsx`) opens a menu:
+  - for a member: My information, Settings and Sign out;
+  - for a visitor: Settings and Sign in.
+- **My information** says what a DID and a Mosaic DID are, and shows the member's DID with Copy.
+  The DID and name are off the top bar.
+- **Dark mode.** Settings has a "Dark mode" switch, and both themes have a dark version.
+  - The choice is saved per browser; until there is one, the River follows the device.
+  - `ui/public/color-scheme.js` applies it before the first paint.
+
+Spec: `docs/spec/ui-revisions-9.md`; details in DECISIONS.md.
+
+**Keys.** None (`localStorage` key `river:color-scheme`).
+
+**Tests.**
+- Unit:
+  - `colorScheme` (the saved choice, the device fallback, blocked storage);
+  - `mosaicTheme` (dark AA pairs);
+  - `civicTheme`, which now checks light and dark separately.
+- e2e:
+  - new `profile.spec.ts`: a member's menu and My information with the DID, no DID in the bar,
+    Sign out from the menu, a visitor's menu, the keyboard, a phone, dark on and off across a
+    reload in both modes with axe, and the device's setting followed;
+  - `signin.spec.ts` reads the DID through My information;
+  - `revisions8` checks the profile button at the right edge.
+- `npm run check`: 50 files, 700 tests passed; UI built.
+- e2e: 136 passed. Check 37 needs `TEST_RECOVERY_KEY_FILE`, which this session doesn't have; it
+  runs in CI.
+
+### Follow-ups
+- The Following page's header has no profile menu yet. Dark mode applies there.
+
 ## UI revisions 8: Coming up back, circle pills, the whole window — 2026-10-24
 
 - Branch / PR: claude/layout-full-width → PR (self-merge when `ci` is green)

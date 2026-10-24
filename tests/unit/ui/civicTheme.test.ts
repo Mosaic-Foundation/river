@@ -7,8 +7,19 @@ import { processKey, type ProcessKey } from "../../../ui/src/lib/format";
 // token change can't quietly drop below it. axe in the e2e tests checks the rendered pages.
 const css = readFileSync(new URL("../../../ui/src/styles/themes/civic.css", import.meta.url), "utf8");
 
-const declared = new Map<string, string>();
-for (const m of css.matchAll(/(--[a-z0-9-]+):\s*([^;]+);/g)) declared.set(m[1]!, m[2]!.trim());
+// The light tokens, then dark mode's (ui-revisions-9 item 2), which redefine some of them.
+const DARK = '[data-theme="civic"][data-scheme="dark"]';
+const darkAt = css.indexOf(DARK);
+
+function tokens(text: string, base = new Map<string, string>()): Map<string, string> {
+  const map = new Map(base);
+  for (const m of text.matchAll(/(--[a-z0-9-]+):\s*([^;]+);/g)) map.set(m[1]!, m[2]!.trim());
+  return map;
+}
+
+const light = tokens(darkAt === -1 ? css : css.slice(0, darkAt));
+const dark = tokens(css.slice(darkAt), light);
+let declared = light;
 
 /** A token's hex value, following var() references. */
 function hex(name: string): string {
@@ -58,7 +69,13 @@ const PROCESS_KEYS: ProcessKey[] = [
 ];
 
 describe("Civic theme (civic.css)", () => {
+  it("has a dark block (ui-revisions-9 item 2)", () => {
+    expect(darkAt).toBeGreaterThan(0);
+    expect(css.slice(darkAt)).toMatch(/color-scheme:\s*dark/);
+  });
+
   it("uses the Civic Hub's default theme values", () => {
+    declared = light;
     expect(hex("--color-primary")).toBe("#2a4e84");
     expect(hex("--color-primary-hover")).toBe("#1f3a66");
     expect(hex("--color-accent")).toBe("#c37b51");
@@ -74,43 +91,48 @@ describe("Civic theme (civic.css)", () => {
     expect(css).not.toMatch(/@import[^;]*newsreader/i);
   });
 
-  it("keeps body, heading, muted and link text at AA on every surface", () => {
-    const surfaces = ["--color-page", "--color-surface", "--color-surface-alt"];
-    for (const text of ["--color-text", "--color-heading", "--color-text-muted", "--color-link", "--color-danger"]) {
-      for (const surface of surfaces) {
-        expect(contrast(hex(text), hex(surface)), `${text} on ${surface}`).toBeGreaterThanOrEqual(4.5);
+  for (const [scheme, tokensOf] of [["light", light], ["dark", dark]] as const) {
+    it(`${scheme}: keeps body, heading, muted and link text at AA on every surface`, () => {
+      declared = tokensOf;
+      const surfaces = ["--color-page", "--color-surface", "--color-surface-alt"];
+      for (const text of ["--color-text", "--color-heading", "--color-text-muted", "--color-link", "--color-danger"]) {
+        for (const surface of surfaces) {
+          expect(contrast(hex(text), hex(surface)), `${text} on ${surface}`).toBeGreaterThanOrEqual(4.5);
+        }
       }
-    }
-  });
+    });
 
-  it("keeps filled controls, chips and banners at AA", () => {
-    const pairs: Array<[string, string]> = [
-      ["--color-on-primary", "--color-primary"],
-      ["--color-on-primary", "--color-primary-hover"],
-      ["--color-primary", "--color-info-soft"], // Live label, active filters, Following badge
-      ["--color-text", "--color-accent-soft"], // sample banner and label, quiet banner
-      ["--color-text", "--color-warning-soft"], // deadline chip
-      ["--color-text", "--color-surface-pressed"],
-      ["--color-success", "--color-success-soft"], // Final result chip
-      ["--color-danger", "--color-danger-soft"], // follow errors
-    ];
-    for (const [fg, bg] of pairs) {
-      expect(contrast(hex(fg), hex(bg)), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
-    }
-  });
+    it(`${scheme}: keeps filled controls, chips and banners at AA`, () => {
+      declared = tokensOf;
+      const pairs: Array<[string, string]> = [
+        ["--color-on-primary", "--color-primary"],
+        ["--color-on-primary", "--color-primary-hover"],
+        ["--color-primary", "--color-info-soft"], // Live label, active filters, Following badge
+        ["--color-text", "--color-accent-soft"], // sample banner and label, quiet banner
+        ["--color-text", "--color-warning-soft"], // deadline chip
+        ["--color-text", "--color-surface-pressed"],
+        ["--color-success", "--color-success-soft"], // Final result chip
+        ["--color-danger", "--color-danger-soft"], // follow errors
+      ];
+      for (const [fg, bg] of pairs) {
+        expect(contrast(hex(fg), hex(bg)), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+      }
+    });
 
-  it("has a color for every process key, and each pill is AA on its tint", () => {
-    const tint = Number.parseFloat(declared.get("--process-tint") ?? "") / 100;
-    expect(tint).toBeGreaterThan(0);
-    for (const key of PROCESS_KEYS) {
-      const hue = hex(`--color-process-${key}`);
-      const pill = mix(hue, tint, hex("--color-surface"));
-      expect(contrast(hue, pill), `${key} pill`).toBeGreaterThanOrEqual(4.5);
-    }
-    // Every key processKey can return has a color (checked through the hub's process types).
-    const returned = ["vote", "proposal", "polis_deliberation", "project", "announcement", "meeting_summary", "brief", "wordcloud"]
-      .map((t) => processKey({ processType: `civic.${t}` }))
-      .sort();
-    expect(returned).toEqual([...PROCESS_KEYS].sort());
-  });
+    it(`${scheme}: has a color for every process key, and each pill is AA on its tint`, () => {
+      declared = tokensOf;
+      const tint = Number.parseFloat(declared.get("--process-tint") ?? "") / 100;
+      expect(tint).toBeGreaterThan(0);
+      for (const key of PROCESS_KEYS) {
+        const hue = hex(`--color-process-${key}`);
+        const pill = mix(hue, tint, hex("--color-surface"));
+        expect(contrast(hue, pill), `${key} pill`).toBeGreaterThanOrEqual(4.5);
+      }
+      // Every key processKey can return has a color (checked through the hub's process types).
+      const returned = ["vote", "proposal", "polis_deliberation", "project", "announcement", "meeting_summary", "brief", "wordcloud"]
+        .map((t) => processKey({ processType: `civic.${t}` }))
+        .sort();
+      expect(returned).toEqual([...PROCESS_KEYS].sort());
+    });
+  }
 });

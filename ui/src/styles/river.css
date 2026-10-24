@@ -1031,7 +1031,7 @@ main.feed:focus {
 }
 
 .filter-sheet::backdrop {
-  background: var(--color-text);
+  background: var(--color-scrim, var(--color-text));
   opacity: 0.35;
 }
 
@@ -1115,7 +1115,7 @@ main.feed:focus {
 }
 
 .info-dialog::backdrop {
-  background: var(--color-text);
+  background: var(--color-scrim, var(--color-text));
   opacity: 0.35;
 }
 
@@ -1130,6 +1130,22 @@ main.feed:focus {
 
 .info-dialog-body p {
   margin: 0 0 var(--space-md);
+}
+
+/* A section inside a dialog (Settings' Appearance, My information's parts). */
+.info-dialog-subtitle {
+  margin: var(--space-md) 0 var(--space-xs);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.info-dialog-body .settings-row,
+.info-dialog-body .my-did {
+  margin-bottom: var(--space-md);
 }
 
 /* ---------- Phone tabs and placeholders ---------- */
@@ -1183,20 +1199,160 @@ main.feed:focus {
 
 /* ---------- Account (sign-in, You) ---------- */
 
-.account {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  min-width: 0;
+/* The profile menu (ui-revisions-9 item 1): a round button at the right of the top bar and a
+   menu under it, right-aligned so it stays on screen. */
+.profile-menu {
+  position: relative;
+  flex: none;
 }
 
-.account-name {
-  max-width: var(--layout-account-name);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--color-text-muted);
+.profile-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-control);
+  height: var(--size-control);
+  padding: 0;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-alt);
+  color: var(--color-heading, var(--color-text));
+  font: inherit;
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.profile-button:hover,
+.profile-button[aria-expanded="true"] {
+  border-color: var(--color-primary);
+}
+
+.profile-icon {
+  width: var(--size-icon);
+  height: var(--size-icon);
+}
+
+.profile-popup {
+  position: absolute;
+  top: calc(100% + var(--space-xs));
+  right: 0;
+  z-index: 15;
+  width: max-content;
+  min-width: calc(var(--layout-row-text) * 1.1);
+  max-width: calc(100vw - var(--space-xl));
+  padding: var(--space-sm);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-overlay, var(--shadow-card));
+}
+
+.profile-who {
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm) var(--space-sm);
+  border-bottom: var(--border-width) solid var(--color-border);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-heading, var(--color-text));
+  overflow-wrap: anywhere;
+}
+
+.profile-list {
+  list-style: none;
+  margin: var(--space-xs) 0 0;
+  padding: 0;
+}
+
+.profile-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--size-control);
+  padding: 0 var(--space-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.profile-item:hover,
+.profile-item:focus-visible {
+  background: var(--color-surface-alt);
+}
+
+.profile-item:focus-visible {
+  outline-offset: calc(var(--border-width) * -3);
+}
+
+/* Settings: a row per setting, the switch at its end. */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.settings-label {
+  font-weight: var(--font-weight-semibold);
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: calc(var(--size-control) * 1.1);
+  height: calc(var(--size-control) * 0.6);
+  padding: 0;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-alt);
+  cursor: pointer;
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 50%;
+  left: var(--space-xs);
+  width: calc(var(--size-control) * 0.6 - var(--space-xs) * 2);
+  height: calc(var(--size-control) * 0.6 - var(--space-xs) * 2);
+  border-radius: var(--radius-pill);
+  background: var(--color-text-muted);
+  transform: translateY(-50%);
+  transition: left 0.15s ease;
+}
+
+.switch[aria-checked="true"] {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.switch[aria-checked="true"] .switch-thumb {
+  left: calc(100% - var(--size-control) * 0.6 + var(--space-xs));
+  background: var(--color-on-primary);
+}
+
+/* My information: the member's DID, wrapping, with Copy beside it. */
+.my-did {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.my-did-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
 }
 
 .account-id {

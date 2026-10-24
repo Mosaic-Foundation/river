@@ -59,9 +59,13 @@ async function signUpFromRiver(page: Page, label: string): Promise<string> {
 test("check 10: sign-up makes an account with a did login method, the seeds copied, and a session cookie", async ({ page, context }) => {
   const did = await signUpFromRiver(page, "check10");
 
-  // The River shows who is signed in, by DID (the note carries no name).
-  await expect(page.locator(".account-name")).toHaveText(did);
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  // The River shows who is signed in, by DID (the note carries no name), under the profile menu's
+  // My information (ui-revisions-9 item 1); the top bar no longer shows it.
+  await page.getByRole("button", { name: "Your profile and settings" }).click();
+  await expect(page.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
+  await page.getByRole("menuitem", { name: "My information" }).click();
+  await expect(page.getByTestId("my-did")).toHaveText(did);
+  await page.getByRole("dialog", { name: "My information" }).getByRole("button", { name: "Done" }).click();
   await expect(page.getByRole("link", { name: "Sign in" })).toHaveCount(0);
 
   // The session cookie: HttpOnly, Secure, SameSite=Lax, 30 days; the state cookie is gone.
@@ -183,7 +187,8 @@ test("check 23: a member's Mark read, Mark unread and opened links persist acros
 
 test("sign out (F10) clears the River session; the page is a visitor's again", async ({ page, context }) => {
   await signUpFromRiver(page, "signout");
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await page.getByRole("button", { name: "Your profile and settings" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
   await expect(page.locator(".topbar").getByRole("link", { name: "Sign in" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("sample-banner")).toBeVisible();
   expect((await context.cookies(CLIENT)).find((c) => c.name === SESSION_COOKIE)).toBeUndefined();
@@ -206,7 +211,7 @@ test("phone: the You tab offers Sign up and Sign in, then shows the member and S
   await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
   await tabs.getByRole("button", { name: "You" }).click();
   await expect(page.locator(".account-id")).toHaveText(did);
-  await expect(page.locator(".account-name")).toBeHidden();
+  await expect(page.locator(".topbar")).not.toContainText(did);
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id)).toEqual([]);
   await page.getByRole("button", { name: "Sign out" }).click();
