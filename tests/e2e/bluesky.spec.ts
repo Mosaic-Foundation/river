@@ -78,7 +78,7 @@ test("follow @bsky.app by handle, then filter the River by Bluesky", async ({ pa
   await expect(open).toHaveAttribute("rel", /noopener/);
   await expect(first.getByTestId("card-host")).toHaveText("bsky.app");
   const url = page.url();
-  await first.locator(".card-source").click();
+  await first.locator(".card-kind").click();
   expect(page.url()).toBe(url);
 
   // A repost reads "Bluesky reposted" above the original author; a quote shows the quoted post.

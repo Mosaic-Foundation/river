@@ -112,6 +112,7 @@ export function riverRoutes(): Router {
         type: param(req, "type"),
         network: param(req, "network"),
         q: param(req, "q"),
+        source: param(req, "source"),
         cursor: param(req, "cursor"),
       };
       const instance = res.locals.instance as Instance;
@@ -190,7 +191,7 @@ export function riverRoutes(): Router {
     }
   });
 
-  // "Mark all read" for the member's current view: { mode?, circle? (one or a list), type?, network?, q? }.
+  // "Mark all read" for the member's current view: { mode?, circle? (one or a list), type?, network?, q?, source? }.
   router.post("/read-state/all", requireInstance(), readSession(), requireMember(), async (req, res, next) => {
     try {
       const marked = await memberMarkAllRead(res.locals.instance as Instance, res.locals.viewer as Viewer, {
@@ -199,6 +200,7 @@ export function riverRoutes(): Router {
         type: bodyParam(req.body, "type"),
         network: bodyParam(req.body, "network"),
         q: bodyParam(req.body, "q"),
+        source: bodyParam(req.body, "source"),
       });
       res.set("Cache-Control", "no-store").json({ marked });
     } catch (err) {

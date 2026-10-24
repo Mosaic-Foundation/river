@@ -114,7 +114,7 @@ test.describe("item 1: circles are multi-select", () => {
     await hub.scrollIntoViewIfNeeded();
     await expect(hub).toHaveAttribute("data-open", "frame");
     const id = (await hub.getAttribute("data-item-id"))!;
-    await hub.locator(".card-source").click();
+    await hub.locator(".card-kind").click();
     await expect(page).toHaveURL(new RegExp(`/item/${id}\\?circle=Civic&circle=Family$`));
     await expect(page.getByTestId("external-frame")).toBeVisible();
     await page.goBack();

@@ -44,6 +44,8 @@ export interface FeedCardProps {
   onOpen: (id: string) => void;
   /** Older activities of the same hub process, newest first (ui-revisions-1 item 7). */
   earlier?: FeedItem[];
+  /** Shows only this card's source (a click on its name, ui-revisions-11 item 2). */
+  onSource?: (spaceId: string) => void;
 }
 
 /** The card's link to the embedded view: a plain click stays in the page, a modified one opens a tab. */
@@ -68,7 +70,7 @@ function originalLink(url: string) {
   return { href: url, target: "_blank", rel: "noopener noreferrer" } as const;
 }
 
-export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, open: opens, onOpen, earlier = [] }: FeedCardProps) {
+export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, open: opens, onOpen, earlier = [], onSource }: FeedCardProps) {
   const titleId = `item-${item.id}-title`;
   const host = item.source === "live" ? linkHost(item.url) : undefined;
   const boosted = boostedPost(item);
@@ -129,7 +131,22 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
       <header className="card-header">
         <SourceIcon name={sourceName} iconUrl={sourceIcon} />
         <div className="card-byline">
-          <span className="card-source">{sourceName}</span>
+          {/* The name shows only this source; a boost names the original's author, not a source
+              the reader follows, so it stays text. */}
+          {onSource && !boosted ? (
+            <button
+              type="button"
+              className="card-source card-source-button"
+              title={`Show only posts from ${sourceName}`}
+              aria-label={`Show only posts from ${sourceName}`}
+              data-testid="card-source"
+              onClick={() => onSource(item.space.id)}
+            >
+              {sourceName}
+            </button>
+          ) : (
+            <span className="card-source">{sourceName}</span>
+          )}
           <span className="card-meta">
             <span className="card-kind">{kindLabel(item.kind)}</span>
             <span aria-hidden="true"> · </span>

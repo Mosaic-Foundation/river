@@ -26,6 +26,7 @@ interface Feed {
   instance: { name: string; theme: string; modes: string[]; defaultMode: string };
   mode: string;
   circles: Array<{ id: string; name: string; role: string | null }>;
+  sources: Array<{ id: string; name: string; adapter: string }>;
   items: FeedItem[];
   nextCursor: string | null;
   empty: boolean;
@@ -223,6 +224,48 @@ describe("filters (check 5)", () => {
     for (const query of ["mode=party", "circle=Bowling", "type=memes", "cursor=nope", "type=a&type=b", "network=atproto"]) {
       const res = await fetch(`${API}/feed?${query}`);
       expect(res.status, query).toBe(400);
+    }
+  });
+});
+
+describe("one source at a time (ui-revisions-11 item 2)", () => {
+  it("lists the mode's sources by name, whatever the other filters, on every page", async () => {
+    const feed = await getFeed();
+    const names = feed.sources.map((s) => s.name);
+    expect(names).toEqual([...names].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())));
+    // Every source with items is listed, with its network.
+    for (const item of everything) {
+      expect(feed.sources.find((s) => s.id === item.space.id), item.space.name).toMatchObject({ name: item.space.name, adapter: item.space.adapter });
+    }
+    // Filters don't shrink the list, and later pages carry it too.
+    expect((await getFeed({ circle: "Family", type: "videos" })).sources).toEqual(feed.sources);
+    if (feed.nextCursor) expect((await getFeed({ cursor: feed.nextCursor })).sources).toEqual(feed.sources);
+    // Civic lists only civic sources.
+    const civic = await getFeed({ mode: "civic" });
+    expect(civic.sources.length).toBeGreaterThan(0);
+    expect(civic.sources.length).toBeLessThan(feed.sources.length);
+  });
+
+  it("source= shows only that space's items, combined with the other filters", async () => {
+    const ledger = (await getFeed()).sources.find((s) => s.name === "The Millbrook Ledger")!;
+    const only = await allItems({ source: ledger.id });
+    expect(only.length).toBeGreaterThan(0);
+    expect(only.length).toBe(everything.filter((i) => i.space.id === ledger.id).length);
+    expect(new Set(only.map((i) => i.space.id))).toEqual(new Set([ledger.id]));
+    // With a type: that source's articles only.
+    const articles = await allItems({ source: ledger.id, type: "articles" });
+    expect(articles.every((i) => i.kind === "article" && i.space.id === ledger.id)).toBe(true);
+    // A source this mode doesn't read shows nothing (Civic and a news source).
+    const civicLedger = await getFeed({ mode: "civic", source: ledger.id });
+    expect(civicLedger.items).toEqual([]);
+    expect(civicLedger.empty).toBe(true);
+  });
+
+  it("refuses a source that isn't a space id", async () => {
+    for (const source of ["nope", "1234", "'; drop table--"]) {
+      const res = await fetch(`${API}/feed?${search({ source })}`);
+      expect(res.status, source).toBe(400);
+      expect(((await res.json()) as { error: string }).error).toBe("bad_source");
     }
   });
 });

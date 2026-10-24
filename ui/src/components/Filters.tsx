@@ -7,9 +7,10 @@
 // one wide button under search reads "Filter your River", then "Clear the filter" once a filter is
 // on (ui-revisions-10 item 1); the sheet keeps its title and compact "Clear all" (ui-revisions-4).
 import { useEffect, useId, useRef, useState } from "react";
-import type { FeedCircle } from "../lib/api";
+import type { FeedCircle, FeedSource } from "../lib/api";
 import { activeFilterCount, filterSummary, hasActiveFilter, type FilterState } from "../lib/filters";
 import { circleColor, CONTENT_TYPES, NETWORKS } from "../lib/format";
+import { GROUPS } from "../lib/following";
 import { CheckIcon, ChevronIcon, CloseIcon, FilterIcon, SearchIcon } from "./Icons";
 
 export type { FilterState };
@@ -22,6 +23,45 @@ export interface FiltersProps {
   onType: (type: string) => void;
   onNetwork: (network: string) => void;
   onSearch: (q: string) => void;
+  /** The mode's sources, for the Source dropdown (ui-revisions-11 item 2). */
+  sources: FeedSource[];
+  /** One source by space id; "" for every source. */
+  onSource: (source: string) => void;
+}
+
+/**
+ * One source at a time (ui-revisions-11 item 2): a dropdown of the mode's sources by name,
+ * grouped by network as on the Following page, "All sources" first.
+ */
+function SourceSelect({ id, sources, value, onSource }: { id: string; sources: FeedSource[]; value: string; onSource: (source: string) => void }) {
+  const known = GROUPS.map((g) => ({ title: g.title, sources: sources.filter((src) => src.adapter === g.adapter) }));
+  const other = sources.filter((src) => !GROUPS.some((g) => g.adapter === src.adapter));
+  const groups = [...known, { title: "Other", sources: other }].filter((g) => g.sources.length > 0);
+  return (
+    <div className="source-filter">
+      <label htmlFor={id} className="visually-hidden">
+        Show posts from
+      </label>
+      <select
+        id={id}
+        className="source-select"
+        value={sources.some((src) => src.id === value) ? value : ""}
+        onChange={(e) => onSource(e.currentTarget.value)}
+        data-testid="source-select"
+      >
+        <option value="">All sources</option>
+        {groups.map((g) => (
+          <optgroup key={g.title} label={g.title}>
+            {g.sources.map((src) => (
+              <option key={src.id} value={src.id}>
+                {src.name}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </div>
+  );
 }
 
 /** A circle's color reaches CSS as a custom property (set through the CSSOM, so CSP allows it). */
@@ -179,6 +219,8 @@ export function FilterSidebar({
   onNetwork,
   onSearch,
   onClearAll,
+  sources,
+  onSource,
 }: FiltersProps & { onClearAll: () => void }) {
   const asideRef = useRef<HTMLElement>(null);
   const circleScroll = useRef<HTMLDivElement>(null);
@@ -243,6 +285,10 @@ export function FilterSidebar({
           ))}
         </ul>
       </FilterSection>
+
+      <FilterSection title="Source">
+        <SourceSelect id="source-desktop" sources={sources} value={value.source} onSource={onSource} />
+      </FilterSection>
     </aside>
   );
 }
@@ -252,15 +298,17 @@ export interface FilterButtonProps {
   value: FilterState;
   expanded: boolean;
   onOpen: (trigger: HTMLButtonElement) => void;
+  /** Names the chosen source in the summary. */
+  sources?: FeedSource[];
 }
 
 /**
  * The phone's one filter button (ui-revisions-6 item 1): "Filter your River", with a count and a
  * one-line summary of what's on when any filter is.
  */
-export function FilterButton({ circles, value, expanded, onOpen }: FilterButtonProps) {
+export function FilterButton({ circles, value, expanded, onOpen, sources = [] }: FilterButtonProps) {
   const count = activeFilterCount(value);
-  const summary = filterSummary(value, circles, { types: CONTENT_TYPES, networks: NETWORKS });
+  const summary = filterSummary(value, circles, { types: CONTENT_TYPES, networks: NETWORKS }, sources);
   return (
     <button
       type="button"
@@ -308,7 +356,19 @@ export interface FilterSheetProps extends FiltersProps {
  * wrapping pills. Filters apply as they're toggled. "Show results", the drag handle (a tap or a
  * swipe down), a tap outside, Escape and the back gesture all close it.
  */
-export function FilterSheet({ circles, value, onCircle, onType, onNetwork, onSearch, open, onClose, onClearAll }: FilterSheetProps) {
+export function FilterSheet({
+  circles,
+  value,
+  onCircle,
+  onType,
+  onNetwork,
+  onSearch,
+  open,
+  onClose,
+  onClearAll,
+  sources,
+  onSource,
+}: FilterSheetProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const drag = useRef<{ start: number; moved: number } | null>(null);
@@ -427,6 +487,10 @@ export function FilterSheet({ circles, value, onCircle, onType, onNetwork, onSea
                 </li>
               ))}
             </ul>
+          </FilterSection>
+
+          <FilterSection title="Source">
+            <SourceSelect id="source-sheet" sources={sources} value={value.source} onSource={onSource} />
           </FilterSection>
         </div>
 

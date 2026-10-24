@@ -4,7 +4,7 @@ import { CONTENT_TYPES, NETWORKS } from "../../../ui/src/lib/format";
 
 // ui-revisions-3 item 5: "Clear all" shows when search, a circle, a type or a network is on, and
 // resets those four, never the mode.
-const none: FilterState = { mode: "civic", circles: [], types: [], networks: [], q: "" };
+const none: FilterState = { mode: "civic", circles: [], types: [], networks: [], q: "", source: "" };
 
 describe("hasActiveFilter", () => {
   it("is false with nothing on, whatever the mode", () => {
@@ -16,10 +16,12 @@ describe("hasActiveFilter", () => {
     expect(hasActiveFilter({ ...none, circles: ["c1"] })).toBe(true);
     expect(hasActiveFilter({ ...none, types: ["posts"] })).toBe(true);
     expect(hasActiveFilter({ ...none, networks: ["hubs"] })).toBe(true);
+    // One source (ui-revisions-11 item 2).
+    expect(hasActiveFilter({ ...none, source: "a1b2" })).toBe(true);
   });
 
   it("CLEARED resets those four and leaves the mode alone", () => {
-    const busy: FilterState = { ...none, circles: ["c1", "c2"], types: ["posts"], networks: ["hubs"], q: "x" };
+    const busy: FilterState = { ...none, circles: ["c1", "c2"], types: ["posts"], networks: ["hubs"], q: "x", source: "s1" };
     const cleared = { ...busy, ...CLEARED };
     expect(cleared).toEqual(none);
     expect(Object.keys(CLEARED)).not.toContain("mode");
@@ -54,6 +56,16 @@ describe("the phone filter button", () => {
     expect(activeFilterCount(none)).toBe(0);
     expect(activeFilterCount({ ...none, circles: ["c1", "c2"], types: ["articles"] })).toBe(3);
     expect(activeFilterCount({ ...none, networks: ["hubs"], q: "vote" })).toBe(2);
+    expect(activeFilterCount({ ...none, source: "s1" })).toBe(1);
+  });
+
+  it("names the chosen source after the networks (ui-revisions-11 item 2)", () => {
+    const sources = [{ id: "s1", name: "The Millbrook Ledger" }];
+    expect(filterSummary({ ...none, types: ["articles"], source: "s1", q: "library" }, circles, labels, sources)).toBe(
+      "Articles · The Millbrook Ledger · “library”",
+    );
+    // A source the list doesn't know.
+    expect(filterSummary({ ...none, source: "gone" }, circles, labels, sources)).toBe("One source");
   });
 
   it("sums up circles, then types, networks and the search", () => {

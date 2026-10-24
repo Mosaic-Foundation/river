@@ -366,7 +366,7 @@ describe("sessions and Origin (Appendix B)", () => {
 
 describe("a member's read state (check 23, API side)", () => {
   interface Feed {
-    items: Array<{ id: string; read?: boolean }>;
+    items: Array<{ id: string; read?: boolean; space: { id: string } }>;
     circles: Array<{ id: string; name: string }>;
     viewer: unknown;
   }
@@ -417,6 +417,19 @@ describe("a member's read state (check 23, API side)", () => {
     expect(everything.items.some((i) => i.read === false)).toBe(true);
     expect((await post("/read-state/all", { circle: "Soccer" }, { cookie, origin })).status).toBe(400);
     expect((await post("/read-state/all", { circle: [soccer!.id, 7] }, { cookie, origin })).status).toBe(400);
+  });
+
+  it("Mark all read takes one source (ui-revisions-11 item 2)", async () => {
+    const cookie = await member();
+    await post("/read-state", { unread: (await feed(cookie)).items.map((i) => i.id) }, { cookie, origin });
+    const source = (await feed(cookie)).items[0].space.id;
+    const res = await post("/read-state/all", { source }, { cookie, origin });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { marked: number }).marked).toBeGreaterThan(0);
+    expect((await feed(cookie, `?source=${source}`)).items.every((i) => i.read)).toBe(true);
+    const everything = await feed(cookie);
+    expect(everything.items.filter((i) => i.space.id !== source).every((i) => i.read === false)).toBe(true);
+    expect((await post("/read-state/all", { source: "not-a-uuid" }, { cookie, origin })).status).toBe(400);
   });
 
   it("several circles: the feed and Mark all read take any of them (ui-revisions-4 item 1)", async () => {

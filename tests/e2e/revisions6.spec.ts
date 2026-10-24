@@ -111,7 +111,7 @@ test.describe("item 2: the bottom sheet", () => {
 
     await expect(sheet(page).getByRole("heading", { level: 2 })).toHaveText("Filter your River");
     await expect(sheet(page).getByRole("searchbox", { name: "Search your River" })).toBeVisible();
-    await expect(sheet(page).getByRole("heading", { level: 3 })).toHaveText(["Circles", "Content type", "Networks"]);
+    await expect(sheet(page).getByRole("heading", { level: 3 })).toHaveText(["Circles", "Content type", "Networks", "Source"]);
     await expect(section(page, "Circles").getByRole("list").getByRole("button")).toHaveText([
       "All",
       "Civic",

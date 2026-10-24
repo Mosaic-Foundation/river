@@ -20,6 +20,41 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 11, item 2: one source at a time — 2026-10-24
+
+- Branch / PR: claude/source-filter → PR (self-merge when `ci` is green)
+- Migrations: none.
+
+**What it does.**
+- **API.** `GET /api/feed` accepts `source` (a space id) and returns only that space's items. It
+  combines with the other filters, and a malformed id gets 400 `bad_source`. Every response now
+  lists the mode's sources (`sources`: id, name, network), sorted by name.
+  `POST /api/read-state/all` takes `source` too, like the other filters.
+- **Filters.** A "Source" section after Networks, in the filter column and the phone sheet. It's
+  a dropdown with "All sources" first, then the sources grouped by network. The choice sits in
+  the URL (`source=`), counts as a filter (so "Clear the filter" clears it) and names the source
+  in the phone button's summary.
+- **Cards.** A card's source name is a button that filters to that source and scrolls to the
+  top. A boost's name stays text. The rest of the card still opens it.
+
+Spec: `docs/spec/ui-revisions-11.md` item 2; details in DECISIONS.md.
+
+**Keys.** None.
+
+**Tests.**
+- API: the sources list and the `source` filter (`feed.test.ts`); Mark all read by source
+  (`signin.test.ts`).
+- Unit (`filters.test.ts`): the source in the active count and summary.
+- New e2e `revisions11.spec.ts`: the dropdown, a card's name, and the phone sheet.
+- Older specs that clicked a card's source name to open the card now click its kind label.
+  `filterColumn` scrolls to the dropdown as the column's last control.
+- `npm run check`: 50 files, 701 tests passed; UI built. `npm run test:api`: 17 files, 166
+  tests passed. Full e2e: 140 passed, 1 failed (identity check 37, which needs
+  `TEST_RECOVERY_KEY_FILE`, as always locally).
+
+### Follow-ups
+- None.
+
 ## UI revisions 11, item 1: no Following link in the top bar — 2026-10-24
 
 - Branch / PR: claude/drop-following-link → PR (self-merge when `ci` is green)

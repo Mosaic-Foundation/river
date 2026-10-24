@@ -73,7 +73,7 @@ export function parseNetworks(raw: string | undefined): string[] | undefined {
 
 export class FeedInputError extends Error {
   constructor(
-    readonly field: "mode" | "circle" | "type" | "network" | "q" | "cursor" | "item",
+    readonly field: "mode" | "circle" | "type" | "network" | "q" | "cursor" | "item" | "source",
     message: string,
   ) {
     super(message);
@@ -100,6 +100,8 @@ export interface FeedFilter {
   adapters?: string[];
   /** One item only (the reader view, ui-revisions-1 item 1). */
   itemId?: string;
+  /** One source only: a space id (ui-revisions-11 item 2). */
+  spaceId?: string;
   q?: string;
   cursor?: Cursor;
   limit?: number;
@@ -219,6 +221,7 @@ function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values:
         AND ($4::text[] IS NULL OR i.kind = ANY($4::text[]))
         AND ($11::text[] IS NULL OR s.adapter = ANY($11::text[]))
         AND ($12::uuid IS NULL OR i.id = $12::uuid)
+        AND ($13::uuid IS NULL OR i.space_id = $13::uuid)
         AND ($5::text IS NULL
              OR i.search @@ plainto_tsquery('simple', $5)
              OR s.name ILIKE $6)
@@ -236,6 +239,7 @@ function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values:
       muted.map((m) => m.key),
       filter.adapters ?? null,
       filter.itemId ?? null,
+      filter.spaceId ?? null,
     ],
   };
 }
@@ -280,6 +284,28 @@ export async function queryFeed(
     items: page.map(toFeedItem),
     nextCursor: rows.length > limit && last ? encodeCursor({ at: last.cursor_at, id: last.id }) : null,
   };
+}
+
+/** A source the Source filter lists (ui-revisions-11 item 2). */
+export interface SourceOption {
+  id: string;
+  name: string;
+  /** The space's adapter: civic_hub, fediverse, atproto, rss or sample. */
+  adapter: string;
+}
+
+/**
+ * The sources a scope reads, by name: its followed spaces and the spaces of its followed streams
+ * (whatever the circle or other filters, so the list doesn't shrink as filters change).
+ */
+export async function querySources(db: Db, scope: FeedScope): Promise<SourceOption[]> {
+  const ids = [...new Set([...scope.spaceIds, ...scope.streams.map((s) => s.spaceId)])];
+  if (ids.length === 0) return [];
+  const { rows } = await db.query<SourceOption>(
+    "SELECT id, name, adapter FROM river.spaces WHERE id = ANY($1::uuid[]) ORDER BY lower(name), id",
+    [ids],
+  );
+  return rows;
 }
 
 /** Most items of a view that plugins read (newest first), and again most of its dated items. */

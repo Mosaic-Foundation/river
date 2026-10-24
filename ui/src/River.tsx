@@ -12,6 +12,7 @@ import {
   signOut,
   SIGN_IN_URL,
   type FeedCircle,
+  type FeedSource,
   type FeedItem,
   type ModeOption,
   type SurfaceOutput,
@@ -52,6 +53,8 @@ type Load =
       status: "ok";
       items: FeedItem[];
       circles: FeedCircle[];
+      /** The mode's sources for the Source filter (ui-revisions-11 item 2). */
+      sources: FeedSource[];
       mode: string;
       modes: ModeOption[];
       defaultMode: string;
@@ -80,6 +83,7 @@ function filtersFromUrl(): FilterState {
     types: parseList(params.get("type"), CONTENT_TYPES),
     networks: parseList(params.get("network"), NETWORKS),
     q: params.get("q") ?? "",
+    source: params.get("source") ?? "",
   };
 }
 
@@ -90,6 +94,7 @@ function filtersToUrl(filters: FilterState): void {
   if (filters.types.length > 0) params.set("type", filters.types.join(","));
   if (filters.networks.length > 0) params.set("network", filters.networks.join(","));
   if (filters.q) params.set("q", filters.q);
+  if (filters.source) params.set("source", filters.source);
   const search = params.toString();
   // The reader view keeps its /item/{id} path; the query string still carries the filters.
   const path = itemIdFromPath(window.location.pathname) ? window.location.pathname : "/";
@@ -329,7 +334,14 @@ export function River() {
     filtersToUrl(filters);
     const controller = new AbortController();
     loadFeed(
-      { mode: filters.mode, circles: filters.circles, types: filters.types, networks: filters.networks, q: filters.q },
+      {
+        mode: filters.mode,
+        circles: filters.circles,
+        types: filters.types,
+        networks: filters.networks,
+        q: filters.q,
+        source: filters.source,
+      },
       controller.signal,
     )
       .then((result) => {
@@ -343,15 +355,27 @@ export function River() {
           setFilters((current) => ({ ...current, mode: "" }));
           return;
         }
+        if (result.status === "bad_source") {
+          // Not a source id (an edited link): every source.
+          setFilters((current) => ({ ...current, source: "" }));
+          return;
+        }
         if (result.status !== "ok") {
           setLoad(result);
           return;
         }
         const { feed } = result;
+        const sources = feed.sources ?? [];
+        if (filters.source && feed.sources && !sources.some((s) => s.id === filters.source)) {
+          // A source this mode doesn't read (Civic after Everything, or an unfollowed one): every source.
+          setFilters((current) => ({ ...current, source: "" }));
+          return;
+        }
         setLoad({
           status: "ok",
           items: feed.items,
           circles: feed.circles,
+          sources,
           mode: feed.mode,
           modes: feed.modes ?? [],
           defaultMode: feed.instance.defaultMode,
@@ -463,6 +487,8 @@ export function River() {
     onType: (type: string) => setFilter({ types: toggleValue(filters.types, type, CONTENT_TYPES) }),
     onNetwork: (network: string) => setFilter({ networks: toggleValue(filters.networks, network, NETWORKS) }),
     onSearch: (q: string) => setFilter({ q: q.trim() }),
+    sources: load.status === "ok" ? load.sources : [],
+    onSource: (source: string) => setFilter({ source }),
   };
 
   return (
@@ -518,7 +544,13 @@ export function River() {
         </div>
       )}
       <div className={tab === "feed" && !readerId ? "phone-only filter-bar" : "phone-only hidden"}>
-        <FilterButton circles={shownCircles} value={filters} expanded={sheetOpen} onOpen={openSheet} />
+        <FilterButton
+          circles={shownCircles}
+          value={filters}
+          expanded={sheetOpen}
+          onOpen={openSheet}
+          sources={load.status === "ok" ? load.sources : []}
+        />
       </div>
       <FilterSheet {...filterProps} open={sheetOpen} onClose={sheetClosed} onClearAll={() => setFilter(CLEARED)} />
 
@@ -578,6 +610,11 @@ export function River() {
                         onMarkRead={() => reads.markRead(ids)}
                         onMarkUnread={() => reads.markUnread(ids)}
                         onSampleInfo={(trigger) => setSampleTrigger(trigger)}
+                        onSource={(source) => {
+                          // A card's source name: only that source, from the top (ui-revisions-11 item 2).
+                          setFilter({ source });
+                          window.scrollTo({ top: 0 });
+                        }}
                         onOpen={(id) => {
                           // Opening a process's card reads its whole story.
                           if (ids.length > 1) reads.markRead(ids.filter((other) => other !== id));

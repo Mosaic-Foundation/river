@@ -237,7 +237,7 @@ test.describe("item 2: other items are framed, or open in a new tab", () => {
     expect(y).toBeGreaterThan(200);
     const id = (await target.getAttribute("data-item-id"))!;
 
-    await target.locator(".card-source").click();
+    await target.locator(".card-kind").click();
     await expect(page).toHaveURL(new RegExp(`/item/${id}\\?network=hubs$`));
     const frame = page.getByTestId("external-frame");
     await expect(frame).toHaveAttribute("src", "https://longmont.civic.social/stand-in");
@@ -249,7 +249,7 @@ test.describe("item 2: other items are framed, or open in a new tab", () => {
     await page.getByRole("button", { name: "Back to the River" }).click();
     await expect(page).toHaveURL(/\/\?network=hubs$/);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(y);
-    await card(page, id).locator(".card-source").click();
+    await card(page, id).locator(".card-kind").click();
     await expect(frame).toBeVisible();
     await page.goBack();
     await expect(page.getByTestId("external-view")).toHaveCount(0);
@@ -264,7 +264,7 @@ test.describe("item 2: other items are framed, or open in a new tab", () => {
     await openFeed(page);
     const hub = (await firstPage(page)).find((i) => i.url === HUB_PAGE)!;
     await expect(card(page, hub.id)).toHaveAttribute("data-open", "pending");
-    await card(page, hub.id).locator(".card-source").click();
+    await card(page, hub.id).locator(".card-kind").click();
 
     await expect(page).toHaveURL(new RegExp(`/item/${hub.id}$`));
     const screen = page.getByTestId("external-elsewhere");
@@ -295,7 +295,7 @@ test.describe("item 2: other items are framed, or open in a new tab", () => {
     });
     await openFeed(page);
     const hub = (await firstPage(page)).find((i) => i.url === HUB_PAGE)!;
-    await card(page, hub.id).locator(".card-source").click();
+    await card(page, hub.id).locator(".card-kind").click();
     await expect(page.getByTestId("external-elsewhere")).toBeVisible();
     release();
     await expect(page.getByTestId("external-frame")).toHaveAttribute("src", "https://longmont.civic.social/stand-in");

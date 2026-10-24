@@ -341,6 +341,23 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-24 — One source at a time, in detail (UI revisions 11 item 2)
+- **A dropdown, not a search box.** A native `<select>` is keyboard- and screen-reader-friendly
+  and works the same on a phone. It's grouped by network (`<optgroup>`, in the Networks order,
+  then "Other") so a long list stays scannable.
+- **Which sources it lists.** Every space the current mode reads: the follows and stream rules in
+  Everything, and only the civic ones in Civic, the same scope the feed uses. The list ignores the
+  other filters, so choosing a type never empties it. It comes with every feed page; a reader's
+  follows are a few dozen rows.
+- **Ids it doesn't know.** A malformed id is a 400 `bad_source`. A well-formed id outside the mode
+  just matches nothing, so the API reveals nothing about other spaces. The UI drops a source that
+  isn't in the mode's list (Civic after Everything, an unfollowed source) and shows every source.
+- **A card's source name.** It's a button for the card's own space, and filters to it and scrolls
+  to the top. A boost names the original author, which the reader may not follow, so it stays
+  text. Clicking any other part of the card still opens it.
+- **Mark all read** (`POST /api/read-state/all`) takes `source` like the other filters, so it
+  marks only what that view shows. The UI has no Mark all read button today.
+
 ## 2026-10-24 — One filter button and narrowing gaps, in detail (UI revisions 10)
 - **What "Filter your River" does.** A button should do something, so with no filter on it opens
   any collapsed section and puts focus on the first filter (Circles' first pill). It works as a

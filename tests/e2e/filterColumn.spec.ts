@@ -12,7 +12,7 @@ async function box(locator: Locator): Promise<{ x: number; y: number; width: num
 
 test.describe("item 4: the filter column scrolls on its own", () => {
   test("taller than the window, it scrolls by itself to its last control and stays put while the feed scrolls", async ({ page }) => {
-    // Short enough that the column (search, circles, types, networks) doesn't fit.
+    // Short enough that the column (search, circles, types, networks, source) doesn't fit.
     await page.setViewportSize({ width: 1440, height: 480 });
     await page.goto("/");
     await expect(page.getByTestId("feed-card").first()).toBeVisible({ timeout: 30_000 });
@@ -36,7 +36,8 @@ test.describe("item 4: the filter column scrolls on its own", () => {
 
     // The column scrolls by itself (the window doesn't), down to its last control.
     const windowY = await page.evaluate(() => window.scrollY);
-    const last = sidebar.getByRole("button").last();
+    // The last control is the Source dropdown (ui-revisions-11 item 2).
+    const last = sidebar.getByRole("combobox", { name: "Show posts from" });
     await expect(last).not.toBeInViewport();
     const at = await box(column);
     await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
@@ -44,8 +45,8 @@ test.describe("item 4: the filter column scrolls on its own", () => {
     await expect.poll(() => column.evaluate((el) => el.scrollTop)).toBe(sizes.scroll - sizes.client);
     await expect(last).toBeInViewport();
     expect(await page.evaluate(() => window.scrollY)).toBe(windowY);
-    await last.click();
-    await expect(last).toHaveAttribute("aria-pressed", "true");
+    await last.selectOption({ index: 1 });
+    await expect(last).not.toHaveValue("");
   });
 
   test("a window tall enough shows the whole column without a scrollbar", async ({ page }) => {

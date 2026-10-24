@@ -658,6 +658,42 @@ main.feed:focus {
   color: var(--color-heading);
 }
 
+/* The source's name shows only that source (ui-revisions-11 item 2): a button that reads as the
+   name, underlined on hover and focus. */
+.card-source-button {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  text-align: left;
+  cursor: pointer;
+}
+
+.card-source-button:hover,
+.card-source-button:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* The Source filter's dropdown (ui-revisions-11 item 2). */
+.source-select {
+  width: 100%;
+  min-height: var(--size-control);
+  padding: 0 var(--space-md);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control, var(--radius-md));
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.source-select:focus-visible {
+  border-color: var(--color-focus);
+}
+
 .card-meta {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
