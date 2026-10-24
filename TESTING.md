@@ -64,6 +64,19 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-24, UI revisions 11 item 2 (one source at a time):
+  - API `feed.test.ts`:
+    - the `sources` list: sorted, covers every item's space, unchanged by filters and on later
+      pages, smaller in Civic;
+    - `source=` alone and with a type; a news source in Civic gives nothing; a malformed id gets
+      400 `bad_source`.
+  - API `signin.test.ts`: Mark all read with `source` marks only that source.
+  - Unit `ui/filters`: the source counts as a filter and is named in the summary.
+  - New e2e `revisions11.spec.ts`: the dropdown (groups, filter, URL, reload, clear), a card's
+    source name, and the phone sheet's dropdown and summary.
+  - Specs that opened a card by clicking `.card-source` (`revisions2`, `revisions3`, `revisions4`,
+    `media`, `bluesky`) click `.card-kind` instead, since the name now filters. `filterColumn`'s
+    last control is the Source dropdown. `revisions` and `revisions6` expect the Source section.
 - 2026-10-24, UI revisions 11 item 1 (no Following link in the bar): `profile.spec.ts` checks the
   menu's items (My information, Following, Settings, Sign out) and no Following link in the
   bar; `modes.spec.ts` opens Following from the menu with Civic kept.
