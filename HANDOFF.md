@@ -20,6 +20,34 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 10: one filter button, narrowing gaps — 2026-10-24
+
+- Branch / PR: claude/filter-button-gaps → PR (self-merge when `ci` is green)
+- Migrations: none.
+
+**What it does.**
+- **One filter button.** The filter column's title and "Clear all" are replaced by one wide
+  button under search. It reads "Filter your River" (open the sections and go to the first
+  filter), then "Clear the filter" once any filter is on (clear all, keep the mode). The phone
+  sheet is unchanged.
+- **Narrowing gaps.** The gaps between columns narrow from 2rem to 0.5rem as the window nears the
+  width where a column drops.
+
+Spec: `docs/spec/ui-revisions-10.md`; details in DECISIONS.md.
+
+**Keys.** None.
+
+**Tests.**
+- New e2e `revisions10.spec.ts`: the button in both modes, and the gaps at three and two columns.
+- `filterClear.spec.ts`: rewritten for the button, including focus and the "go to filters" click.
+- `revisions4` items 3-4: removed as superseded; the sheet tests stay.
+- `revisions` and `themes`: read the button.
+- `npm run check`: 48 files, 689 tests passed; UI built. The filter and layout e2e files (7
+  files): 44 passed.
+
+### Follow-ups
+- None.
+
 ## UI revisions 8: Coming up back, circle pills, the whole window — 2026-10-24
 
 - Branch / PR: claude/layout-full-width → PR (self-merge when `ci` is green)
