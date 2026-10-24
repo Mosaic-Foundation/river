@@ -1,7 +1,8 @@
 // Filters (spec F5, ui-revisions-1 items 2-4, ui-revisions-4 item 1): circles AND content types AND
 // networks (each toggles, several at once, none means all; "All" clears the circles), plus search.
 // Desktop: everything in the left column under "Filter your River", each section collapsible, the
-// circles scrolling after six (ui-revisions-4 items 2-3). Phone: one "Filter your River" button
+// circles as wrapping pills like the content types, scrolling after four rows (ui-revisions-8
+// item 2; ui-revisions-4 items 2-3). Phone: one "Filter your River" button
 // that opens a bottom sheet with the same content as wrapping pills (ui-revisions-6). A compact
 // "Clear all" shows while a filter is on, below search in the column and in the sheet
 // (ui-revisions-3 item 5, ui-revisions-4 item 4).
@@ -136,20 +137,6 @@ function ClearAll({ onClear, testId }: { onClear: () => void; testId: string }) 
   );
 }
 
-/** A circle row: "All" is on when no circle is; a circle toggles. */
-function CircleOption({ circle, value, onCircle }: { circle: Pick<FeedCircle, "id" | "name" | "color">; value: FilterState; onCircle: (id: string) => void }) {
-  const pressed = circlePressed(value, circle.id);
-  return (
-    <li>
-      <button type="button" className="filter-option" aria-pressed={pressed} onClick={() => onCircle(circle.id)}>
-        <span className="circle-swatch" style={swatch(circle.color)} aria-hidden="true" />
-        <span className="filter-option-name">{circle.name}</span>
-        {pressed && <CheckIcon className="pill-check filter-option-check" />}
-      </button>
-    </li>
-  );
-}
-
 /** Whether the element's content is taller than the element (it scrolls). */
 function useOverflows(ref: React.RefObject<HTMLElement | null>, key: unknown): boolean {
   const [overflows, setOverflows] = useState(false);
@@ -176,7 +163,8 @@ export function FilterSidebar({
 }: FiltersProps & { onClearAll: () => void }) {
   const asideRef = useRef<HTMLElement>(null);
   const circleScroll = useRef<HTMLDivElement>(null);
-  // Six circles show; more scroll inside the section, with a hint (ui-revisions-4 item 2).
+  // Four rows of circle pills show; more scroll inside the section, with a hint (ui-revisions-8
+  // item 2, after ui-revisions-4 item 2).
   const circlesScroll = useOverflows(circleScroll, circles.length);
   return (
     <aside className="sidebar" aria-label="Filters" ref={asideRef}>
@@ -194,17 +182,16 @@ export function FilterSidebar({
       )}
 
       <FilterSection title="Circles">
-        <ul className="filter-list">
-          <CircleOption circle={ALL} value={value} onCircle={onCircle} />
-        </ul>
         <div
           className={circlesScroll ? "circle-scroll circle-scroll-more" : "circle-scroll"}
           ref={circleScroll}
           data-testid="circle-scroll"
         >
-          <ul className="filter-list">
-            {circles.map((c) => (
-              <CircleOption key={c.id} circle={c} value={value} onCircle={onCircle} />
+          <ul className="pill-list">
+            {allCircles(circles).map((c) => (
+              <li key={c.id}>
+                <Pill label={c.name} pressed={circlePressed(value, c.id)} onToggle={() => onCircle(c.id)} color={c.color} />
+              </li>
             ))}
           </ul>
         </div>

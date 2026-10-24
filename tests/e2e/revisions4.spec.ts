@@ -57,7 +57,7 @@ async function expectPressed(page: Page, names: string[]): Promise<void> {
   for (const name of all) {
     const pressed = names.includes(name) || (names.length === 0 && name === "All");
     await expect(circle(page, name), name).toHaveAttribute("aria-pressed", String(pressed));
-    await expect(circle(page, name).locator(".filter-option-check"), name).toHaveCount(pressed ? 1 : 0);
+    await expect(circle(page, name).locator(".pill-check"), name).toHaveCount(pressed ? 1 : 0);
   }
 }
 
@@ -193,39 +193,62 @@ async function extraCircles(page: Page, count: number): Promise<void> {
   });
 }
 
-test.describe("item 2: six circles, then the section scrolls", () => {
-  test("with more than six circles the list shows six rows, scrolls to the last, and says so", async ({ page }) => {
-    await extraCircles(page, 3);
+/** The pills' rows: their distinct top edges, top to bottom. */
+async function pillRows(pills: Locator): Promise<number[]> {
+  const tops = await pills.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+  return [...new Set(tops)].sort((a, b) => a - b);
+}
+
+// The circles are wrapping pills like the content types (ui-revisions-8 item 2); four rows show,
+// then the section scrolls (after ui-revisions-4 item 2).
+test.describe("item 2: circle pills, four rows, then the section scrolls", () => {
+  test("circles bunch several to a row, like the content types", async ({ page }) => {
+    await openFeed(page);
+    const pills = page.getByTestId("circle-scroll").getByRole("button");
+    await expect(pills).toHaveText(["All", "Civic", "News and ideas", "Family", "Soccer", "Neighborhood"]);
+    const rows = await pillRows(pills);
+    expect(rows.length).toBeLessThan(6);
+    // Each is a pill: the content types' shape, with the circle's swatch.
+    expect(await pills.nth(1).evaluate((el) => el.className)).toBe("pill");
+    await expect(pills.nth(1).locator(".circle-swatch")).toHaveCount(1);
+  });
+
+  test("with more circles than four rows hold, four rows show, the rest scroll, and it says so", async ({ page }) => {
+    await extraCircles(page, 12);
     await openFeed(page);
     const scroll = page.getByTestId("circle-scroll");
-    const rows = scroll.getByRole("button");
-    await expect(rows).toHaveCount(8);
-    const row = (await rows.first().boundingBox())!.height;
+    const pills = scroll.getByRole("button");
+    await expect(pills).toHaveCount(18);
+    const pill = (await pills.first().boundingBox())!.height;
+    const rows = await pillRows(pills);
+    expect(rows.length).toBeGreaterThan(4);
+    // Four rows and the three gaps between them.
     const box = (await scroll.boundingBox())!;
-    expect(box.height).toBeLessThanOrEqual(row * 6 + 2);
-    expect(box.height).toBeGreaterThanOrEqual(row * 6 - 2);
+    const fourRows = rows[3]! - rows[0]! + pill;
+    expect(box.height).toBeGreaterThanOrEqual(fourRows - 1);
+    expect(box.height).toBeLessThanOrEqual(fourRows + 3);
     expect(await scroll.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
     await expect(page.getByTestId("circle-scroll-hint")).toHaveText("Scroll for more circles");
     await expect(page.getByTestId("circle-scroll-hint")).toBeVisible();
 
-    // The last circle is reached by scrolling the section; All stays above it.
-    const last = rows.last();
+    // The last circle is reached by scrolling the section.
+    const last = pills.last();
     await last.scrollIntoViewIfNeeded();
     const lastBox = (await last.boundingBox())!;
     const after = (await scroll.boundingBox())!;
     expect(await scroll.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
     expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(after.y + after.height + 1);
-    await expect(circle(page, "All")).toBeInViewport();
 
     // The column itself keeps its own scroll (ui-revisions-3 item 4).
     expect(await page.locator(".filter-column").evaluate((el) => getComputedStyle(el).overflowY)).toBe("auto");
   });
 
-  test("with six circles or fewer there's no inner scroll and no hint", async ({ page }) => {
+  test("when they fit in four rows there's no inner scroll and no hint", async ({ page }) => {
     await extraCircles(page, 1);
     await openFeed(page);
     const scroll = page.getByTestId("circle-scroll");
-    await expect(scroll.getByRole("button")).toHaveCount(6);
+    await expect(scroll.getByRole("button")).toHaveCount(7);
+    expect((await pillRows(scroll.getByRole("button"))).length).toBeLessThanOrEqual(4);
     expect(await scroll.evaluate((el) => el.scrollHeight <= el.clientHeight)).toBe(true);
     await expect(page.getByTestId("circle-scroll-hint")).toHaveCount(0);
   });

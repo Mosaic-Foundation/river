@@ -138,6 +138,32 @@ describe("check 7: a member's Civic mode", () => {
     expect(comingUpOf(search)).toBeUndefined();
   });
 
+  it("Everything's Coming up still finds a vote when hundreds of newer posts follow it", async () => {
+    // A busy feed (Bluesky, the fediverse) posts far more than a hub: the newest 500 items can all
+    // be posts, and the hub's deadline was announced before them.
+    const member = await newMember();
+    const longmont = await createHubSpace(river, LONGMONT_FEED, { name: "Longmont (modes busy)" });
+    const busy = (
+      await admin.query<{ id: string }>(
+        `INSERT INTO river.spaces (adapter, canonical_url, name, last_fetched_at) VALUES ('rss', $1, 'Busy feed (modes)', $2)
+         RETURNING id`,
+        [`https://busy-feed.invalid/${randomUUID()}`, now],
+      )
+    ).rows[0]!.id;
+    await admin.query(
+      `INSERT INTO river.items (space_id, source_id, kind, published_at, title)
+       SELECT $1, 'busy-' || g, 'post', $2::timestamptz - make_interval(secs => g), 'Busy post ' || g
+         FROM generate_series(1, 520) g`,
+      [busy, now],
+    );
+    await as(member, async (db) => {
+      for (const space of [longmont.id, busy]) await db.insert("follows", { space_id: space, rule: "follow" });
+    });
+    const first = await memberFeed(instance, member, { mode: "everything" }, deps());
+    expect(first.items[0]?.space.id).toBe(busy);
+    expect(comingUpOf(first)?.map((e) => e.date)).toContain(LONGMONT_DEADLINE);
+  });
+
   it("Mark all read in Civic marks only that view", async () => {
     const member = await newMember();
     const longmont = await createHubSpace(river, LONGMONT_FEED, { name: "Longmont (modes read)" });

@@ -282,42 +282,59 @@ export async function queryFeed(
   };
 }
 
-/** Most items of a view that plugins read (newest first). */
+/** Most items of a view that plugins read (newest first), and again most of its dated items. */
 export const VIEW_ITEMS_LIMIT = 500;
 
-/**
- * The current view's items as plugins see them (src/river/plugins/api.ts PluginItem): the same
- * scope and filters as the feed, every page rather than one, newest first, up to
- * VIEW_ITEMS_LIMIT. Only what a card shows: no raw activity, no read state.
- */
-export async function queryViewItems(db: Db, scope: FeedScope, filter: Omit<FeedFilter, "cursor" | "limit">): Promise<PluginItem[]> {
-  if (scope.spaceIds.length === 0 && scope.streams.length === 0) return [];
-  const where = feedWhere(scope, { ...filter, cursor: undefined });
-  const { rows } = await db.query<{
-    id: string;
-    kind: ItemKind;
-    published_at: Date;
-    title: string | null;
-    url: string | null;
-    stream_key: string | null;
-    deadline: string | null;
-    event_start: string | null;
-    space_id: string;
-    space_name: string;
-    space_category: string | null;
-    space_adapter: string;
-  }>(
+const EVENT_START_SQL = "CASE WHEN i.kind = 'event' THEN coalesce(i.raw ->> 'startTime', i.raw -> 'object' ->> 'startTime') END";
+
+interface ViewItemRow {
+  id: string;
+  kind: ItemKind;
+  published_at: Date;
+  title: string | null;
+  url: string | null;
+  stream_key: string | null;
+  deadline: string | null;
+  event_start: string | null;
+  space_id: string;
+  space_name: string;
+  space_category: string | null;
+  space_adapter: string;
+}
+
+async function selectViewItems(db: Db, where: { sql: string; values: unknown[] }, datedOnly: boolean): Promise<ViewItemRow[]> {
+  const dated = datedOnly ? ` AND (i.civic ->> 'deadline' IS NOT NULL OR ${EVENT_START_SQL} IS NOT NULL)` : "";
+  const { rows } = await db.query<ViewItemRow>(
     `SELECT i.id, i.kind, i.published_at, coalesce(i.title, st.title) AS title, i.url, i.stream_key,
             i.civic ->> 'deadline' AS deadline,
-            CASE WHEN i.kind = 'event' THEN coalesce(i.raw ->> 'startTime', i.raw -> 'object' ->> 'startTime') END AS event_start,
+            ${EVENT_START_SQL} AS event_start,
             s.id AS space_id, s.name AS space_name, s.category AS space_category, s.adapter AS space_adapter
        FROM river.items i
        JOIN river.spaces s ON s.id = i.space_id
        LEFT JOIN river.streams st ON st.space_id = i.space_id AND st.key = i.stream_key
-      WHERE ${where.sql}
+      WHERE ${where.sql}${dated}
       ORDER BY i.published_at DESC, i.id DESC
       LIMIT $${where.values.length + 1}`,
     [...where.values, VIEW_ITEMS_LIMIT],
+  );
+  return rows;
+}
+
+/**
+ * The current view's items as plugins see them (src/river/plugins/api.ts PluginItem): the same
+ * scope and filters as the feed, every page rather than one, newest first. That is the newest
+ * VIEW_ITEMS_LIMIT items, plus up to as many of the newest that carry a date (a hub deadline or an
+ * event's start), so a busy social feed can't push a vote announced last week out of Coming up.
+ * Only what a card shows: no raw activity, no read state.
+ */
+export async function queryViewItems(db: Db, scope: FeedScope, filter: Omit<FeedFilter, "cursor" | "limit">): Promise<PluginItem[]> {
+  if (scope.spaceIds.length === 0 && scope.streams.length === 0) return [];
+  const where = feedWhere(scope, { ...filter, cursor: undefined });
+  const newest = await selectViewItems(db, where, false);
+  const seen = new Set(newest.map((row) => row.id));
+  const dated = (await selectViewItems(db, where, true)).filter((row) => !seen.has(row.id));
+  const rows = [...newest, ...dated].sort(
+    (a, b) => b.published_at.getTime() - a.published_at.getTime() || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0),
   );
   return rows.map((row) => ({
     id: row.id,

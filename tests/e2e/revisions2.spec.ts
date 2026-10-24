@@ -66,8 +66,11 @@ test.describe("item 3: the reader is wide", () => {
     await page.goto(`/item/${sample.id}`);
     await expect(page.getByTestId("reader")).toHaveAttribute("data-item-id", sample.id, { timeout: 30_000 });
     const reader = await box(page.getByTestId("reader"));
-    expect(Math.round(reader.x)).toBe(Math.round(feed.x));
-    expect(Math.round(reader.x + reader.width)).toBe(Math.round(comingUp.x + comingUp.width));
+    // Edge to edge (ui-revisions-8 item 3), the reader is the old feed and Coming up columns
+    // together, centred beside the filters: wider than the feed, reaching where Coming up was.
+    expect(reader.width).toBeGreaterThan(feed.width + comingUp.width / 2);
+    expect(reader.x).toBeLessThanOrEqual(feed.x);
+    expect(reader.x + reader.width).toBeLessThanOrEqual(comingUp.x + comingUp.width + 1);
     await expect(page.getByTestId("plugin-coming-up")).toHaveCount(0);
   });
 

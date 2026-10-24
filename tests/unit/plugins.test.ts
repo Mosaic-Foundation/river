@@ -6,7 +6,7 @@ import { enabledModes, MODE_DEFINITIONS, MODES } from "../../src/river/modes/ind
 import { parseMode, scopeFor, type ReaderView } from "../../src/river/feed/visitor.js";
 import { FeedInputError } from "../../src/river/feed/query.js";
 import type { PluginItem, ViewApi, ViewPlugin } from "../../src/river/plugins/api.js";
-import { COMING_UP_LIMIT, comingUp, comingUpPlugin } from "../../src/river/plugins/builtin/comingUp.js";
+import { COMING_UP_EMPTY, COMING_UP_LIMIT, comingUp, comingUpPlugin } from "../../src/river/plugins/builtin/comingUp.js";
 import { electionsPlugin, representativesPlugin } from "../../src/river/plugins/builtin/placeholders.js";
 import { ManifestError, validateManifest } from "../../src/river/plugins/manifest.js";
 import {
@@ -222,6 +222,11 @@ describe("Coming up (spec 4.7)", () => {
     expect(comingUp(api(items))).toEqual([]);
     expect(comingUpPlugin.render(api(items))).toBeNull(); // hidden when there are none
     expect(comingUpPlugin.render(api([]))).toBeNull();
+  });
+
+  it("in Everything (reach: followed) the column stays, saying there's nothing yet", () => {
+    const empty = comingUpPlugin.render({ items: [item({ deadline: "2026-10-20T23:59:59.000Z" })], now: NOW, reach: "followed" });
+    expect(empty).toEqual({ type: "dates", intro: COMING_UP_EMPTY, entries: [] });
   });
 
   it("shows a process's deadline once, from its newest item", () => {

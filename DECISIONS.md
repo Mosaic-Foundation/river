@@ -341,6 +341,34 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-24 — UI revisions 8, in detail
+- **Why Coming up went away.** Its plugin read the newest 500 items a member follows
+  (`VIEW_ITEMS_LIMIT`). With Bluesky imports and busy fediverse and RSS feeds, those 500 were
+  all newer than the hub announcements carrying the deadlines, so Coming up found no dates and
+  hid. `queryViewItems` now also reads up to 500 of the newest items carrying a hub deadline or an
+  event start, merged with the rest, newest first. The cost is one more indexed query per first
+  page, for modes that place a plugin.
+- **Empty Coming up.** Everything keeps its column and says "Nothing coming up yet…".
+  Civic still hides an empty Coming up, because its panel keeps the placeholder slots and its
+  Coming up reads the filtered view. That changes `river-v1.md` 4.7's "hidden when there are
+  none" for Everything only.
+- **Circle pills.**
+  - The desktop column reuses the phone sheet's `Pill` with the circle's swatch. "All" is the
+    first pill.
+  - The inner scroll is four pill rows (four heights and three gaps, plus two borders' slack).
+  - It contains the wheel only when it really overflows, so the wheel over a pill scrolls the
+    column. Without that, Chrome treats exactly four rows as a sub-pixel scroll box and swallows
+    the wheel.
+- **Edge to edge.**
+  - The grid is the filter column, then a `1fr` middle column, then from 80rem the panel. There
+    is a 16px gutter at the window edges.
+  - The feed is centred in the middle column at `--layout-feed`, like Facebook's centre column.
+  - The reader takes the middle and panel columns, capped at feed + panel + gap (66rem) and
+    centred, so lines stay readable on wide screens.
+  - The unused `--layout-page-wide` token is gone.
+  - The Following page keeps its own centred layout. It is a settings page, and the request was
+    about the River.
+
 ## 2026-10-23 — A Following row's circles menu, in detail (UI revisions 7)
 - Decision: the details `ui-revisions-7.md` left open.
   - **Which rows.** Every followed row in Spaces and Quiet: a whole space, or a space with a

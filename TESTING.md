@@ -64,6 +64,23 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-24, UI revisions 8 (Coming up back, circle pills, the whole window):
+  - API `db/modes.test.ts`: Everything's Coming up finds a hub vote under 520 newer posts in
+    another followed space. It reproduces the missing column on the old query.
+  - Unit `plugins.test.ts`: Everything's empty Coming up.
+  - New e2e `revisions8.spec.ts`:
+    - Coming up shows in Everything at desktop width;
+    - at 1920 and 1440 px the filters and Coming up meet the page's edges, with the feed centred
+      at most 44rem;
+    - at 1100 px the panel sits above the feed;
+    - the top bar's brand and Follow meet its edges.
+  - `revisions4` item 2 now covers circle pills:
+    - several to a row;
+    - four rows tall, then scrolling with the hint;
+    - no scroll when they fit.
+  - `revisions2`: the reader is wider than the feed and inside the old Coming up edge.
+  - `themes`: checks a content-type pill.
+  - Unit 689, API 162, e2e 131 (130 locally; check 37 needs `TEST_RECOVERY_KEY_FILE`).
 - 2026-10-23, UI revisions 7 (circles menu on Following rows): new e2e `circlesMenu.spec.ts`
   (add and remove with every circle listed and the row's checked, a reload keeps it, the row
   changing before a held save and undone with its error when refused, Escape and a click outside
