@@ -1,6 +1,6 @@
 // The profile menu (docs/spec/ui-revisions-9.md item 1): a round button at the right of the top
-// bar, a member's initials or a person icon, opening a menu of My information (members), Settings
-// and Sign out (or Sign in for a visitor). My information explains DIDs and shows the member's;
+// bar, a member's initials or a person icon, opening a menu of My information and Following
+// (members), Settings and Sign out (or Sign in for a visitor). My information explains DIDs and shows the member's;
 // Settings holds the light/dark switch (item 2). Keyboard and screen readers as the circles menu:
 // a menu button, arrow keys, Escape, a click outside, focus back on the button.
 import { useEffect, useId, useRef, useState } from "react";
@@ -80,7 +80,16 @@ function MyInformation({ did }: { did: string | null }) {
   );
 }
 
-export function ProfileMenu({ viewer, onSignOut }: { viewer: Viewer | null; onSignOut: () => void }) {
+export function ProfileMenu({
+  viewer,
+  onSignOut,
+  followingHref = "/following",
+}: {
+  viewer: Viewer | null;
+  onSignOut: () => void;
+  /** The Following page, keeping the mode (ui-revisions-11 item 1: the bar's link moved here). */
+  followingHref?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [dialog, setDialog] = useState<{ which: "info" | "settings"; trigger: HTMLElement } | null>(null);
@@ -90,7 +99,12 @@ export function ProfileMenu({ viewer, onSignOut }: { viewer: Viewer | null; onSi
   const name = viewer?.displayName?.trim() || null;
 
   const items: Item[] = [
-    ...(viewer ? [{ key: "info", label: "My information", action: "info" as const }] : []),
+    ...(viewer
+      ? [
+          { key: "info", label: "My information", action: "info" as const },
+          { key: "following", label: "Following", href: followingHref },
+        ]
+      : []),
     { key: "settings", label: "Settings", action: "settings" },
     viewer ? { key: "signout", label: "Sign out", action: "signout" } : { key: "signin", label: "Sign in", href: SIGN_IN_URL },
   ];

@@ -20,6 +20,25 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## UI revisions 11, item 1: no Following link in the top bar — 2026-10-24
+
+- Branch / PR: claude/drop-following-link → PR (self-merge when `ci` is green)
+- Migrations: none.
+
+**What it does.** The top bar's "Following" text link is gone; it did what Follow does for a
+member. The profile menu gains a "Following" item for members, which keeps the mode. Spec:
+`docs/spec/ui-revisions-11.md` (item 2, the Source filter, follows in its own PR).
+
+**Keys.** None.
+
+**Tests.** `profile.spec.ts`: the menu lists My information, Following, Settings and Sign out,
+and the bar has no Following link. `modes.spec.ts` opens Following from the menu, with Civic
+kept. `npm run check`: 50 files, 700 tests passed; UI built. e2e (profile, modes, following,
+revisions8): 21 passed.
+
+### Follow-ups
+- Item 2 (Source filter): its own PR.
+
 ## UI revisions 10: one filter button, narrowing gaps — 2026-10-24
 
 - Branch / PR: claude/filter-button-gaps → PR (self-merge when `ci` is green)

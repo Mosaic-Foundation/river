@@ -1,6 +1,6 @@
 // The River's frame: the header (logo, the mode switch, phone search toggle, Sign in on desktop
-// for a visitor, a member's Following link, Follow, and the profile menu with My information,
-// Settings and Sign out, ui-revisions-9) and the phone's bottom tabs (spec 2, phone paragraph),
+// for a visitor, Follow, and the profile menu with My information, Following, Settings and Sign
+// out, ui-revisions-9 and 11) and the phone's bottom tabs (spec 2, phone paragraph),
 // plus the You panel. The mode switch shows the instance's modes
 // and hides when there is only one (spec F9, check 8).
 import { SIGN_IN_URL, viewerLabel, type ModeOption, type Viewer } from "../lib/api";
@@ -61,7 +61,7 @@ export interface HeaderProps {
   modes: readonly ModeOption[];
   mode: string;
   onMode: (mode: string) => void;
-  /** The Following page, keeping the mode. */
+  /** The Following page, keeping the mode (the profile menu's Following item; Follow goes there too). */
   followingHref: string;
   searchOpen: boolean;
   onToggleSearch: () => void;
@@ -93,11 +93,6 @@ export function Header({ modes, mode, onMode, followingHref, searchOpen, onToggl
             Sign in
           </a>
         )}
-        {viewer && (
-          <a className="button button-quiet desktop-inline" href={followingHref}>
-            Following
-          </a>
-        )}
         <button
           type="button"
           className="icon-button phone-only"
@@ -118,7 +113,7 @@ export function Header({ modes, mode, onMode, followingHref, searchOpen, onToggl
           <span className="follow-label">Follow</span>
         </button>
         {/* Who is signed in, their DID and Settings live in this menu, not the bar (ui-revisions-9). */}
-        {viewer !== undefined && <ProfileMenu viewer={viewer} onSignOut={onSignOut} />}
+        {viewer !== undefined && <ProfileMenu viewer={viewer} onSignOut={onSignOut} followingHref={followingHref} />}
       </div>
     </header>
   );
