@@ -16,6 +16,20 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-25 — "Link cards and quotes on an item's own page" and ui-revisions-3 item 2
+- Question: Adam asked for a Bluesky post's link card and quoted post on the item's own page.
+  ui-revisions-3 item 2 has a fediverse post's address (and so a Bluesky one's, both stay in the
+  feed) show only the embedded view's "Open on {host} ↗" screen, with nothing of the post, so a
+  link card drawn in the reader would never be seen.
+- Reading used: the address of a post that stays in the feed (fediverse and Bluesky) shows the
+  reader: the post's text, media, link card and quote, "Open in new tab" and Back to River.
+  Cards are unchanged (their body still opens nothing; Open ↗ opens the original), and hub and
+  feed pages keep the framing check and the "Open on {host} ↗" screen.
+- Proposed change: ui-revisions-3 item 2's check "loading /item/{id} for a refused or fediverse
+  item shows that screen" becomes "for a refused item"; a fediverse or Bluesky item's address
+  shows the reader.
+- Thread / PR: link cards and quotes on an item's own page
+
 ### 2026-10-23 — Bluesky in v1 (Bluesky reading, step 1)
 - Question: `river-v1.md` section 5 lists "atproto (stub adapter)" as out of scope and 4.1 keeps
   an atproto stub; Adam's Phase 2 plan (2026-10-23, `docs/spec/bluesky-1.md`) asks for a working
