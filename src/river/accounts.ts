@@ -8,6 +8,7 @@
 import { randomUUID } from "node:crypto";
 import { forAccount, forInstance, type ClientSource, type Db, type RiverDb } from "../db/context.js";
 import { findSpaces } from "./feed/spaces.js";
+import { hasFollowOrigin, originValues, SEED } from "./following/origin.js";
 import type { Instance } from "./instances.js";
 
 export const SEED_PENDING_KEY = "seed_pending";
@@ -91,8 +92,17 @@ async function streamId(db: Db, spaceId: string, key: string): Promise<string> {
   return rows[0].id;
 }
 
+/** A seed follow (the sign-up copy, or one waiting for its space): origin seed once the column exists. */
 async function follow(db: Db, spaceId: string, streamKey: string | undefined): Promise<void> {
   const stream = streamKey ? await streamId(db, spaceId, streamKey) : null;
+  if (await hasFollowOrigin(db)) {
+    await db.query(
+      `INSERT INTO river.follows (space_id, stream_id, origin, origin_ref, origin_label) VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (account_id, space_id, stream_id) DO NOTHING`,
+      [spaceId, stream, ...originValues(SEED)],
+    );
+    return;
+  }
   await db.query(
     "INSERT INTO river.follows (space_id, stream_id) VALUES ($1, $2) ON CONFLICT (account_id, space_id, stream_id) DO NOTHING",
     [spaceId, stream],
