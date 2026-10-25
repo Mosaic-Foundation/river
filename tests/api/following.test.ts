@@ -156,6 +156,14 @@ describe("members only, from the River's own pages", () => {
   });
 });
 
+describe("the Following page's viewer", () => {
+  it("names who is signed in, for the page's profile menu", async () => {
+    const body = (await page()) as Page & { viewer?: { did: string | null; displayName: string | null } };
+    expect(body.viewer?.did).toMatch(/^did:/);
+    expect(body.viewer).toHaveProperty("displayName");
+  });
+});
+
 describe("the follow box over HTTP (spec F6)", () => {
   it("check 13: previews Demosville (name, initials), then following it shows its items", async () => {
     // A new member starts with the seed follows; unfollow Demosville to follow it from the box.

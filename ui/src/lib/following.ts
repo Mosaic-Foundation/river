@@ -1,6 +1,7 @@
 // The follow box, the Following page and circles (spec F6, F7, F8): calls to the River's own API
 // (members only; same origin, so the CSP's connect-src 'self' holds). Shapes match
 // src/river/following/ (DECISIONS.md "Following API").
+import type { Viewer } from "./api";
 
 export interface Preview {
   adapter: string;
@@ -66,6 +67,8 @@ export interface FollowingPage {
   quiet: string[];
   ended: EndedView[];
   circles: CircleView[];
+  /** Who is signed in (the page's profile menu); absent from an older server. */
+  viewer?: Viewer;
 }
 
 /** What a call answered: ok with its body, or the sentence to show. */

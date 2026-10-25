@@ -211,7 +211,9 @@ export function followingRoutes(deps: RefreshDeps = {}): Router {
     ...members,
     route(async (_req, res) => {
       const page = await inAccount(res, (db) => followingPage(db, deps.now ?? riverNow()));
-      res.set("Cache-Control", "no-store").json(page);
+      // Who is signed in, for the page's profile menu (its My information shows the DID).
+      const { viewer } = member(res);
+      res.set("Cache-Control", "no-store").json({ ...page, viewer: { did: viewer.did, displayName: viewer.displayName } });
     }),
   );
 

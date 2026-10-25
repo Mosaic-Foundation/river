@@ -64,6 +64,8 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-25, the Following page's profile menu: API `following.test.ts` (the page's `viewer`);
+  e2e `profile.spec.ts` (the member's menu on Following, Sign out from it; a visitor's menu).
 - 2026-10-24, UI revisions 11 item 2 (one source at a time):
   - API `feed.test.ts`:
     - the `sources` list: sorted, covers every item's space, unchanged by filters and on later
