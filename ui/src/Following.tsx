@@ -3,13 +3,14 @@
 // a visitor gets the sign-up prompt. On a phone the same parts live in the River's Following and
 // Circles tabs (River.tsx); this page works at that width too.
 import { useEffect } from "react";
-import { SIGN_IN_URL } from "./lib/api";
+import { SIGN_IN_URL, signOut } from "./lib/api";
 import { modeFromSearch, themeForMode, withMode } from "./lib/modes";
 import { Brand } from "./components/Chrome";
 import { CirclesPanel } from "./components/CirclesPanel";
 import { ImportBluesky } from "./components/ImportBluesky";
 import { FollowBox } from "./components/FollowBox";
 import { FollowingList } from "./components/FollowingList";
+import { ProfileMenu } from "./components/ProfileMenu";
 import { useFollowing } from "./components/useFollowing";
 
 /** What a visitor sees where a member's Following page or circles would be (spec 2, Visitor). */
@@ -58,6 +59,15 @@ export function FollowingPage() {
           <a className="button button-quiet" href={withMode("/", mode)}>
             ‹ Back to your River
           </a>
+          {/* The River's profile menu (ui-revisions-9): a member's once the page loads, a visitor's
+              when signed out. */}
+          {(state.status === "ok" || (state.status === "error" && state.signedOut)) && (
+            <ProfileMenu
+              viewer={state.status === "ok" ? (state.page.viewer ?? { did: null, displayName: null }) : null}
+              followingHref={withMode("/following", mode)}
+              onSignOut={() => void signOut().then(() => window.location.assign(withMode("/", mode)))}
+            />
+          )}
         </div>
       </header>
       <div className="following-layout">
