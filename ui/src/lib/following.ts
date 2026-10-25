@@ -113,20 +113,52 @@ export interface ImportPreview {
   truncated: boolean;
   /** The first few, for the preview. */
   accounts: Array<{ did: string; name: string; handle: string | null; iconUrl: string | null }>;
+  /**
+   * Bluesky accounts the member follows here that this account no longer follows: offered for
+   * unfollowing, each confirmed. Null when the list is partial (cut off at 1,000, or a later page
+   * failed): nobody can be said to be unfollowed then. Absent from an older server.
+   */
+  removals?: ImportRemoval[] | null;
+  /** True when a page after the first failed, so the list of follows ends early. */
+  incomplete?: boolean;
+}
+
+export interface ImportRemoval {
+  spaceId: string;
+  did: string;
+  name: string;
+  /** As the Following page writes it: "@handle", or the DID. */
+  address: string;
+  iconUrl: string | null;
 }
 
 export interface ImportResult {
   total: number;
   followed: number;
   alreadyFollowing: number;
+  /** Accounts unfollowed because the imported account no longer follows them (confirmed). */
+  unfollowed?: number;
   skipped: number;
   truncated: boolean;
 }
 
 export const previewBlueskyImport = (input: string) => request<ImportPreview>("POST", "/follow/bluesky/preview", { input });
 
-export const importBluesky = (input: string, circleIds: string[]) =>
-  request<ImportResult>("POST", "/follow/bluesky/import", { input, circleIds });
+export const importBluesky = (input: string, circleIds: string[], unfollow: string[] = []) =>
+  request<ImportResult>("POST", "/follow/bluesky/import", { input, circleIds, unfollow });
+
+/** "@eff.org", or the account's name when no handle verifies. */
+export function importWho(preview: ImportPreview): string {
+  return preview.account.handle ? `@${preview.account.handle}` : preview.account.name;
+}
+
+/** The import button: what one click will do. */
+export function importButtonLabel(count: number, unfollow: number): string {
+  if (count > 0 && unfollow > 0) return `Follow all ${count} and unfollow ${unfollow}`;
+  if (count > 0) return `Follow all ${count}`;
+  if (unfollow > 0) return `Unfollow ${unfollow}`;
+  return "Nothing to change";
+}
 
 function accountsCount(n: number): string {
   return n === 1 ? "1 account" : `${n.toLocaleString("en-US")} accounts`;
@@ -134,7 +166,7 @@ function accountsCount(n: number): string {
 
 /** "@eff.org follows 263 accounts." with what was left out. */
 export function importCountSentence(preview: ImportPreview): string {
-  const who = preview.account.handle ? `@${preview.account.handle}` : preview.account.name;
+  const who = importWho(preview);
   const parts = [`${who} follows ${accountsCount(preview.count)}${preview.truncated ? " (the first 1,000 are listed)" : ""}.`];
   if (preview.skipped > 0) {
     parts.push(`Left out: ${accountsCount(preview.skipped)} that show only to people signed in to Bluesky.`);
@@ -142,13 +174,21 @@ export function importCountSentence(preview: ImportPreview): string {
   return parts.join(" ");
 }
 
-/** "You're now following 250 more accounts (13 you already followed), in Friends. …" */
-export function importDoneSentence(result: ImportResult, circle: string | null): string {
-  const already = result.alreadyFollowing > 0 ? ` (${result.alreadyFollowing.toLocaleString("en-US")} you already followed)` : "";
-  const where = circle ? `, in ${circle}` : "";
-  const n = result.followed;
-  const more = n === 1 ? "1 more account" : `${n.toLocaleString("en-US")} more accounts`;
-  return `You're now following ${more}${already}${where}. Their posts fill in over your next visits.`;
+/**
+ * "You're now following 250 more accounts (13 you already followed), in Friends. …", and "You
+ * unfollowed 2 accounts @eff.org no longer follows." when the member confirmed removals.
+ */
+export function importDoneSentence(result: ImportResult, circle: string | null, who = "it"): string {
+  const parts: string[] = [];
+  if (result.total > 0 || !result.unfollowed) {
+    const already = result.alreadyFollowing > 0 ? ` (${result.alreadyFollowing.toLocaleString("en-US")} you already followed)` : "";
+    const where = circle ? `, in ${circle}` : "";
+    const n = result.followed;
+    const more = n === 1 ? "1 more account" : `${n.toLocaleString("en-US")} more accounts`;
+    parts.push(`You're now following ${more}${already}${where}. Their posts fill in over your next visits.`);
+  }
+  if (result.unfollowed) parts.push(`You unfollowed ${accountsCount(result.unfollowed)} ${who} no longer follows.`);
+  return parts.join(" ");
 }
 
 export const loadFollowing = () => request<FollowingPage>("GET", "/following");

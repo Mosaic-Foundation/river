@@ -20,10 +20,40 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Import from Bluesky removes accounts it no longer follows (confirmed) — 2026-10-25
+
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #51) → PR (self-merge when
+  `ci` is green)
+- Migrations: none.
+
+**What it does.** "Import from Bluesky"'s preview now also lists the Bluesky accounts the
+member follows that the imported account no longer follows ("No longer followed by @eff.org"),
+each an unchecked checkbox, with "Check all". The button says what one click does ("Follow all
+263 and unfollow 2", or "Unfollow 2" when nothing is new), and the result sentence counts the
+unfollows. The import re-reads the list and unfollows only checked accounts still on it. The
+imported account itself and accounts that hide from signed-out readers are never offered. A
+partial list (over 1,000, or a later page failed) offers nobody and says why. API:
+`POST /api/follow/bluesky/preview` returns `removals` (or null) and `incomplete`;
+`POST /api/follow/bluesky/import` takes `unfollow` (space ids) and returns `unfollowed`. Design
+and alternatives in DECISIONS.md; this closes the Bluesky step 4 follow-up.
+
+**Keys.** None.
+
+**Tests.** Unit `bluesky/follows.test.ts` (`skippedDids`; a failed later page is `incomplete`),
+`ui/following.test.ts` (`importWho`, `importButtonLabel`, the unfollow sentence). API
+`blueskyImport.test.ts` (the preview offers only @bsky.app, not @eff.org or anyone it follows;
+no confirmation unfollows nobody; a hub id is ignored; the next preview offers nobody; a
+malformed list is 400). e2e `bluesky.spec.ts` (the group, unchecked to start, the button's
+words, Check all and Uncheck all, axe, the unfollow and its sentence). `npm run check`: 50 files,
+704 tests passed; UI built. API: 8 passed. e2e (bluesky): 4 passed.
+
+### Follow-ups
+- Recording which follows came from an import (a needs-adam column on `river.follows`) would let
+  the import offer only the accounts it added. Say if you want it.
+
 ## Link cards and quotes on an item's own page — 2026-10-25
 
-- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #50) → PR (self-merge when
-  `ci` is green)
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #50) → #51 (merged)
 - Migrations: none.
 
 **What it does.** The reader draws a Bluesky post's link card and quoted post, with the same

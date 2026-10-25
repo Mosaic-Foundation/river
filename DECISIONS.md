@@ -355,6 +355,26 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-25 — Import from Bluesky offers to unfollow accounts it no longer follows
+- Decision: the import's preview lists `removals`: the member's whole-account follows of Bluesky
+  spaces whose DID isn't among the imported account's current follows. The imported account
+  itself, and accounts that hide from signed-out readers (their DIDs now come back from
+  `readFollows` as `skippedDids`), are still followed there and never listed. Each is an
+  unchecked checkbox; the member checks the ones to unfollow (or "Check all"), and the button
+  says what one click does ("Follow all 263 and unfollow 2"). The import recomputes the list from
+  a fresh read and unfollows only checked accounts still on it (the Following page's Unfollow:
+  rules and circle memberships go). When the read is partial (cut off at 1,000, or a later page
+  failed, e.g. a rate limit) the River offers nobody and says why, since the missing pages are
+  still followed.
+- Why: Adam asked for unfollows on Bluesky to come through, confirmed in the preview. The River
+  doesn't record which follows came from an import, so every followed Bluesky account is a
+  candidate, including ones followed by hand, from an earlier import of another handle, or (if an
+  instance ever seeds one) a seed. Starting unchecked keeps one click from unfollowing those.
+- Alternatives: pre-checked removals (one careless click unfollows a second import's accounts);
+  recording each follow's origin (a column on `river.follows`, a needs-adam migration), which would
+  let the import offer only what it added; unfollowing without asking.
+- Thread / PR: Bluesky import removals
+
 ## 2026-10-24 — One source at a time, in detail (UI revisions 11 item 2)
 - **A dropdown, not a search box.** A native `<select>` is keyboard- and screen-reader-friendly
   and works the same on a phone. It's grouped by network (`<optgroup>`, in the Networks order,
