@@ -20,9 +20,31 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## The Following page uses the whole window — 2026-10-25
+
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #49) → PR (self-merge when
+  `ci` is green)
+- Migrations: none.
+
+**What it does.** On a desktop the Following page spans the window as the River does
+(ui-revisions-8 item 3): Circles against the right edge, the main column (follow box, import,
+lists) centred in the space beside it at its 52rem reading width, the gap narrowing with the
+window (ui-revisions-10 item 2). The top bar already spanned the window. The phone is
+unchanged. This closes the ui-revisions-8 follow-up.
+
+**Keys.** None.
+
+**Tests.** e2e `following.spec.ts`: at 1920 and 1440 px Circles meet the right edge, the main
+column is centred beside them at no more than 52rem, and the bar's brand and profile button meet
+the edges; at 390 px nothing scrolls sideways. `npm run check`: 50 files, 701 tests passed; UI
+built.
+
+### Follow-ups
+- None.
+
 ## The Following page gets the profile menu; M11's deploy is done — 2026-10-25
 
-- Branch / PR: claude/dreamy-ride-w3nd4z → PR (self-merge when `ci` is green)
+- Branch / PR: claude/dreamy-ride-w3nd4z → #49 (merged)
 - Migrations: none.
 
 **What it does.** The Following page's top bar now has the River's profile menu
