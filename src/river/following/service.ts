@@ -11,6 +11,7 @@
 // which moves them from Spaces to Ended; the daily job deletes them 90 days later.
 import type { Db, RiverDb } from "../../db/context.js";
 import type { SpaceCategory, SpacePreview } from "../../shared/items/index.js";
+import { canonicalUrlFor } from "../adapters/bluesky/input.js";
 import { SPACE_COLUMNS, type SpaceRow } from "../feed/spaces.js";
 import { upsertSpace } from "../feed/store.js";
 import { addressOf, kindLabel } from "./resolve.js";
@@ -159,6 +160,41 @@ export async function unfollowSpace(db: Db, spaceId: string): Promise<number> {
   const { rowCount } = await db.query("DELETE FROM river.follows WHERE space_id = $1 AND ended_at IS NULL", [spaceId]);
   await db.query("DELETE FROM river.circle_members WHERE space_id = $1", [spaceId]);
   return rowCount ?? 0;
+}
+
+/** A followed Bluesky account an import offers to unfollow. */
+export interface BlueskyRemoval {
+  spaceId: string;
+  did: string;
+  name: string;
+  /** As the Following page writes it (addressOf): "@handle", or the DID when none verifies. */
+  address: string;
+  iconUrl: string | null;
+}
+
+/**
+ * The member's whole-account Bluesky follows whose DIDs aren't in `stillFollowed` (Import from
+ * Bluesky): the accounts the imported account no longer follows, offered for unfollowing. Read
+ * inside forAccount(), so only the member's own follows count.
+ */
+export async function blueskyFollowsNotIn(db: Db, stillFollowed: readonly string[]): Promise<BlueskyRemoval[]> {
+  const { rows } = await db.query<{ id: string; adapter: string; canonical_url: string; name: string; icon_url: string | null; manifest: Record<string, unknown> | null }>(
+    `SELECT s.id, s.adapter, s.canonical_url, s.name, s.icon_url, s.manifest
+       FROM river.spaces s
+      WHERE s.adapter = 'atproto'
+        AND EXISTS (SELECT 1 FROM river.follows f
+                     WHERE f.space_id = s.id AND f.stream_id IS NULL AND f.rule = 'follow' AND f.ended_at IS NULL)
+        AND NOT (s.canonical_url = ANY($1::text[]))
+      ORDER BY lower(s.name), s.id`,
+    [stillFollowed.map(canonicalUrlFor)],
+  );
+  return rows.map((r) => ({
+    spaceId: r.id,
+    did: r.canonical_url.slice("at://".length),
+    name: r.name,
+    address: addressOf(r),
+    iconUrl: r.icon_url,
+  }));
 }
 
 /** Removes one stream rule: unmute, stop following just that stream, or clear an Ended one. */

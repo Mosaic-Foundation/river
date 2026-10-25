@@ -39,8 +39,12 @@ export interface FollowsListing {
   accounts: FollowedAccount[];
   /** Accounts left out because they hide from signed-out readers. */
   skipped: number;
+  /** Their DIDs: still followed on Bluesky, so an import never offers to unfollow them. */
+  skippedDids: string[];
   /** True when the account follows more than MAX_FOLLOW_PAGES pages hold. */
   truncated: boolean;
+  /** True when a page after the first failed, so the list ends early: some follows are missing. */
+  incomplete: boolean;
 }
 
 /** A profile view (getProfile, getFollows' entries) as a followed account; undefined if unusable. */
@@ -116,13 +120,15 @@ export async function readFollows(guard: FetchGuard, input: string): Promise<Fol
 
   const seen = new Set<string>();
   const accounts: FollowedAccount[] = [];
-  let skipped = 0;
+  const skippedDids: string[] = [];
   let cursor: string | undefined;
   let truncated = false;
+  let incomplete = false;
   for (let page = 1; page <= MAX_FOLLOW_PAGES; page++) {
     const reply = await get(guard, followsUrl(did, cursor));
     if (reply.status !== 200 || !isObject(reply.body)) {
       if (page === 1) throw replyError(reply);
+      incomplete = true;
       break;
     }
     for (const entry of list(reply.body.follows)) {
@@ -130,7 +136,7 @@ export async function readFollows(guard: FetchGuard, input: string): Promise<Fol
       if (!followed || seen.has(followed.did) || followed.did === did) continue;
       seen.add(followed.did);
       if (hidesFromVisitors(entry)) {
-        skipped++;
+        skippedDids.push(followed.did);
         continue;
       }
       accounts.push(followed);
@@ -139,5 +145,5 @@ export async function readFollows(guard: FetchGuard, input: string): Promise<Fol
     if (!cursor || list(reply.body.follows).length === 0) break;
     if (page === MAX_FOLLOW_PAGES) truncated = true;
   }
-  return { account, accounts, skipped, truncated };
+  return { account, accounts, skipped: skippedDids.length, skippedDids, truncated, incomplete };
 }

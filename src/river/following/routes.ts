@@ -4,8 +4,8 @@
 //
 //   POST   /follow/preview                 { input }                  → { preview }
 //   POST   /follows                        { input, scope, circleIds } → { spaceId, streamId, refresh }
-//   POST   /follow/bluesky/preview         { input }                  → { account, count, accounts, … }
-//   POST   /follow/bluesky/import          { input, circleIds }       → { total, followed, alreadyFollowing, … }
+//   POST   /follow/bluesky/preview         { input }                  → { account, count, accounts, removals, … }
+//   POST   /follow/bluesky/import          { input, circleIds, unfollow } → { total, followed, alreadyFollowing, unfollowed, … }
 //   GET    /following                                                 → FollowingPage
 //   DELETE /following/spaces/:spaceId                                  unfollow a space
 //   PUT    /following/streams/:streamId    { rule: follow | mute }     a stream rule
@@ -32,6 +32,7 @@ import { requireInstance, type Instance } from "../instances.js";
 import { addCircleMember, createCircle, deleteCircle, removeCircleMember, updateCircle } from "./circles.js";
 import { followErrorMessage, previewView, resolveInput } from "./resolve.js";
 import {
+  blueskyFollowsNotIn,
   FollowingError,
   followingPage,
   followPreview,
@@ -41,6 +42,7 @@ import {
   setStreamRule,
   unfollowQuiet,
   unfollowSpace,
+  type BlueskyRemoval,
   type FollowRequest,
 } from "./service.js";
 
@@ -50,7 +52,7 @@ const MAX_CIRCLE_IDS = 50;
 const IMPORT_PREVIEW_NAMES = 12;
 
 /** What the import preview shows (docs/spec/bluesky-1.md item 4): who, how many, the first names. */
-function importView(listing: FollowsListing) {
+function importView(listing: FollowsListing, removals: BlueskyRemoval[] | null) {
   const { account, accounts } = listing;
   return {
     account: { did: account.did, name: account.name, handle: account.handle ?? null, iconUrl: account.iconUrl ?? null },
@@ -60,7 +62,32 @@ function importView(listing: FollowsListing) {
     accounts: accounts
       .slice(0, IMPORT_PREVIEW_NAMES)
       .map((a) => ({ did: a.did, name: a.name, handle: a.handle ?? null, iconUrl: a.iconUrl ?? null })),
+    // Null when the list was cut off at 1,000 or broke off early: then nobody can be said to be
+    // unfollowed.
+    removals,
+    incomplete: listing.incomplete,
   };
+}
+
+/**
+ * Whom the member follows on Bluesky but the imported account doesn't (it unfollowed them): the
+ * import offers to unfollow them too. The imported account itself and the accounts that hide from
+ * signed-out readers are still followed there. Unknown (null) when the listing is partial: cut off
+ * at 1,000, or a later page failed (a rate limit, say), since the missing pages are still followed.
+ */
+async function removalsFor(db: RiverDb, listing: FollowsListing): Promise<BlueskyRemoval[] | null> {
+  if (listing.truncated || listing.incomplete) return null;
+  const still = [listing.account.did, ...listing.accounts.map((a) => a.did), ...listing.skippedDids];
+  return blueskyFollowsNotIn(db, still);
+}
+
+/** The space ids the member confirmed to unfollow: a list of uuids, at most one per removal. */
+function unfollowIds(raw: unknown): string[] {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw) || raw.length > 2000 || !raw.every((v): v is string => typeof v === "string" && isUuid(v))) {
+    throw new FollowingError(400, "bad_unfollow", "Choose the accounts to unfollow from the list.");
+  }
+  return [...new Set(raw.map((v) => v.toLowerCase()))];
 }
 
 /** The handle, profile URL or DID typed in the import box. */
@@ -171,7 +198,8 @@ export function followingRoutes(deps: RefreshDeps = {}): Router {
     ...members,
     route(async (req, res) => {
       const listing = await readFollows(deps.guard ?? getFetchGuard(), importInput(body(req)));
-      res.set("Cache-Control", "no-store").json(importView(listing));
+      const removals = await inAccount(res, (db) => removalsFor(db, listing));
+      res.set("Cache-Control", "no-store").json(importView(listing, removals));
     }),
   );
 
@@ -184,12 +212,21 @@ export function followingRoutes(deps: RefreshDeps = {}): Router {
     route(async (req, res) => {
       const raw = body(req);
       const { circleIds } = parseFollowRequest({ circleIds: raw.circleIds });
+      const confirmed = unfollowIds(raw.unfollow);
       const listing = await readFollows(deps.guard ?? getFetchGuard(), importInput(raw));
       const now = deps.now ?? riverNow();
       const previews = listing.accounts.map((a) => previewForAccount(a, now));
-      const { spaces, followed } = await inAccount(res, async (db) => {
+      const { spaces, followed, unfollowed } = await inAccount(res, async (db) => {
+        // Only accounts the fresh listing still shows as unfollowed, of those the member confirmed.
+        let gone = 0;
+        if (confirmed.length > 0) {
+          const removable = new Set(((await removalsFor(db, listing)) ?? []).map((r) => r.spaceId));
+          for (const spaceId of confirmed) {
+            if (removable.has(spaceId) && (await unfollowSpace(db, spaceId)) > 0) gone++;
+          }
+        }
         const rows = await upsertSpaces(db, previews);
-        return { spaces: rows, followed: await followSpaces(db, rows.map((r) => r.id), circleIds) };
+        return { spaces: rows, followed: await followSpaces(db, rows.map((r) => r.id), circleIds), unfollowed: gone };
       });
       const refresh = await refreshSpaces(member(res).instance.id, spaces, deps);
       res
@@ -199,6 +236,7 @@ export function followingRoutes(deps: RefreshDeps = {}): Router {
           total: spaces.length,
           followed,
           alreadyFollowing: spaces.length - followed,
+          unfollowed,
           skipped: listing.skipped,
           truncated: listing.truncated,
           refresh: { claimed: refresh.claimed, pending: refresh.pending },
