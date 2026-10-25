@@ -252,13 +252,40 @@ describe("follow origins, and an import offering only its own follows", () => {
     expect((await as("POST", "/follows", { input: "@bsky.app", scope: "space", circleIds: [] })).status).toBe(201);
     expect((await origins()).find((r) => r.canonical_url === `at://${BSKY_DID}`)).toMatchObject({ origin: "manual", origin_ref: null });
 
+    // One account @eff.org follows is already followed by hand before the import.
+    const preview = (await (await as("POST", "/follow/bluesky/preview", { input: "@eff.org" })).json()) as ImportPreview;
+    const handFollowed = preview.accounts[0]!.did;
+    await admin(async (c) => {
+      const { rows } = await c.query<{ id: string }>(
+        `INSERT INTO river.spaces (adapter, canonical_url, name, network, category)
+         VALUES ('atproto', $1, 'Followed by hand', 'bluesky', 'person')
+         ON CONFLICT (canonical_url) DO UPDATE SET canonical_url = EXCLUDED.canonical_url RETURNING id`,
+        [`at://${handFollowed}`],
+      );
+      await c.query(
+        `INSERT INTO river.follows (instance_id, account_id, space_id, origin)
+         SELECT a.instance_id, a.id, $2, 'manual' FROM river.accounts a WHERE a.id = $1`,
+        [accountId, rows[0]!.id],
+      );
+    });
+
     expect((await as("POST", "/follow/bluesky/import", { input: "@eff.org" })).status).toBe(201);
     const imported = (await origins()).filter((r) => r.origin === "bluesky_import");
     expect(imported.length).toBeGreaterThan(200);
     expect(imported.every((r) => r.origin_ref === EFF_DID && r.origin_label === "eff.org")).toBe(true);
-    // Following again (already followed) keeps where a follow came from.
-    expect((await as("POST", "/follows", { input: "@bsky.app", scope: "space", circleIds: [] })).status).toBeLessThan(300);
-    expect((await origins()).find((r) => r.canonical_url === `at://${BSKY_DID}`)?.origin).toBe("manual");
+    // An import over a follow made another way leaves its origin alone (it's never "this import's").
+    expect((await origins()).find((r) => r.canonical_url === `at://${handFollowed}`)?.origin).toBe("manual");
+  });
+
+  it("a stream rule is the member's own: origin manual", async () => {
+    const pageBody = (await (await as("GET", "/following")).json()) as {
+      spaces: Array<{ streams: Array<{ id: string; rule: string | null }> }>;
+    };
+    const stream = pageBody.spaces.flatMap((s) => s.streams).find((st) => st.rule === null);
+    expect(stream).toBeDefined();
+    expect((await as("PUT", `/following/streams/${stream!.id}`, { rule: "mute" })).status).toBeLessThan(300);
+    const rule = await admin(async (c) => (await c.query<{ origin: string }>("SELECT origin FROM river.follows WHERE account_id = $1 AND stream_id = $2", [accountId, stream!.id])).rows[0]);
+    expect(rule?.origin).toBe("manual");
   });
 
   it("offers what an earlier @eff.org import added as fromThisImport, and the rest as not", async () => {
