@@ -79,6 +79,35 @@ test.describe("item 1: the profile menu", () => {
     await expect(bar.getByRole("link", { name: "Sign in" })).toBeVisible({ timeout: 30_000 });
   });
 
+  test("the Following page has the same menu: My information, Following, Settings, Sign out", async ({ page }) => {
+    const did = await signUp(page, "profile-following");
+    await page.goto("/following?mode=civic");
+    await expect(page.getByRole("heading", { level: 1, name: "Following" })).toBeVisible({ timeout: 30_000 });
+    const button = page.locator(".topbar").getByRole("button", { name: "Your profile and settings" });
+    await button.click();
+    const menu = page.getByRole("menu", { name: "Your profile and settings" });
+    await expect(menu.getByRole("menuitem")).toHaveText(["My information", "Following", "Settings", "Sign out"]);
+    await expect(menu.getByRole("menuitem", { name: "Following" })).toHaveAttribute("href", "/following?mode=civic");
+    await menu.getByRole("menuitem", { name: "My information" }).click();
+    await expect(page.getByTestId("my-did")).toHaveText(did);
+    await page.getByRole("button", { name: "Done" }).click();
+    await expect(button).toBeFocused();
+    expect(await seriousAxe(page)).toEqual([]);
+
+    // Sign out from the Following page goes back to the River (in its mode) as a visitor.
+    await button.click();
+    await page.getByRole("menu", { name: "Your profile and settings" }).getByRole("menuitem", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/\?mode=civic$/);
+    await expect(page.getByTestId("sample-banner")).toBeVisible({ timeout: 30_000 });
+  });
+
+  test("a visitor on the Following page gets the visitor's menu", async ({ page }) => {
+    await page.goto("/following");
+    await expect(page.getByRole("link", { name: "Sign up" })).toBeVisible({ timeout: 30_000 });
+    await page.locator(".topbar").getByRole("button", { name: "Settings" }).click();
+    await expect(page.getByRole("menu", { name: "Settings" }).getByRole("menuitem")).toHaveText(["Settings", "Sign in"]);
+  });
+
   test("a visitor's menu has Settings and Sign in, no My information", async ({ page }) => {
     await openFeed(page);
     const button = page.locator(".topbar").getByRole("button", { name: "Settings" });
