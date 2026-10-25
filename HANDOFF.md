@@ -20,6 +20,29 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## The Following page gets the profile menu; M11's deploy is done — 2026-10-25
+
+- Branch / PR: claude/dreamy-ride-w3nd4z → PR (self-merge when `ci` is green)
+- Migrations: none.
+
+**What it does.** The Following page's top bar now has the River's profile menu
+(`ProfileMenu`, ui-revisions-9) beside "Back to your River". A member gets My information
+(their DID), Following, Settings and Sign out; Sign out goes back to the River in its mode. A
+signed-out visitor gets Settings and Sign in. `GET /api/following` now also returns `viewer`
+(`did`, `displayName`), as the feed does, so the page knows who is signed in. This closes the
+ui-revisions-9 follow-up. M11's entry now records the production deploy as done (Adam,
+2026-10-25).
+
+**Keys.** None.
+
+**Tests.** API `following.test.ts`: the page names its viewer. e2e `profile.spec.ts`: the
+member's menu on the Following page (items, the mode kept, My information, focus back, axe,
+Sign out), and the visitor's. `npm run check`: 50 files, 701 tests passed; UI built. e2e
+(profile, following): 14 passed.
+
+### Follow-ups
+- None.
+
 ## UI revisions 11, item 2: one source at a time — 2026-10-24
 
 - Branch / PR: claude/source-filter → PR (self-merge when `ci` is green)
@@ -848,7 +871,8 @@ e2e `media` (follows the podcast by home page and the channel by handle; cards s
   change, no auth or session change (the export route only uses `readSession()` and
   `requireMember()`), no new outbound host in app code (the @live tests and the perf script are
   not app code; @live goes through the fetch guard to the seed hosts ADR-001 already covers), no
-  `.github/`, `vercel.json` or CLAUDE.md change. The production deploy is not done: it needs Adam.
+  `.github/`, `vercel.json` or CLAUDE.md change. The production deploy is done (Adam, 2026-10-25;
+  see Follow-ups).
 - Migrations: none.
 
 **What it does.** `GET /api/me/export` (check 29) returns a member's follows, circles and
@@ -876,8 +900,9 @@ same works there. The e2e run wasn't repeated against `vite preview` on 4173 (CI
 
 ### Follow-ups
 - Adam: run `npm run test:live` once (check 32); it contacts the three hubs and w3c.social.
-- Adam: production deploy per `docs/deploy.md` (merges, role passwords, both Vercel projects'
-  variables, DNS, Resend records, smoke).
+- Done (Adam, 2026-10-25): the production deploy per `docs/deploy.md`. River on
+  `river.mosaic.social`, the identity host on `id.mosaic.social`: role passwords, both Vercel
+  projects' variables, DNS and Resend records set; sign-up, sign-in and passkey recovery tested.
 - The UI has no "Download my data" link yet (3.3: "API in v1, screen later"); the You tab is the
   natural place.
 - Spec questions logged: the export's circles carry no members; ended stream rules in the export;
