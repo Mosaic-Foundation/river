@@ -130,6 +130,11 @@ export interface ImportRemoval {
   /** As the Following page writes it: "@handle", or the DID. */
   address: string;
   iconUrl: string | null;
+  /**
+   * An earlier import from this same account added it (offered checked); otherwise it was
+   * followed some other way (offered unchecked). Absent from an older server: treated as false.
+   */
+  fromThisImport?: boolean;
 }
 
 export interface ImportResult {
