@@ -15,12 +15,15 @@ interface ImportPreview {
   skipped: number;
   truncated: boolean;
   accounts: Array<{ did: string; name: string; handle: string | null; iconUrl: string | null }>;
+  removals: Array<{ spaceId: string; did: string; name: string; address: string; iconUrl: string | null }> | null;
+  incomplete: boolean;
 }
 
 interface ImportResult {
   total: number;
   followed: number;
   alreadyFollowing: number;
+  unfollowed: number;
   skipped: number;
   truncated: boolean;
   refresh: { claimed: string[]; pending: string[] };
@@ -137,5 +140,69 @@ describe("Import from Bluesky (docs/spec/bluesky-1.md item 4)", () => {
     expect(empty.status).toBe(422);
     const circles = await call("POST", "/follow/bluesky/import", { input: "@eff.org", circleIds: ["Friends"] });
     expect(circles.status).toBe(400);
+  });
+});
+
+// Accounts the member follows here that the imported account no longer follows: listed in the
+// preview, unfollowed only when the member confirms them (ui follow-up, Adam 2026-10-25).
+describe("Import from Bluesky removes accounts it no longer follows, once confirmed", () => {
+  const BSKY_DID = "did:plc:z72i7hdynmk6r22z27h6tvur"; // @bsky.app: @eff.org doesn't follow it
+  let other: Member;
+  const as = (method: string, path: string, body?: unknown) => call(method, path, body, other);
+  const spaces = async () => ((await (await as("GET", "/following")).json()) as Page).spaces;
+
+  beforeAll(async () => {
+    other = await logs.signIn();
+    for (const input of ["@bsky.app", "@eff.org"]) {
+      const res = await as("POST", "/follows", { input, scope: "space", circleIds: [] });
+      expect(res.status, input).toBe(201);
+    }
+  }, 30_000);
+
+  it("the preview lists @bsky.app, not @eff.org itself or anyone it follows", async () => {
+    const res = await as("POST", "/follow/bluesky/preview", { input: "@eff.org" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as ImportPreview;
+    expect(body.incomplete).toBe(false);
+    const bsky = body.removals?.find((r) => r.did === BSKY_DID);
+    expect(bsky).toMatchObject({ address: "@bsky.app" });
+    expect(body.removals?.some((r) => r.did === EFF_DID)).toBe(false);
+    // Nobody @eff.org still follows is offered: the member follows only @bsky.app and @eff.org
+    // among Bluesky accounts (and the instance seeds none), so @bsky.app is the only removal.
+    expect(body.removals?.map((r) => r.did)).toEqual([BSKY_DID]);
+    // Nothing changed yet.
+    expect((await spaces()).find((s) => s.id === bsky!.spaceId)?.following).toBe(true);
+  });
+
+  it("an import without confirmations unfollows nobody; with one, just that account", async () => {
+    const preview = (await (await as("POST", "/follow/bluesky/preview", { input: "@eff.org" })).json()) as ImportPreview;
+    const bsky = preview.removals!.find((r) => r.did === BSKY_DID)!;
+    const hub = (await spaces()).find((s) => s.adapter === "civic_hub" && s.following)!;
+
+    const plain = await as("POST", "/follow/bluesky/import", { input: "@eff.org" });
+    expect(plain.status).toBe(201);
+    expect(((await plain.json()) as ImportResult).unfollowed).toBe(0);
+    expect((await spaces()).find((s) => s.id === bsky.spaceId)?.following).toBe(true);
+
+    // A space that isn't on the removal list (a hub) is ignored, never unfollowed.
+    const res = await as("POST", "/follow/bluesky/import", { input: "@eff.org", unfollow: [bsky.spaceId, hub.id] });
+    expect(res.status).toBe(201);
+    expect(((await res.json()) as ImportResult).unfollowed).toBe(1);
+    const after = await spaces();
+    expect(after.find((s) => s.id === bsky.spaceId)?.following ?? false).toBe(false);
+    expect(after.find((s) => s.id === hub.id)?.following).toBe(true);
+    expect(after.find((s) => s.adapter === "atproto" && s.address === "@eff.org")?.following).toBe(true);
+
+    // The next preview offers nobody: @bsky.app is gone, and the hundreds just imported are still
+    // followed by @eff.org.
+    const next = (await (await as("POST", "/follow/bluesky/preview", { input: "@eff.org" })).json()) as ImportPreview;
+    expect(next.removals).toEqual([]);
+  });
+
+  it("a malformed unfollow list is a 400", async () => {
+    for (const unfollow of ["all", [7], ["not-a-uuid"]]) {
+      const res = await as("POST", "/follow/bluesky/import", { input: "@eff.org", unfollow });
+      expect(res.status, JSON.stringify(unfollow)).toBe(400);
+    }
   });
 });

@@ -173,3 +173,48 @@ test("a Bluesky post's own address shows the post with its link card or quote (t
   await reader.getByRole("button", { name: /Back to River/ }).click();
   await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
 });
+
+test("Import from Bluesky lists the accounts it no longer follows; the ones checked are unfollowed", async ({ page }) => {
+  await signUp(page, "bluesky-removals");
+  await page.goto("/following");
+  // Follow @bsky.app, which @eff.org doesn't follow.
+  const follow = page.getByRole("region", { name: "Follow something" });
+  await follow.getByLabel("Web address or handle").fill("@bsky.app");
+  await follow.getByRole("button", { name: "Look it up" }).click();
+  await expect(follow.getByTestId("follow-preview")).toBeVisible({ timeout: 30_000 });
+  await follow.getByRole("button", { name: "Follow", exact: true }).click();
+  await expect(follow.getByRole("status")).toContainText("You're following", { timeout: 30_000 });
+  const bskyRow = page.getByTestId("space-row").filter({ hasText: "@bsky.app" });
+  await expect(bskyRow).toHaveCount(1);
+
+  const box = page.getByRole("region", { name: "Import from Bluesky" });
+  await box.getByLabel("Bluesky handle").fill("@eff.org");
+  await box.getByRole("button", { name: "List follows" }).click();
+  const preview = box.getByTestId("import-preview");
+  await expect(preview).toBeVisible({ timeout: 30_000 });
+  const count = Number(/follows (\d+) accounts/.exec((await preview.getByTestId("import-count").textContent()) ?? "")?.[1]);
+
+  // The removals: a group named for the account, each a checkbox, none checked to start with.
+  const removals = preview.getByRole("group", { name: "No longer followed by @eff.org" });
+  await expect(removals).toBeVisible();
+  const bsky = removals.getByRole("checkbox", { name: /Bluesky @bsky\.app/ });
+  await expect(bsky).not.toBeChecked();
+  await expect(removals.locator("input[type=checkbox]:checked")).toHaveCount(0);
+  await expect(preview.getByRole("button", { name: `Follow all ${count}`, exact: true })).toBeVisible();
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id)).toEqual([]);
+
+  // Checking one says so on the button; "Check all" (when there are several) checks the rest.
+  const all = await removals.getByRole("checkbox").count();
+  await bsky.check();
+  await expect(preview.getByRole("button", { name: `Follow all ${count} and unfollow 1` })).toBeVisible();
+  if (all > 1) {
+    await removals.getByRole("button", { name: `Check all ${all}` }).click();
+    await expect(preview.getByRole("button", { name: `Follow all ${count} and unfollow ${all}` })).toBeVisible();
+    await removals.getByRole("button", { name: "Uncheck all" }).click();
+    await bsky.check();
+  }
+  await preview.getByRole("button", { name: `Follow all ${count} and unfollow 1` }).click();
+  await expect(box.getByRole("status")).toContainText("You unfollowed 1 account @eff.org no longer follows.", { timeout: 30_000 });
+  await expect(bskyRow).toHaveCount(0);
+});

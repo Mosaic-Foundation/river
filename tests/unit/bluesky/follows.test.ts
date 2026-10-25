@@ -47,7 +47,10 @@ describe("readFollows", () => {
     expect(listing.account).toMatchObject({ did: EFF_DID, handle: "eff.org" });
     expect(listing.accounts).toHaveLength(all.length - hidden.length);
     expect(listing.skipped).toBe(hidden.length);
+    // The hidden ones' DIDs, so an import never offers to unfollow accounts still followed there.
+    expect(new Set(listing.skippedDids)).toEqual(new Set(hidden.map((f) => f.did as string)));
     expect(listing.truncated).toBe(false);
+    expect(listing.incomplete).toBe(false);
     expect(new Set(listing.accounts.map((a) => a.did)).size).toBe(listing.accounts.length);
     expect(listing.accounts.every((a) => a.did.startsWith("did:") && a.name)).toBe(true);
     // getFollows' order: most recently followed first.
@@ -79,6 +82,9 @@ describe("readFollows", () => {
     const listing = await readFollows(replay.guard, "@eff.org");
     expect(listing.accounts.length).toBeGreaterThan(0);
     expect(listing.accounts.length).toBeLessThan(recordedPages().flatMap((p) => p.follows).length);
+    // Partial, so an import must not treat the missing pages as unfollowed.
+    expect(listing.incomplete).toBe(true);
+    expect(listing.truncated).toBe(false);
   });
 
   it("DERIVED: a first page that fails is the follow box's error", async () => {

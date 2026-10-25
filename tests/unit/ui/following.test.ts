@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   CIRCLE_COLORS,
+  importButtonLabel,
   importCountSentence,
   importDoneSentence,
+  importWho,
   nextCircleColor,
   toggleId,
   type ImportPreview,
@@ -44,6 +46,33 @@ describe("importDoneSentence", () => {
     expect(importDoneSentence({ ...result, followed: 1, alreadyFollowing: 0 }, null)).toBe(
       "You're now following 1 more account. Their posts fill in over your next visits.",
     );
+  });
+});
+
+// Removals: accounts the imported one no longer follows, checked by the member (2026-10-25).
+describe("import removals", () => {
+  it("importWho is the handle, else the name", () => {
+    expect(importWho(preview)).toBe("@eff.org");
+    expect(importWho({ ...preview, account: { ...preview.account, handle: null } })).toBe("EFF");
+  });
+
+  it("the button says what one click does", () => {
+    expect(importButtonLabel(234, 0)).toBe("Follow all 234");
+    expect(importButtonLabel(234, 2)).toBe("Follow all 234 and unfollow 2");
+    expect(importButtonLabel(0, 3)).toBe("Unfollow 3");
+    expect(importButtonLabel(0, 0)).toBe("Nothing to change");
+  });
+
+  it("the done sentence adds the unfollows, or says only them when nothing was new", () => {
+    const result = { total: 234, followed: 0, alreadyFollowing: 234, unfollowed: 2, skipped: 0, truncated: false };
+    expect(importDoneSentence(result, null, "@eff.org")).toBe(
+      "You're now following 0 more accounts (234 you already followed). Their posts fill in over your next visits. You unfollowed 2 accounts @eff.org no longer follows.",
+    );
+    expect(importDoneSentence({ ...result, total: 0, alreadyFollowing: 0, unfollowed: 1 }, null, "@eff.org")).toBe(
+      "You unfollowed 1 account @eff.org no longer follows.",
+    );
+    // No unfollows: the sentence is as before.
+    expect(importDoneSentence({ ...result, unfollowed: 0 }, null)).not.toContain("unfollowed");
   });
 });
 
