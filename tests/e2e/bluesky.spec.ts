@@ -131,3 +131,45 @@ test("Import from Bluesky: list who @eff.org follows, choose a circle, follow th
   // They are under "Bluesky" on the Following page.
   await expect(page.locator(".group-title", { hasText: /^Bluesky$/ })).toBeVisible({ timeout: 30_000 });
 });
+
+test("a Bluesky post's own address shows the post with its link card or quote (the reader)", async ({ page }) => {
+  await signUp(page, "bluesky-reader");
+  await page.goto("/following");
+  const box = page.getByRole("region", { name: "Follow something" });
+  await box.getByLabel("Web address or handle").fill("@bsky.app");
+  await box.getByRole("button", { name: "Look it up" }).click();
+  await expect(box.getByTestId("follow-preview")).toBeVisible({ timeout: 30_000 });
+  await box.getByRole("button", { name: "Follow", exact: true }).click();
+  await expect(box.getByRole("status")).toContainText("You're following", { timeout: 30_000 });
+
+  await page.goto("/?network=bluesky");
+  await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
+  const linked = cards(page).filter({ has: page.getByTestId("card-link") }).first();
+  const quoting = cards(page).filter({ has: page.getByTestId("card-quote") }).first();
+  const linkId = (await linked.getAttribute("data-item-id"))!;
+  const linkHref = (await linked.getByTestId("card-link").getAttribute("href"))!;
+  const quoteId = (await quoting.getAttribute("data-item-id"))!;
+  const quoteName = (await quoting.locator(".card-quote-name").first().innerText()).trim();
+
+  // The link card, at the post's address, in the reader (not the Open on bsky.app screen).
+  await page.goto(`/item/${linkId}?network=bluesky`);
+  const reader = page.getByTestId("reader");
+  await expect(reader).toHaveAttribute("data-item-id", linkId, { timeout: 30_000 });
+  await expect(page.getByTestId("external-view")).toHaveCount(0);
+  const card = reader.getByTestId("card-link");
+  await expect(card).toHaveAttribute("href", linkHref);
+  await expect(card).toHaveAttribute("target", "_blank");
+  await expect(card).toHaveAttribute("rel", /noopener/);
+  await expect(reader.getByRole("link", { name: /Open in new tab/ })).toHaveAttribute("href", /^https:\/\/bsky\.app\/profile\//);
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id)).toEqual([]);
+
+  // The quoted post, the same way.
+  await page.goto(`/item/${quoteId}`);
+  await expect(reader).toHaveAttribute("data-item-id", quoteId, { timeout: 30_000 });
+  await expect(reader.getByTestId("card-quote").locator(".card-quote-name")).toHaveText(quoteName);
+
+  // Back to River returns to the feed.
+  await reader.getByRole("button", { name: /Back to River/ }).click();
+  await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
+});

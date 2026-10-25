@@ -1,7 +1,8 @@
 // The reader view (ui-revisions-1 item 1): one stored item inside the River, at /item/{id}, with
 // the left sidebar still beside it, across the feed's and Coming up's columns (ui-revisions-2
-// item 3). Since ui-revisions-3 item 2 no click opens it: it shows only at the address of an item
-// without a live page (a sample) or one that isn't there.
+// item 3). Since ui-revisions-3 item 2 no click opens it: it shows at the address of an item
+// without a live page (a sample), of a post that stays in the feed (fediverse, Bluesky), or of one
+// that isn't there. A Bluesky post's link card and quoted post show as on its card (PostEmbed).
 // Full sanitized content (src/shared/sanitize/, the only HTML; CLAUDE.md constraint 8), every
 // image, the author and the source. "Back to River" returns to the feed where it was; "Open in
 // new tab" opens the item where it lives. Nothing is fetched from outside: the item comes from
@@ -25,6 +26,7 @@ import {
 } from "../lib/format";
 import { CardMedia } from "./CardMedia";
 import { BoostIcon, ExternalIcon } from "./Icons";
+import { PostEmbed } from "./PostEmbed";
 import { SourceIcon } from "./SourceIcon";
 
 export type ReaderState =
@@ -40,6 +42,8 @@ export interface ReaderViewProps {
   onMarkRead: (id: string) => void;
   onMarkUnread: (id: string) => void;
   onSampleInfo: (trigger: HTMLButtonElement) => void;
+  /** For a quoted post's relative time. */
+  now: number;
 }
 
 /** Spec F4: links open in a new tab with rel="noopener noreferrer". */
@@ -58,7 +62,7 @@ function BackButton({ onBack }: { onBack: () => void }) {
   );
 }
 
-export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSampleInfo }: ReaderViewProps) {
+export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSampleInfo, now }: ReaderViewProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const itemId = state.status === "ok" ? state.item.id : null;
   // Focus moves to the item's heading when it opens, so a screen reader starts there.
@@ -190,6 +194,7 @@ export function ReaderView({ state, read, onBack, onMarkRead, onMarkUnread, onSa
       )}
 
       <CardMedia media={item.media} limit={20} />
+      {item.embed && <PostEmbed embed={item.embed} now={now} onOpened={() => onMarkRead(item.id)} />}
       {players.map((m, i) => {
         const label = `${m.type === "video" ? "Video" : "Audio"}${players.length > 1 ? ` ${i + 1}` : ""} from ${linkHost(m.url) ?? item.space.name}`;
         return m.type === "video" ? (

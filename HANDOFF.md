@@ -20,10 +20,34 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Link cards and quotes on an item's own page — 2026-10-25
+
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #50) → PR (self-merge when
+  `ci` is green)
+- Migrations: none.
+
+**What it does.** The reader draws a Bluesky post's link card and quoted post, with the same
+`PostEmbed` the cards use (links in a new tab, opening one marks the item read). The address of
+a post that stays in the feed (fediverse, Bluesky) now shows the reader (text, media, link card,
+quote, "Open in new tab", Back to River) instead of the empty "Open on {host} ↗" screen, which
+the reader would otherwise never reach for them. Hub and feed pages keep the framing check and
+that screen; cards are unchanged. This closes the Bluesky step 3 follow-up; the ui-revisions-3
+reading is logged under "Spec questions".
+
+**Keys.** None.
+
+**Tests.** e2e `bluesky.spec.ts`: a post's address shows the reader with its link card (href,
+new tab), Open in new tab, axe; a quoting post's shows the quote; Back to River.
+`revisions3.spec.ts`: a fediverse post's address shows the reader, a refused hub page's the
+"Open on" screen; the River-bar checks open the hub page's address. `npm run check`: 50 files,
+701 tests passed; UI built. Full e2e: 146 passed (vite preview, as CI).
+
+### Follow-ups
+- None.
+
 ## The Following page uses the whole window — 2026-10-25
 
-- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #49) → PR (self-merge when
-  `ci` is green)
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #49) → #50 (merged)
 - Migrations: none.
 
 **What it does.** On a desktop the Following page spans the window as the River does

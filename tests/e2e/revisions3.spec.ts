@@ -108,13 +108,15 @@ async function standInFrames(page: Page): Promise<void> {
   });
 }
 
-/** Opens the embedded view on a fediverse post straight from its address (its "Open on" screen). */
+/**
+ * Opens the embedded view straight from an address: the hub page that refuses framing (its "Open
+ * on" screen). A fediverse post's address shows the reader since 2026-10-25.
+ */
 async function openEmbedded(page: Page): Promise<void> {
   await standInFrames(page);
   await page.goto("/");
-  const body = (await (await page.request.get("/api/feed?network=fediverse")).json()) as { items: ApiItem[] };
-  const post = body.items.find((i) => /^https:\/\/[^/]+\/@[^/]+\/\d+$/.test(i.url ?? ""))!;
-  await page.goto(`/item/${post.id}`);
+  const hub = (await firstPage(page)).find((i) => i.url === HUB_PAGE)!;
+  await page.goto(`/item/${hub.id}`);
   await expect(page.getByTestId("external-view")).toBeVisible({ timeout: 30_000 });
 }
 
@@ -302,16 +304,18 @@ test.describe("item 2: other items are framed, or open in a new tab", () => {
     await expect(page.getByTestId("external-elsewhere")).toHaveCount(0);
   });
 
-  test("an address of a fediverse post or a refused page shows Open on {host} ↗; a sample's shows the reader", async ({ page }) => {
+  test("a refused page's address shows Open on {host} ↗; a fediverse post's and a sample's show the reader", async ({ page }) => {
     await page.setViewportSize(DESKTOP);
     await page.goto("/");
     const items = await firstPage(page);
+    // A post that stays in the feed shows itself at its address, with Open in new tab (since
+    // 2026-10-25, for Bluesky's link cards and quotes; DECISIONS.md).
     const post = items.find((i) => i.space.adapter === "fediverse")!;
     await page.goto(`/item/${post.id}`);
+    await expect(page.getByTestId("reader")).toHaveAttribute("data-item-id", post.id, { timeout: 30_000 });
+    await expect(page.getByTestId("reader").getByRole("link", { name: /Open in new tab/ })).toHaveAttribute("href", post.url!);
+    await expect(page.getByTestId("external-view")).toHaveCount(0);
     const screen = page.getByTestId("external-elsewhere");
-    await expect(screen).toBeVisible({ timeout: 30_000 });
-    await expect(screen.getByRole("link", { name: /^Open on / })).toHaveAttribute("href", post.url!);
-    await expect(page.getByTestId("external-frame")).toHaveCount(0);
 
     const hub = items.find((i) => i.url === HUB_PAGE)!;
     await page.goto(`/item/${hub.id}`);
