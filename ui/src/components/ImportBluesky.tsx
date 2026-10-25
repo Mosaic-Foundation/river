@@ -3,9 +3,10 @@
 // shows who, how many and the first names. The member chooses a circle (or none) and follows them
 // all. Their posts fill in over the next opens of the River: each open refreshes a few (DECISIONS.md
 // "Refreshing hundreds of Bluesky accounts"). The preview also lists the Bluesky accounts the member
-// follows here that the account no longer follows, unchecked: the member checks the ones to
-// unfollow (or all of them), and the button says what one click does (DECISIONS.md). Errors are
-// the server's F6 sentences.
+// follows here that the account no longer follows, in two groups: those an earlier import from this
+// same account added (checked), and every other one (by hand, another import, a seed, or from
+// before origins were kept; unchecked). The button says what one click does (DECISIONS.md).
+// Errors are the server's F6 sentences.
 import { useId, useState } from "react";
 import { circleColor } from "../lib/format";
 import {
@@ -17,6 +18,7 @@ import {
   previewBlueskyImport,
   type CircleView,
   type ImportPreview,
+  type ImportRemoval,
 } from "../lib/following";
 import { SourceIcon } from "./SourceIcon";
 
@@ -26,6 +28,70 @@ type State =
   | { step: "preview"; input: string; preview: ImportPreview }
   | { step: "importing"; input: string; preview: ImportPreview }
   | { step: "done"; sentence: string };
+
+/** One group of accounts to unfollow: a fieldset of checkboxes with "Check all" / "Uncheck all". */
+function RemovalGroup({
+  testId,
+  legend,
+  hint,
+  removals,
+  unfollow,
+  setUnfollow,
+}: {
+  testId: string;
+  legend: string;
+  hint: string;
+  removals: ImportRemoval[];
+  unfollow: ReadonlySet<string>;
+  setUnfollow: (next: ReadonlySet<string>) => void;
+}) {
+  const hintId = useId();
+  const checked = removals.filter((r) => unfollow.has(r.spaceId)).length;
+  const setAll = (on: boolean) => {
+    const next = new Set(unfollow);
+    for (const r of removals) {
+      if (on) next.add(r.spaceId);
+      else next.delete(r.spaceId);
+    }
+    setUnfollow(next);
+  };
+  return (
+    <fieldset className="import-removals" data-testid={testId} aria-describedby={hintId}>
+      <legend>{legend}</legend>
+      <p className="panel-text" id={hintId}>
+        {hint}
+      </p>
+      {removals.length > 1 && (
+        <button type="button" className="button button-small button-quiet import-check-all" onClick={() => setAll(checked !== removals.length)}>
+          {checked === removals.length ? "Uncheck all" : `Check all ${removals.length}`}
+        </button>
+      )}
+      <ul className="import-names import-removal-list">
+        {removals.map((r) => (
+          <li key={r.spaceId}>
+            <label className="import-name import-removal">
+              <input
+                type="checkbox"
+                checked={unfollow.has(r.spaceId)}
+                onChange={(e) => {
+                  const next = new Set(unfollow);
+                  if (e.currentTarget.checked) next.add(r.spaceId);
+                  else next.delete(r.spaceId);
+                  setUnfollow(next);
+                }}
+              />
+              <SourceIcon name={r.name} iconUrl={r.iconUrl} />
+              <span>
+                <span className="import-name-text">{r.name}</span>
+                <span className="import-name-handle"> {r.address}</span>
+              </span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </fieldset>
+  );
+}
 
 function swatch(color: string | null): React.CSSProperties | undefined {
   const value = circleColor(color);
@@ -39,7 +105,6 @@ export function ImportBluesky({ circles, onImported }: { circles: CircleView[]; 
   const [circleId, setCircleId] = useState("");
   // The removals the member checks: unfollowed with the import. None are checked to start with.
   const [unfollow, setUnfollow] = useState<ReadonlySet<string>>(new Set());
-  const removalsHint = useId();
   const headingId = useId();
   const hintId = useId();
   const inputId = useId();
@@ -61,7 +126,8 @@ export function ImportBluesky({ circles, onImported }: { circles: CircleView[]; 
       return;
     }
     setCircleId("");
-    setUnfollow(new Set());
+    // What an earlier import from this account added starts checked; everything else unchecked.
+    setUnfollow(new Set((result.value.removals ?? []).filter((r) => r.fromThisImport === true).map((r) => r.spaceId)));
     setState({ step: "preview", input, preview: result.value });
   };
 
@@ -85,6 +151,8 @@ export function ImportBluesky({ circles, onImported }: { circles: CircleView[]; 
 
   const shown = state.step === "preview" || state.step === "importing" ? state.preview : undefined;
   const removals = shown?.removals ?? [];
+  const ownRemovals = removals.filter((r) => r.fromThisImport === true);
+  const otherRemovals = removals.filter((r) => r.fromThisImport !== true);
   const unfollowCount = removals.filter((r) => unfollow.has(r.spaceId)).length;
 
   return (
@@ -155,46 +223,27 @@ export function ImportBluesky({ circles, onImported }: { circles: CircleView[]; 
             </ul>
           )}
 
-          {removals.length > 0 && (
-            <fieldset className="import-removals" data-testid="import-removals" aria-describedby={removalsHint}>
-              <legend>No longer followed by {importWho(shown)}</legend>
-              <p className="panel-text" id={removalsHint}>
-                You follow {removals.length === 1 ? "this account" : `these ${removals.length} accounts`} here, but{" "}
-                {importWho(shown)} doesn't any more. Check the ones to unfollow here too; the rest stay followed.
-              </p>
-              {removals.length > 1 && (
-                <button
-                  type="button"
-                  className="button button-small button-quiet import-check-all"
-                  onClick={() => setUnfollow(unfollowCount === removals.length ? new Set() : new Set(removals.map((r) => r.spaceId)))}
-                >
-                  {unfollowCount === removals.length ? "Uncheck all" : `Check all ${removals.length}`}
-                </button>
-              )}
-              <ul className="import-names import-removal-list">
-                {removals.map((r) => (
-                  <li key={r.spaceId}>
-                    <label className="import-name import-removal">
-                      <input
-                        type="checkbox"
-                        checked={unfollow.has(r.spaceId)}
-                        onChange={(e) => {
-                          const next = new Set(unfollow);
-                          if (e.currentTarget.checked) next.add(r.spaceId);
-                          else next.delete(r.spaceId);
-                          setUnfollow(next);
-                        }}
-                      />
-                      <SourceIcon name={r.name} iconUrl={r.iconUrl} />
-                      <span>
-                        <span className="import-name-text">{r.name}</span>
-                        <span className="import-name-handle"> {r.address}</span>
-                      </span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </fieldset>
+          {ownRemovals.length > 0 && (
+            <RemovalGroup
+              testId="import-removals-own"
+              legend={`Imported from ${importWho(shown)}, no longer followed there`}
+              hint={`${importWho(shown)} stopped following ${
+                ownRemovals.length === 1 ? "this account" : `these ${ownRemovals.length} accounts`
+              } since you imported ${ownRemovals.length === 1 ? "it" : "them"}. Checked ones are unfollowed here too; uncheck any to keep.`}
+              removals={ownRemovals}
+              unfollow={unfollow}
+              setUnfollow={setUnfollow}
+            />
+          )}
+          {otherRemovals.length > 0 && (
+            <RemovalGroup
+              testId="import-removals"
+              legend={`Other Bluesky accounts ${importWho(shown)} doesn't follow`}
+              hint={`You follow ${otherRemovals.length === 1 ? "this account" : `these ${otherRemovals.length} accounts`} here some other way (by hand, from another import, or before the River kept track). Check any to unfollow too.`}
+              removals={otherRemovals}
+              unfollow={unfollow}
+              setUnfollow={setUnfollow}
+            />
           )}
           {shown.removals === null && (
             <p className="panel-text" data-testid="import-removals-unknown">

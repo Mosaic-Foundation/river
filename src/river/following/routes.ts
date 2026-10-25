@@ -78,7 +78,7 @@ function importView(listing: FollowsListing, removals: BlueskyRemoval[] | null) 
 async function removalsFor(db: RiverDb, listing: FollowsListing): Promise<BlueskyRemoval[] | null> {
   if (listing.truncated || listing.incomplete) return null;
   const still = [listing.account.did, ...listing.accounts.map((a) => a.did), ...listing.skippedDids];
-  return blueskyFollowsNotIn(db, still);
+  return blueskyFollowsNotIn(db, still, listing.account.did);
 }
 
 /** The space ids the member confirmed to unfollow: a list of uuids, at most one per removal. */
@@ -226,7 +226,9 @@ export function followingRoutes(deps: RefreshDeps = {}): Router {
           }
         }
         const rows = await upsertSpaces(db, previews);
-        return { spaces: rows, followed: await followSpaces(db, rows.map((r) => r.id), circleIds), unfollowed: gone };
+        // Each new follow records the import it came from (the account's DID and, for display, its handle).
+        const origin = { origin: "bluesky_import" as const, ref: listing.account.did, label: listing.account.handle ?? null };
+        return { spaces: rows, followed: await followSpaces(db, rows.map((r) => r.id), circleIds, origin), unfollowed: gone };
       });
       const refresh = await refreshSpaces(member(res).instance.id, spaces, deps);
       res

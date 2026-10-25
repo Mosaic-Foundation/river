@@ -12,6 +12,7 @@
 import type { Db, RiverDb } from "../../db/context.js";
 import type { SpaceCategory, SpacePreview } from "../../shared/items/index.js";
 import { canonicalUrlFor } from "../adapters/bluesky/input.js";
+import { hasFollowOrigin, MANUAL, originValues, type FollowOrigin } from "./origin.js";
 import { SPACE_COLUMNS, type SpaceRow } from "../feed/spaces.js";
 import { upsertSpace } from "../feed/store.js";
 import { addressOf, kindLabel } from "./resolve.js";
@@ -63,24 +64,41 @@ export async function setStreamRule(db: Db, streamId: string, rule: Rule): Promi
   ]);
   const stream = streams[0];
   if (!stream) throw new FollowingError(404, "unknown_stream", "That stream isn't known here.");
-  const { rows } = await db.query<{ id: string }>(
-    `INSERT INTO river.follows (space_id, stream_id, rule, ends_with_stream) VALUES ($1, $2, $3, true)
-     ON CONFLICT (account_id, space_id, stream_id) DO UPDATE SET rule = EXCLUDED.rule, ends_with_stream = true
-     RETURNING id`,
-    [stream.space_id, streamId, rule],
-  );
+  // A new rule is the member's own (origin manual); changing one keeps where it came from.
+  const { rows } = (await hasFollowOrigin(db))
+    ? await db.query<{ id: string }>(
+        `INSERT INTO river.follows (space_id, stream_id, rule, ends_with_stream, origin, origin_ref, origin_label)
+         VALUES ($1, $2, $3, true, $4, $5, $6)
+         ON CONFLICT (account_id, space_id, stream_id) DO UPDATE SET rule = EXCLUDED.rule, ends_with_stream = true
+         RETURNING id`,
+        [stream.space_id, streamId, rule, ...originValues(MANUAL)],
+      )
+    : await db.query<{ id: string }>(
+        `INSERT INTO river.follows (space_id, stream_id, rule, ends_with_stream) VALUES ($1, $2, $3, true)
+         ON CONFLICT (account_id, space_id, stream_id) DO UPDATE SET rule = EXCLUDED.rule, ends_with_stream = true
+         RETURNING id`,
+        [stream.space_id, streamId, rule],
+      );
   await db.query("SELECT river.mark_stream_follows_ended($1)", [streamId]);
   return { ruleId: rows[0]!.id, spaceId: stream.space_id };
 }
 
-/** Follows a whole space (idempotent). */
+/** Follows a whole space (idempotent): the follow box, so origin manual; an existing follow keeps its own. */
 export async function followSpace(db: Db, spaceId: string): Promise<string> {
-  const { rows } = await db.query<{ id: string }>(
-    `INSERT INTO river.follows (space_id, stream_id, rule) VALUES ($1, NULL, 'follow')
-     ON CONFLICT (account_id, space_id, stream_id) DO UPDATE SET rule = 'follow'
-     RETURNING id`,
-    [spaceId],
-  );
+  const { rows } = (await hasFollowOrigin(db))
+    ? await db.query<{ id: string }>(
+        `INSERT INTO river.follows (space_id, stream_id, rule, origin, origin_ref, origin_label)
+         VALUES ($1, NULL, 'follow', $2, $3, $4)
+         ON CONFLICT (account_id, space_id, stream_id) DO UPDATE SET rule = 'follow'
+         RETURNING id`,
+        [spaceId, ...originValues(MANUAL)],
+      )
+    : await db.query<{ id: string }>(
+        `INSERT INTO river.follows (space_id, stream_id, rule) VALUES ($1, NULL, 'follow')
+         ON CONFLICT (account_id, space_id, stream_id) DO UPDATE SET rule = 'follow'
+         RETURNING id`,
+        [spaceId],
+      );
   return rows[0]!.id;
 }
 
@@ -98,16 +116,29 @@ export async function addToCircles(db: Db, spaceId: string, circleIds: readonly 
 
 /**
  * Follows many whole spaces at once (an import), adding each to the circles these ids name.
- * Returns how many were newly followed; spaces already followed keep their rule and gain circles.
+ * Returns how many were newly followed; spaces already followed keep their rule, their origin
+ * and gain circles. New follows record `origin` (where they came from).
  */
-export async function followSpaces(db: Db, spaceIds: readonly string[], circleIds: readonly string[]): Promise<number> {
+export async function followSpaces(
+  db: Db,
+  spaceIds: readonly string[],
+  circleIds: readonly string[],
+  origin: FollowOrigin = MANUAL,
+): Promise<number> {
   if (spaceIds.length === 0) return 0;
-  const { rowCount } = await db.query(
-    `INSERT INTO river.follows (space_id, stream_id, rule)
-     SELECT s, NULL, 'follow' FROM unnest($1::uuid[]) AS s
-     ON CONFLICT (account_id, space_id, stream_id) DO NOTHING`,
-    [[...spaceIds]],
-  );
+  const { rowCount } = (await hasFollowOrigin(db))
+    ? await db.query(
+        `INSERT INTO river.follows (space_id, stream_id, rule, origin, origin_ref, origin_label)
+         SELECT s, NULL, 'follow', $2, $3, $4 FROM unnest($1::uuid[]) AS s
+         ON CONFLICT (account_id, space_id, stream_id) DO NOTHING`,
+        [[...spaceIds], ...originValues(origin)],
+      )
+    : await db.query(
+        `INSERT INTO river.follows (space_id, stream_id, rule)
+         SELECT s, NULL, 'follow' FROM unnest($1::uuid[]) AS s
+         ON CONFLICT (account_id, space_id, stream_id) DO NOTHING`,
+        [[...spaceIds]],
+      );
   if (circleIds.length > 0) {
     await db.query(
       `INSERT INTO river.circle_members (circle_id, space_id)
@@ -170,23 +201,40 @@ export interface BlueskyRemoval {
   /** As the Following page writes it (addressOf): "@handle", or the DID when none verifies. */
   address: string;
   iconUrl: string | null;
+  /**
+   * True when an earlier import from the same Bluesky account added this follow (its origin):
+   * the import offers these ticked. False for every other follow (by hand, a seed, another
+   * import, or from before origins were kept), offered unticked.
+   */
+  fromThisImport: boolean;
 }
 
 /**
  * The member's whole-account Bluesky follows whose DIDs aren't in `stillFollowed` (Import from
- * Bluesky): the accounts the imported account no longer follows, offered for unfollowing. Read
- * inside forAccount(), so only the member's own follows count.
+ * Bluesky): the accounts the imported account (`importedFrom`, a DID) no longer follows, offered
+ * for unfollowing, each saying whether an import from that same account added it. Read inside
+ * forAccount(), so only the member's own follows count. On the schema before follow origins,
+ * none is from this import.
  */
-export async function blueskyFollowsNotIn(db: Db, stillFollowed: readonly string[]): Promise<BlueskyRemoval[]> {
-  const { rows } = await db.query<{ id: string; adapter: string; canonical_url: string; name: string; icon_url: string | null; manifest: Record<string, unknown> | null }>(
-    `SELECT s.id, s.adapter, s.canonical_url, s.name, s.icon_url, s.manifest
+export async function blueskyFollowsNotIn(db: Db, stillFollowed: readonly string[], importedFrom: string): Promise<BlueskyRemoval[]> {
+  const withOrigin = await hasFollowOrigin(db);
+  const { rows } = await db.query<{
+    id: string;
+    adapter: string;
+    canonical_url: string;
+    name: string;
+    icon_url: string | null;
+    manifest: Record<string, unknown> | null;
+    from_this_import: boolean;
+  }>(
+    `SELECT s.id, s.adapter, s.canonical_url, s.name, s.icon_url, s.manifest,
+            ${withOrigin ? "(f.origin = 'bluesky_import' AND f.origin_ref = $2)" : "false"} AS from_this_import
        FROM river.spaces s
+       JOIN river.follows f ON f.space_id = s.id AND f.stream_id IS NULL AND f.rule = 'follow' AND f.ended_at IS NULL
       WHERE s.adapter = 'atproto'
-        AND EXISTS (SELECT 1 FROM river.follows f
-                     WHERE f.space_id = s.id AND f.stream_id IS NULL AND f.rule = 'follow' AND f.ended_at IS NULL)
         AND NOT (s.canonical_url = ANY($1::text[]))
       ORDER BY lower(s.name), s.id`,
-    [stillFollowed.map(canonicalUrlFor)],
+    withOrigin ? [stillFollowed.map(canonicalUrlFor), importedFrom] : [stillFollowed.map(canonicalUrlFor)],
   );
   return rows.map((r) => ({
     spaceId: r.id,
@@ -194,6 +242,7 @@ export async function blueskyFollowsNotIn(db: Db, stillFollowed: readonly string
     name: r.name,
     address: addressOf(r),
     iconUrl: r.icon_url,
+    fromThisImport: r.from_this_import,
   }));
 }
 

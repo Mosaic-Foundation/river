@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
 import { identityURL } from "../../playwright.config";
 import { expect, test } from "./fixtures";
-import { addAuthenticator, resetLimits, setClock, testEmail, throughCallback } from "./identityHelpers";
+import { addAuthenticator, resetLimits, riverAccount, setClock, testEmail, throughCallback, withAdmin } from "./identityHelpers";
 
 // Bluesky (docs/spec/bluesky-1.md items 2, 3 and 5; ADR-009). A real member follows @bsky.app by
 // its handle from the follow box (preview: name, avatar, bio), then filters the River by the
@@ -174,18 +174,37 @@ test("a Bluesky post's own address shows the post with its link card or quote (t
   await expect(cards(page).first()).toBeVisible({ timeout: 30_000 });
 });
 
-test("Import from Bluesky lists the accounts it no longer follows; the ones checked are unfollowed", async ({ page }) => {
+test("Import from Bluesky offers what it added from the same account checked, and other accounts unchecked", async ({ page, context }) => {
   await signUp(page, "bluesky-removals");
   await page.goto("/following");
-  // Follow @bsky.app, which @eff.org doesn't follow.
+  // Follow @bsky.app by hand: @eff.org doesn't follow it.
   const follow = page.getByRole("region", { name: "Follow something" });
   await follow.getByLabel("Web address or handle").fill("@bsky.app");
   await follow.getByRole("button", { name: "Look it up" }).click();
   await expect(follow.getByTestId("follow-preview")).toBeVisible({ timeout: 30_000 });
   await follow.getByRole("button", { name: "Follow", exact: true }).click();
   await expect(follow.getByRole("status")).toContainText("You're following", { timeout: 30_000 });
+
+  // An account an earlier @eff.org import added, which @eff.org has since unfollowed: a stand-in
+  // space and an import-origin follow, written as the database would hold them.
+  const account = (await riverAccount(context))!;
+  await withAdmin(async (client) => {
+    const { rows } = await client.query<{ id: string }>(
+      `INSERT INTO river.spaces (adapter, canonical_url, name, network, category, manifest)
+       VALUES ('atproto', 'at://did:plc:bbbbbbbbbbbbbbbbbbbbbbbb', 'Gone Account', 'bluesky', 'person', '{"actor":{"handle":"@gone.example"}}')
+       ON CONFLICT (canonical_url) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
+    );
+    await client.query(
+      `INSERT INTO river.follows (instance_id, account_id, space_id, origin, origin_ref, origin_label)
+       SELECT a.instance_id, a.id, $2, 'bluesky_import', 'did:plc:lr36xv2l64jwtnyoaqem6z2z', 'eff.org'
+         FROM river.accounts a WHERE a.id = $1`,
+      [account, rows[0]!.id],
+    );
+  });
+  await page.reload();
+  const goneRow = page.getByTestId("space-row").filter({ hasText: "Gone Account" });
   const bskyRow = page.getByTestId("space-row").filter({ hasText: "@bsky.app" });
-  await expect(bskyRow).toHaveCount(1);
+  await expect(goneRow).toHaveCount(1, { timeout: 30_000 });
 
   const box = page.getByRole("region", { name: "Import from Bluesky" });
   await box.getByLabel("Bluesky handle").fill("@eff.org");
@@ -194,27 +213,23 @@ test("Import from Bluesky lists the accounts it no longer follows; the ones chec
   await expect(preview).toBeVisible({ timeout: 30_000 });
   const count = Number(/follows (\d+) accounts/.exec((await preview.getByTestId("import-count").textContent()) ?? "")?.[1]);
 
-  // The removals: a group named for the account, each a checkbox, none checked to start with.
-  const removals = preview.getByRole("group", { name: "No longer followed by @eff.org" });
-  await expect(removals).toBeVisible();
-  const bsky = removals.getByRole("checkbox", { name: /Bluesky @bsky\.app/ });
+  // Two headings: what the import added, checked; the others, unchecked.
+  const own = preview.getByRole("group", { name: "Imported from @eff.org, no longer followed there" });
+  const others = preview.getByRole("group", { name: "Other Bluesky accounts @eff.org doesn't follow" });
+  const gone = own.getByRole("checkbox", { name: /Gone Account @gone\.example/ });
+  const bsky = others.getByRole("checkbox", { name: /Bluesky @bsky\.app/ });
+  await expect(gone).toBeChecked();
   await expect(bsky).not.toBeChecked();
-  await expect(removals.locator("input[type=checkbox]:checked")).toHaveCount(0);
-  await expect(preview.getByRole("button", { name: `Follow all ${count}`, exact: true })).toBeVisible();
+  await expect(preview.getByRole("button", { name: `Follow all ${count} and unfollow 1` })).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id)).toEqual([]);
 
-  // Checking one says so on the button; "Check all" (when there are several) checks the rest.
-  const all = await removals.getByRole("checkbox").count();
+  // Checking another account says so on the button; unchecking it again leaves the import's own.
   await bsky.check();
-  await expect(preview.getByRole("button", { name: `Follow all ${count} and unfollow 1` })).toBeVisible();
-  if (all > 1) {
-    await removals.getByRole("button", { name: `Check all ${all}` }).click();
-    await expect(preview.getByRole("button", { name: `Follow all ${count} and unfollow ${all}` })).toBeVisible();
-    await removals.getByRole("button", { name: "Uncheck all" }).click();
-    await bsky.check();
-  }
+  await expect(preview.getByRole("button", { name: `Follow all ${count} and unfollow 2` })).toBeVisible();
+  await bsky.uncheck();
   await preview.getByRole("button", { name: `Follow all ${count} and unfollow 1` }).click();
   await expect(box.getByRole("status")).toContainText("You unfollowed 1 account @eff.org no longer follows.", { timeout: 30_000 });
-  await expect(bskyRow).toHaveCount(0);
+  await expect(goneRow).toHaveCount(0);
+  await expect(bskyRow).toHaveCount(1);
 });
