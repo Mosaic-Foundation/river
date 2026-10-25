@@ -41,11 +41,21 @@
   margin-top: var(--space-lg);
 }
 
+/* The whole window, as the River does (ui-revisions-8 item 3): Circles against the right edge, the
+   main column centred in the space beside it at its reading width, and the gap narrowing as the
+   window does (ui-revisions-10 item 2). */
 @media (min-width: 56rem) {
   .following-layout {
-    grid-template-columns: minmax(0, var(--layout-following)) var(--layout-circles);
-    justify-content: center;
-    padding: var(--space-xl);
+    grid-template-columns: minmax(0, 1fr) var(--layout-circles);
+    column-gap: clamp(var(--space-sm), (100vw - 56rem) / 4, var(--space-xl));
+    max-width: none;
+    padding: var(--space-lg) var(--space-md);
+  }
+
+  .following-main {
+    justify-self: center;
+    width: 100%;
+    max-width: var(--layout-following);
   }
 
   .following-aside {
