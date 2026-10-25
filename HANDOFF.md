@@ -42,11 +42,13 @@ nothing is "this import's"). Design in DECISIONS.md.
 
 **Tests.** Unit `followOrigin.test.ts` (the column check and its cache, the values). API
 `blueskyImport.test.ts` (origins recorded as seed, manual and bluesky_import with DID and
-handle; following again keeps the origin; a stand-in follow from an earlier @eff.org import is
+handle; an import over a follow made by hand keeps it manual; a stream rule is manual; a
+stand-in follow from an earlier @eff.org import is
 `fromThisImport`, @bsky.app followed by hand isn't; confirming unfollows the import's own). e2e
 `bluesky.spec.ts` (the two headings, checked and unchecked, the button, axe, the unfollow).
 Old schema: with the three columns dropped locally, only the two tests reading them failed (37
-others passed). `npm run check`: 51 files, 707 tests passed; UI built. API (fresh `db reset`):
+others passed). Not covered by a test: a waiting seed applied later records `seed` (it goes
+through the same `follow()` as the sign-up copy). `npm run check`: 51 files, 707 tests passed; UI built. API (fresh `db reset`):
 17 files, 172 passed. Full e2e: 146 passed.
 
 ### Follow-ups
