@@ -386,3 +386,31 @@ test("check 15 on a phone: the Following tab's follow box previews @w3c@w3c.soci
   await expect(page.getByTestId("circle-row").filter({ hasText: "News and ideas" })).toBeVisible();
   await expectNoSeriousAxeIssues(page);
 });
+
+test("the Following page uses the whole window, as the River does (ui-revisions-8 item 3)", async ({ page }) => {
+  await signUp(page, "following-edges");
+  const gutter = 16; // --space-md
+  for (const width of [1920, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await openFollowing(page);
+    const right = await page.evaluate(() => document.body.getBoundingClientRect().width);
+    const main = (await page.locator(".following-main").boundingBox())!;
+    const circles = (await page.locator(".following-aside").boundingBox())!;
+    // Circles against the right edge; the main column centred in the space left of them, at its
+    // reading width (52rem).
+    expect(right - (circles.x + circles.width), `${width}px`).toBeLessThanOrEqual(gutter);
+    const spaceLeft = main.x;
+    const spaceRight = circles.x - (main.x + main.width);
+    expect(Math.abs(spaceLeft - spaceRight), `${width}px`).toBeLessThanOrEqual(gutter + 1);
+    expect(main.width).toBeLessThanOrEqual(52 * 16 + 1);
+    // The top bar spans the window too: the brand at the left edge, the profile menu at the right.
+    const brand = (await page.locator(".topbar .brand").boundingBox())!;
+    const profile = (await page.locator(".topbar").getByTestId("profile-button").boundingBox())!;
+    expect(brand.x).toBeLessThanOrEqual(gutter);
+    expect(right - (profile.x + profile.width)).toBeLessThanOrEqual(gutter);
+  }
+  // A phone keeps the one column, with no sideways scroll.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openFollowing(page);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+});
