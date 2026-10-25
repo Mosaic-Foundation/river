@@ -355,8 +355,33 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-25 — Where each follow came from, and the import offering only its own (Adam)
+- Decision: `river.follows` gains `origin` (`unknown` for rows from before, `manual` for the
+  follow box and stream rules, `seed` for the sign-up seed copy and seeds that wait for their
+  space, `bluesky_import`, and `linked`, reserved for linked accounts), `origin_ref` (for an
+  import: the imported account's DID) and `origin_label` (its handle at the time, for display).
+  An existing follow keeps its origin when it is followed again another way (`ON CONFLICT` leaves
+  it). Import from Bluesky's preview now marks each removal `fromThisImport` (an import from the
+  same DID added it). The box shows those under "Imported from @x, no longer followed there",
+  checked, and every other followed Bluesky account @x doesn't follow under "Other Bluesky
+  accounts @x doesn't follow", unchecked. A follow from before the migration is `unknown`, so it is
+  never "this import's".
+- Why: Adam approved recording origins (2026-10-25) so the import can offer, checked, only what
+  it added. The import is keyed to the account's DID, not its handle: handles change (a handle
+  move would otherwise orphan the import's follows), and the DID is what the River stores.
+- Code before the migration: `src/river/following/origin.ts` reads information_schema once (and
+  again a minute later while the column is missing); inserts name the origin columns only once
+  it exists, and the preview marks nothing `fromThisImport` until then. Proven by dropping the
+  columns locally: only the two tests that read them failed.
+- Alternatives: keying on the handle (breaks on a handle change); a separate import-log table
+  (more joins for the same answer); backfilling old rows by guessing (an imported account and a
+  hand-followed one look the same).
+- Thread / PR: follow origins (needs-adam)
+
 ## 2026-10-25 — Import from Bluesky offers to unfollow accounts it no longer follows
-- Decision: the import's preview lists `removals`: the member's whole-account follows of Bluesky
+- Decision (amended the same day by "Where each follow came from" above: what this import added
+  is now checked, under its own heading): the import's preview lists `removals`: the member's
+  whole-account follows of Bluesky
   spaces whose DID isn't among the imported account's current follows. The imported account
   itself, and accounts that hide from signed-out readers (their DIDs now come back from
   `readFollows` as `skippedDids`), are still followed there and never listed. Each is an

@@ -64,6 +64,10 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-25, follow origins: unit `followOrigin` (the column check and cache); API
+  `blueskyImport` (origins recorded; the import's own removals marked; an admin-written stand-in
+  for an account an earlier import added); e2e `bluesky.spec.ts` (the two headings). Old schema
+  checked by dropping the columns locally. Unit 707, API 172, e2e 146.
 - 2026-10-25, Bluesky import removals: unit `bluesky/follows` (skipped DIDs, an incomplete
   list), `ui/following` (the button, who, the unfollow sentence); API `blueskyImport` (a second
   member: the removal list, confirmed unfollows only, ids off the list ignored, 400s); e2e

@@ -20,10 +20,42 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Where each follow came from; the import offers its own follows checked — 2026-10-25
+
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #52) → PR, **needs-adam**
+  (changes an existing table); Adam merges after review.
+- Migrations: `20261025172932_follow_origin.sql` (additive: `origin` NOT NULL DEFAULT 'unknown',
+  `origin_ref`, `origin_label` on `river.follows`, with CHECKs; policy and grants unchanged;
+  idempotent).
+
+**What it does.** Every new follow records where it came from: `manual` (the follow box, stream
+rules), `seed` (the sign-up copy and seeds that wait for their space) or `bluesky_import` (with
+the imported account's DID and handle); `linked` is reserved for later, and existing rows read
+`unknown`. Import from Bluesky's preview now shows two headings: "Imported from @eff.org, no
+longer followed there" (what an import from that same account added; checked) and "Other
+Bluesky accounts @eff.org doesn't follow" (everything else; unchecked), each with Check all.
+The API's removals carry `fromThisImport`. Code runs on the old schema too
+(`src/river/following/origin.ts` checks for the column; until then inserts leave it out and
+nothing is "this import's"). Design in DECISIONS.md.
+
+**Keys.** None.
+
+**Tests.** Unit `followOrigin.test.ts` (the column check and its cache, the values). API
+`blueskyImport.test.ts` (origins recorded as seed, manual and bluesky_import with DID and
+handle; following again keeps the origin; a stand-in follow from an earlier @eff.org import is
+`fromThisImport`, @bsky.app followed by hand isn't; confirming unfollows the import's own). e2e
+`bluesky.spec.ts` (the two headings, checked and unchecked, the button, axe, the unfollow).
+Old schema: with the three columns dropped locally, only the two tests reading them failed (37
+others passed). `npm run check`: 51 files, 707 tests passed; UI built. API (fresh `db reset`):
+17 files, 172 passed. Full e2e: 146 passed.
+
+### Follow-ups
+- Adam: after merge, `deploy-migrations` applies the migration to the dev project; check its run.
+- The Following page could say where each follow came from (not asked for).
+
 ## Import from Bluesky removes accounts it no longer follows (confirmed) — 2026-10-25
 
-- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #51) → PR (self-merge when
-  `ci` is green)
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #51) → #52 (merged)
 - Migrations: none.
 
 **What it does.** "Import from Bluesky"'s preview now also lists the Bluesky accounts the
@@ -48,8 +80,7 @@ words, Check all and Uncheck all, axe, the unfollow and its sentence). `npm run 
 704 tests passed; UI built. API: 8 passed. e2e (bluesky): 4 passed.
 
 ### Follow-ups
-- Recording which follows came from an import (a needs-adam column on `river.follows`) would let
-  the import offer only the accounts it added. Say if you want it.
+- Recording which follows came from an import: approved by Adam and built in the next entry.
 
 ## Link cards and quotes on an item's own page — 2026-10-25
 
