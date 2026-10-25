@@ -64,6 +64,10 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-25, Bluesky import removals: unit `bluesky/follows` (skipped DIDs, an incomplete
+  list), `ui/following` (the button, who, the unfollow sentence); API `blueskyImport` (a second
+  member: the removal list, confirmed unfollows only, ids off the list ignored, 400s); e2e
+  `bluesky.spec.ts` (the confirm list). Unit 704.
 - 2026-10-25, link cards and quotes on an item's own page: e2e `bluesky.spec.ts` (the reader
   at a post's address with its link card and quote); `revisions3.spec.ts` (a fediverse address
   shows the reader; the bar checks use the refused hub page). Full e2e 146.
