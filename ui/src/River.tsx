@@ -274,9 +274,10 @@ export function River() {
   }, [readerItem, viewerKnown, reads]);
 
   // How the opened item shows (ui-revisions-3 item 2): framed beside the River bar when the
-  // server's check allows it; otherwise the same bar with "Open on {host} ↗" (a fediverse post, a
-  // page that refuses framing, or one still being checked). Only an item without a live page (a
-  // sample, from its own address) shows the reader.
+  // server's check allows it; otherwise the same bar with "Open on {host} ↗" (a page that refuses
+  // framing, or one still being checked). A post that stays in the feed (fediverse, Bluesky) and an
+  // item without a live page (a sample) show the reader at their own address, so a Bluesky post's
+  // link card and quote show there too.
   const plan = readerItem ? framePlan(readerItem) : null;
   const checked = readerItem ? frames.answers[readerItem.id] : undefined;
   const checking = plan?.kind === "check" && checked === undefined;
@@ -284,7 +285,7 @@ export function River() {
   useEffect(() => {
     if (checking && readerItem) requestFrame(readerItem.id, true);
   }, [checking, readerItem, requestFrame]);
-  const external = Boolean(plan && plan.kind !== "reader");
+  const external = plan?.kind === "check";
   const frameSrc = plan?.kind === "check" && isHttpsUrl(checked) ? checked : undefined;
   const readerHost = readerItem ? linkHost(readerItem.url) : undefined;
   const shownReaderState: ReaderState | null = external ? null : readerState;
@@ -569,6 +570,7 @@ export function River() {
               onMarkRead={(id) => reads.markRead([id])}
               onMarkUnread={(id) => reads.markUnread([id])}
               onSampleInfo={(trigger) => setSampleTrigger(trigger)}
+              now={now}
             />
           )}
           {/* The feed stays mounted while reading, so Back finds it exactly as it was. */}
