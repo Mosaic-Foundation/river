@@ -42,10 +42,33 @@ leave the owner's allowance). e2e check 36 waits for the recovery mail. `npm run
 ### Follow-ups
 - The per-person cap of 3 links an hour can still be used up from several addresses (see
   DECISIONS).
+## Sign-in rate limits, one fresh DID read a minute, attempts kept an hour — 2026-10-26
+
+- Branch / PR: claude/signin-rate-limit → #58 (merged by Adam)
+- Migrations: `20261026161614_auth_attempts_hour.sql` (CREATE OR REPLACE `river.daily_job`: the
+  `auth_attempts` purge goes from a day to an hour; nothing else changes)
+
+**What it does.** Security review of 3a86e8f, item 4. `/api/auth/signin` and `/api/auth/callback`
+allow 60 each per address per 10 minutes (429 and a page; `x-real-ip` on Vercel). `note.ts`
+reads a DID's log fresh at most once per DID per minute (`fresh_limited` after that). The daily
+job purges sign-in attempts older than an hour. The new `POST /api/test/rate-limits/reset` is
+TEST_ROUTES only. The API helpers and the e2e `resetLimits` call it.
+
+**Keys.** None (`LIMITS.signin`, `LIMITS.callback`, `FRESH_INTERVAL_S`).
+
+**Tests.** API `signin` (the 61st start and the 61st callback get 429, a page and no redirect). API
+db `dailyJob` (a two-hour-old attempt is deleted). Unit `riverSignIn` (20 bad notes cause one fresh
+read, then `fresh_limited`, and another a minute later; the recover-dids case checks the old key a
+minute on). The API and daily-job tests failed before. `npm run check`: 52 files, 721 tests
+passed; UI built. API (fresh `db reset`): 18 files, 179 passed. e2e `signin`, `profile`,
+`following`: 20 passed.
+
+### Follow-ups
+- Session revocation (a session epoch on accounts) is a separate follow-up; see the item 8 entry.
 
 ## Follow caps: 2,000 per account; the Bluesky import rate-limited — 2026-10-26
 
-- Branch / PR: claude/follow-caps → #57 (merge when ci is green)
+- Branch / PR: claude/follow-caps → #57 (merged)
 - Migrations: none
 
 **What it does.** Security review of 3a86e8f, item 3. An account follows at most 2,000 spaces and

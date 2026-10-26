@@ -16,6 +16,7 @@ import { FeedInputError, memberFeed, memberMarkAllRead, readerItem, visitorFeed,
 import { checkFraming } from "./frame/check.js";
 import { followingRoutes } from "./following/routes.js";
 import { requireInstance, type Instance } from "./instances.js";
+import { resetRateLimits } from "./rateLimit.js";
 
 /** A query parameter as one string; repeated or nested values are refused, not guessed at. */
 function param(req: Request, name: string): string | undefined {
@@ -89,6 +90,15 @@ function feedError(err: unknown, res: Response, next: NextFunction): void {
 
 export function riverRoutes(): Router {
   const router = Router();
+
+  // Tests only (TEST_ROUTES=1, which env.ts refuses on Vercel): the e2e and API suites sign in
+  // more often from one address than the sign-in limit allows.
+  if (env.testRoutes) {
+    router.post("/test/rate-limits/reset", (_req, res) => {
+      resetRateLimits();
+      res.status(204).end();
+    });
+  }
 
   router.use(checkOrigin());
 
