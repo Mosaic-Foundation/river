@@ -7,11 +7,14 @@
 //   POST /recover/options {token}             registration options for the person's user handle
 //   POST /recover/verify  {request, response}  new passkey → {redirect} or {done}
 //
-// Rate limits: per IP and per address (in memory), and at most 3 links an hour per person (in
-// the database). An unknown or unverified address gets the same answer and no email. The token
+// Rate limits: per IP, and per IP and address together (in memory), and at most 3 links an hour
+// per person (in the database). An unknown or unverified address gets the same answer and no
+// email, in the same time: the lookup and the email happen after the answer (waitUntil on
+// Vercel), so a known address doesn't take longer. The token
 // is consumed in the same transaction that adds the passkey, so a link that fails halfway still
 // works; once a passkey is added it never works again.
 import { createHash, randomUUID } from "node:crypto";
+import { waitUntil } from "@vercel/functions";
 import { forIdentity } from "../../db/context.js";
 import { audit } from "../audit.js";
 import { identityNow } from "../clock.js";
@@ -61,10 +64,16 @@ export function recoverRoutes(router: Routes): void {
       res.status(400).type("html").send(recoverPage(requestId, MESSAGES.invalidEmail));
       return;
     }
-    // Per address, known or not, so the limit itself says nothing about who has an account.
-    const addressKey = createHash("sha256").update(email).digest("base64url");
-    if (hit("recoverAddress", addressKey)) {
-      await sendRecoveryLink(email, requestId, clientIp(req));
+    // Per address, known or not, so the limit itself says nothing about who has an account; and
+    // per IP too, so requests from elsewhere can't use up the owner's own allowance.
+    const ip = clientIp(req);
+    if (hit("recoverAddress", recoverAddressKey(ip, email))) {
+      // Not awaited: the answer goes out at once whether or not the address has an account.
+      waitUntil(
+        sendRecoveryLink(email, requestId, ip).catch((err: unknown) => {
+          console.error(`Recovery link failed: ${err instanceof Error ? err.name : "error"}`);
+        }),
+      );
     }
     res.type("html").send(recoverPage(requestId, RECOVER_SENT));
   });
@@ -164,6 +173,11 @@ export function recoverRoutes(router: Routes): void {
     await sendEmail(recoveryNoticeMessage(result.email));
     res.json(result.redirect ? { redirect: result.redirect } : { done: true });
   });
+}
+
+/** The per-address recovery limit's key: the IP and the address together, hashed. */
+export function recoverAddressKey(ip: string, email: string): string {
+  return createHash("sha256").update(`${ip}\n${email}`).digest("base64url");
 }
 
 async function findLiveToken(

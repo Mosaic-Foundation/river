@@ -1,9 +1,10 @@
 // Routes for tests only, mounted when TEST_ROUTES=1, which env.ts refuses on Vercel. They read the
-// capture mailbox, move the identity clock, and reset the in-memory rate limits.
+// capture mailbox, slow the capture transport down, move the identity clock, and reset the
+// in-memory rate limits.
 import { Router } from "express";
 import { env } from "../../config/env.js";
 import { clockOffset, setClockOffset } from "../clock.js";
-import { capturedEmails, clearCapturedEmails } from "../email/index.js";
+import { capturedEmails, clearCapturedEmails, setCaptureDelay } from "../email/index.js";
 import { resetRateLimits } from "../rateLimit.js";
 
 export function testRoutes(): Router {
@@ -20,6 +21,12 @@ export function testRoutes(): Router {
 
   router.delete("/test/mailbox", (_req, res) => {
     clearCapturedEmails();
+    res.status(204).end();
+  });
+
+  // Makes each captured email take this long to send, so a test can tell whether a request waits.
+  router.post("/test/email-delay", (req, res) => {
+    setCaptureDelay(Number(req.body?.ms ?? 0));
     res.status(204).end();
   });
 
