@@ -67,6 +67,9 @@ Newest first: date, slice, tests added, counts.
 - 2026-10-26, identity account page: API `identity` (the page, `/account/options`, refused
   requests and origins; check 28 covers both); e2e `identity` (the account page's two cases; the
   CSP, axe and Tab test covers `/account`). Unit 734, API 203, e2e 153.
+- 2026-10-26, Mark all read's route removed: API `signin` (one test: 404, nothing marked; the
+  four Mark all read tests go); API `feed` (visitor check on `/read-state` only); API db `modes`
+  (Mark all read in Civic removed). Unit 734, API 198.
 - 2026-10-26, small hardening (security review item 8): unit `env` (NODE_ENV=production refusals,
   capture refused in production); unit `identityHost` (Permissions-Policy and COOP in both
   vercel.json files and the identity pages); unit `workflows` (new: checkout credentials, no

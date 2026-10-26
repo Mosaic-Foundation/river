@@ -46,6 +46,27 @@ UI built. API (fresh `db reset`): 21 files, 203 passed. e2e: 153 passed.
 - The no-address notice after sign-in still links to `/account/email` (adding is done there).
 - Removing a passkey from the account page (today only right after a recovery) would be its own
   change: it needs a rule for which passkey a fresh check may remove.
+## Mark all read's route removed — 2026-10-26
+
+- Branch / PR: claude/remove-read-state-all → #64 (merged)
+- Migrations: none
+
+**What it does.** Removes `POST /api/read-state/all`, which had no caller since ui-revisions-5 took
+the button away (the UI revisions 5 entry's follow-up; Adam agreed). `memberMarkAllRead()`,
+`markViewRead()` and the route's body parsers go with it. Mark read, Mark unread and opening a
+link are unchanged.
+
+**Keys.** None.
+
+**Tests.** API `signin`: the four Mark all read tests are replaced by one that gets 404 and finds
+nothing marked (failed before); the several-circles test keeps its feed checks. API `feed`: the
+visitor check covers `/read-state` only. API db `modes`: "Mark all read in Civic" removed.
+`npm run check`: 53 files, 734 tests passed; UI built. API (fresh `db reset`): 21 files, 198
+passed. No UI change, so no e2e run.
+
+### Follow-ups
+- `river-v1.md` F4 still lists "Mark all read for the current view" (proposed change in
+  DECISIONS.md).
 
 ## Small hardening: Permissions-Policy, COOP, test flags off in production, workflow credentials — 2026-10-26
 

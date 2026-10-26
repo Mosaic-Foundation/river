@@ -376,6 +376,15 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Alternatives: a session on the identity host (a cookie and its revocation, for one page); reusing
   the `change_email` purpose for the check (no migration, but a ceremony named for something else).
 - Thread / PR: identity account page
+## 2026-10-26 — `POST /api/read-state/all` removed (Adam)
+- Decision: the route, `memberMarkAllRead()` and `markViewRead()` are gone; a POST there answers
+  404 like any unknown path. Mark read, Mark unread and opening a link still write read state.
+- Why: ui-revisions-5 item 1 removed the "Mark all read" button on 2026-10-23, leaving the route
+  with no caller. Adam agreed it can go (2026-10-26).
+- Alternatives: keeping it for a later button (it is a few lines to bring back from history).
+- Spec: F4 still lists "Mark all read for the current view"; see the 2026-10-21 spec question,
+  now answered by ui-revisions-5. Proposed change: drop it from F4.
+- Thread / PR: remove read-state/all
 
 ## 2026-10-26 — Row security: accounts updates need an account; shared rows' identity columns fixed (security review item 7)
 - Decision:
