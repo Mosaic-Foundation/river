@@ -12,7 +12,8 @@ export interface Blocked {
   resourceType: string;
 }
 
-async function cutOff(context: BrowserContext, blocked: Blocked[]): Promise<void> {
+/** Cuts a browser context off from everything but loopback; a test's own extra contexts use it too. */
+export async function cutOff(context: BrowserContext, blocked: Blocked[]): Promise<void> {
   await context.route("**/*", async (route) => {
     const request = route.request();
     const url = request.url();

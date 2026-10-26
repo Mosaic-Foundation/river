@@ -465,8 +465,8 @@ export function River() {
     });
   };
 
-  const endSession = () => {
-    void signOut().then(() => window.location.assign("/"));
+  const endSession = (everywhere = false) => {
+    void signOut(everywhere).then(() => window.location.assign("/"));
   };
 
   // Cards whose page might be framed ask the server as they come into view (ui-revisions-3 item 2).

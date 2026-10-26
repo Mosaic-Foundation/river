@@ -16,6 +16,19 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-26 — Should a Mosaic ID recovery sign out the River? (session revocation)
+- Question: a recovery replaces a lost passkey, which suggests the old sessions may be in the
+  wrong hands. The River now has "Sign out everywhere" (a session epoch per account), but a
+  recovery happens on the identity host, and ADR-002 lets the two meet only through the sign-in
+  redirect and the signed note. Nothing tells the River a recovery happened.
+- Reading used: a recovery doesn't touch River sessions. The member can press "Sign out
+  everywhere" after recovering. Nothing crosses ADR-002.
+- Proposed change: decide with the Phase 2 design (Adam, 2026-10-26). One shape: the signed note
+  carries a recovery counter from the DID log or the identity host, and the River raises the
+  account's epoch when it sees a higher one at sign-in. That still leaves sessions open until the
+  next sign-in, so it needs the design work.
+- Thread / PR: session revocation
+
 ### 2026-10-25 — "Link cards and quotes on an item's own page" and ui-revisions-3 item 2
 - Question: Adam asked for a Bluesky post's link card and quoted post on the item's own page.
   ui-revisions-3 item 2 has a fediverse post's address (and so a Bluesky one's, both stay in the
@@ -356,6 +369,30 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-26 — Session revocation: an epoch per account; cookies without one refused (Adam)
+- Decision:
+  - `river.accounts.session_epoch` (integer, default 1, at least 1). Every session cookie carries
+    the epoch it was issued at (token `v: 2`, field `epoch`). `readSession()` accepts a cookie only
+    when its epoch equals the account's current one; anything else reads as a visitor and the
+    cookie is cleared.
+  - `POST /api/auth/signout-everywhere` (signed-in member, Origin-checked) raises the epoch by one
+    and clears this browser's cookie, which ends every session of the account on every device. The
+    profile menu and the phone's You tab have "Sign out everywhere" under Sign out. No
+    confirmation step: the worst a stray press costs is signing in again.
+  - Cookies from before this change (`v: 1`, no epoch) are refused at deploy, not accepted until
+    they expire (Adam, 2026-10-26). Only Adam is signed in today, so the cost is one sign-in, and no
+    cookie escapes revocation.
+  - The code may deploy before the migration lands. Until the column exists every account reads as
+    epoch 1 (the default), so sessions issued meanwhile stay good afterwards, and Sign out
+    everywhere answers 503 "Try again in a few minutes".
+  - A Mosaic ID recovery doesn't raise the epoch: see "Spec questions".
+  - Migration `20261026201500_session_epoch.sql` (adds a column to an existing table; needs-adam).
+- Why: a stateless cookie stayed good for 30 days whatever happened; there was no way to end a
+  stolen or forgotten session short of rotating `SESSION_SECRET`, which signs out every member.
+- Alternatives: a server-side session table (a read per request either way, more rows to purge);
+  accepting old cookies until expiry (no forced sign-in, but up to 30 days of sessions nothing
+  could revoke); a confirmation dialog before signing out everywhere.
+- Thread / PR: session revocation
 ## 2026-10-26 — `POST /api/read-state/all` removed (Adam)
 - Decision: the route, `memberMarkAllRead()` and `markViewRead()` are gone; a POST there answers
   404 like any unknown path. Mark read, Mark unread and opening a link still write read state.
