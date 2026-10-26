@@ -25,6 +25,12 @@ export interface CapturedEmail extends OutgoingEmail {
 export const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
 const captured: CapturedEmail[] = [];
+/** Test-only (POST /test/email-delay): how long the capture transport takes to "send". */
+let captureDelayMs = 0;
+
+export function setCaptureDelay(ms: number): void {
+  captureDelayMs = Math.max(0, Math.min(ms, 10_000));
+}
 const CAPTURE_LIMIT = 500;
 
 export function capturedEmails(): readonly CapturedEmail[] {
@@ -47,6 +53,7 @@ export async function sendEmail(email: OutgoingEmail, guard?: FetchGuard): Promi
         console.log(redactedLine(email));
         return true;
       case "capture":
+        if (captureDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, captureDelayMs));
         captured.push({ ...email, at: new Date().toISOString() });
         if (captured.length > CAPTURE_LIMIT) captured.splice(0, captured.length - CAPTURE_LIMIT);
         return true;

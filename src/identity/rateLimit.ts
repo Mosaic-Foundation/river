@@ -1,5 +1,5 @@
-// Fixed-window rate limits per key (spec 4.6: /authorize and sign-up per IP; recovery per IP and
-// per address). Kept in the function instance's memory: on Vercel each warm instance counts on
+// Fixed-window rate limits per key (spec 4.6: /authorize and sign-up per IP; recovery per IP, and
+// per IP and address together, so a stranger can't use up someone else's recovery). Kept in the function instance's memory: on Vercel each warm instance counts on
 // its own, which slows a single client but is no global cap (DECISIONS, M7). Recovery emails also
 // have a durable per-person cap in the database (src/identity/flows/recover.ts).
 export interface Limit {
@@ -14,7 +14,7 @@ export const LIMITS = {
   signup: { max: 10, windowMs: 60 * 60_000 },
   /** "Lost your passkey?" per IP. */
   recoverIp: { max: 10, windowMs: 15 * 60_000 },
-  /** "Lost your passkey?" per address (hashed), known or not. */
+  /** "Lost your passkey?" per IP and address together (hashed), known or not. */
   recoverAddress: { max: 3, windowMs: 60 * 60_000 },
   /** Emailed links and the change-email ceremony. */
   links: { max: 60, windowMs: 10 * 60_000 },
