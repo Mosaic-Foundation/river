@@ -203,9 +203,14 @@ export async function loadViewer(
     accountId,
     (db) =>
       db.query<{ id: string; display_name: string | null; did: string | null }>(
+        // Row security already limits this to the account in context; the WHERE says so too, so
+        // a looser policy or another role could never hand back someone else's account.
         `SELECT a.id, a.display_name,
-                (SELECT lm.did FROM river.login_methods lm ORDER BY lm.last_used_at DESC LIMIT 1) AS did
-           FROM river.accounts a`,
+                (SELECT lm.did FROM river.login_methods lm WHERE lm.account_id = a.id
+                  ORDER BY lm.last_used_at DESC LIMIT 1) AS did
+           FROM river.accounts a
+          WHERE a.id = $1`,
+        [accountId],
       ),
     source,
   );
