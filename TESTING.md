@@ -64,6 +64,12 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, session revocation: unit `riverSignIn` (the epoch in the token; v1 and malformed
+  epochs refused); API db `sessionRevocation` (new: runs `readSession()` against the database as
+  river_app, with its own SESSION_SECRET and DATABASE_URL); API `signin` (Sign out everywhere over
+  HTTP); e2e `signin` (two browser contexts share a session; the second uses `cutOff()` from
+  `fixtures.ts`, now exported) and `profile` (the menu's items; "Sign out" matched exactly, since
+  "Sign out everywhere" contains it). Unit 735, API 207, e2e 152.
 - 2026-10-26, small hardening (security review item 8): unit `env` (NODE_ENV=production refusals,
   capture refused in production); unit `identityHost` (Permissions-Policy and COOP in both
   vercel.json files and the identity pages); unit `workflows` (new: checkout credentials, no
