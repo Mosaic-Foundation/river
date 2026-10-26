@@ -20,13 +20,15 @@ it keeps to the Mosaic and Civic theme tokens, keyboard access and labels on eve
    the River checks the visible cards ahead of time (cached as now). When a card is clicked
    before its answer is known, the embedded view opens with a one-click "Open on {host} ↗" screen
    beside the River bar, which becomes the frame if the check then allows it. The reader view is
-   retired from the click flow (it remains only for a sample's or a missing item's address).
+   retired from the click flow (it remains for a sample's or a missing item's address, and for
+   the address of a fediverse or Bluesky post, which shows the post; amended by Adam 2026-10-26).
    - Checks: a visible card's framing check runs before it is clicked; a card whose page refuses
      framing opens its original in a new tab on click, and the River stays on the feed; a card
      whose page allows it opens the embedded view at `/item/{id}`; a card clicked while its check
      is pending shows "Open on {host} ↗" beside the bar, which opens the original in a new tab;
-     loading `/item/{id}` for a refused or fediverse item shows that screen; no card click opens
-     the reader view.
+     loading `/item/{id}` for a refused item shows that screen; loading it for a fediverse or
+     Bluesky item shows the reader (the post's text, media, link card and quote); no card click
+     opens the reader view.
 
 3. **A narrower River bar.** The embedded view's bar is narrower, with the Mosaic mark centered
    vertically, filling most of its white tile.
