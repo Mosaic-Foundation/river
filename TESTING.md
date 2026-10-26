@@ -64,6 +64,10 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, feed reader linear time (security review item 1): unit `rssFeed` gains timed
+  cases (each under 1 s with `performance.now()`) for 2M stray `<`, a tag that never closes,
+  quotes that never close, 1,000 xmlns over 20,000 children and 50,000 unclosed `<link` tags,
+  plus the 64-declaration cap, namespace scoping and `constructor:`/`toString:` prefixes. Unit 718.
 - 2026-10-26, where a Following row's follow came from: unit `ui/following` (`originLine`: Added
   by you, Seed copy, Imported from @handle or Bluesky, nothing for unknown or linked); API
   `blueskyImport` (the page's `origin` for seed, manual and import rows, null for an admin-written

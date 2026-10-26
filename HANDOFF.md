@@ -20,6 +20,29 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Feed reader: linear time on hostile feeds — 2026-10-26
+
+- Branch / PR: claude/zealous-planck-pyye2b → PR (merge when ci is green)
+- Migrations: none
+
+**What it does.** Security review of 3a86e8f, item 1. `parseXml` checks a tag's name before it
+looks for the tag's `>`. A `<` with no `>` after it makes the rest of the document text and ends
+the scan, so `"<rss>" + "<".repeat(2_000_000)` now takes milliseconds, not hours. After one tag whose
+quotes never close, tags end at the next `>`, so the parser keeps reading without rescanning. Elements
+share their parent's namespace map unless they declare one (a `Map`, so a prefix like
+`constructor:` no longer throws), and only the first 64 namespace declarations in a document are
+read. Autodiscovery's `<link` pattern stops at the next `<`.
+
+**Keys.** None (`MAX_NAMESPACES = 64` in `xml.ts`).
+
+**Tests.** Unit `rssFeed`: timed cases (each under 1 s; the old code hung or took 6–8 s) for 2M
+stray `<`, a never-closed tag, never-closed quotes, 1,000 xmlns over 20,000 children, and 50,000
+unclosed `<link`. Also checks the 64-declaration cap, namespace scoping and `Object` property prefixes.
+`npm run check`: 51 files, 718 tests passed; UI built.
+
+### Follow-ups
+- None.
+
 ## Each Following row says where its follow came from — 2026-10-26
 
 - Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #53) → PR (merge when ci is green)
