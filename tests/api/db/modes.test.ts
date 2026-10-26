@@ -8,7 +8,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { forAccount } from "../../../src/db/context.js";
 import type { Viewer } from "../../../src/river/accounts.js";
-import { memberFeed, memberMarkAllRead, visitorFeed, type FeedResponse } from "../../../src/river/feed/index.js";
+import { memberFeed, visitorFeed, type FeedResponse } from "../../../src/river/feed/index.js";
 import { FeedInputError } from "../../../src/river/feed/query.js";
 import type { RefreshDeps } from "../../../src/river/feed/refresh.js";
 import { clearInstanceCache, instanceForHost, type Instance } from "../../../src/river/instances.js";
@@ -162,21 +162,6 @@ describe("check 7: a member's Civic mode", () => {
     const first = await memberFeed(instance, member, { mode: "everything" }, deps());
     expect(first.items[0]?.space.id).toBe(busy);
     expect(comingUpOf(first)?.map((e) => e.date)).toContain(LONGMONT_DEADLINE);
-  });
-
-  it("Mark all read in Civic marks only that view", async () => {
-    const member = await newMember();
-    const longmont = await createHubSpace(river, LONGMONT_FEED, { name: "Longmont (modes read)" });
-    const club = await createHubSpace(river, DEMOSVILLE_FEED, { name: "Club (modes read)", category: "club" });
-    await as(member, async (db) => {
-      for (const space of [longmont, club]) await db.insert("follows", { space_id: space.id, rule: "follow" });
-    });
-    await feedOf(member); // refresh both
-    await memberMarkAllRead(instance, member, { mode: "civic" }, { source: river });
-    const { items } = await feedOf(member, { mode: "everything" });
-    const read = (spaceId: string) => items.filter((i) => i.space.id === spaceId).map((i) => i.read);
-    expect(read(longmont.id).every(Boolean)).toBe(true);
-    expect(read(club.id).some((r) => r === false)).toBe(true);
   });
 });
 

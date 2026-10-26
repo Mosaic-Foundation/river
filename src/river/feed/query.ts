@@ -204,7 +204,7 @@ function likePattern(q: string): string {
 }
 
 /**
- * The scope, kind, search and cursor conditions, shared by the feed and "Mark all read". The
+ * The scope, kind, search and cursor conditions of the feed. The
  * caller's next bind parameter is `$${values.length + 1}`.
  */
 function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values: unknown[] } {
@@ -374,31 +374,6 @@ export async function queryViewItems(db: Db, scope: FeedScope, filter: Omit<Feed
     source: row.space_adapter === "sample" ? "sample" : "live",
     space: { id: row.space_id, name: row.space_name, category: row.space_category },
   }));
-}
-
-/** Most items "Mark all read" marks in one go (newest first). */
-export const MARK_ALL_LIMIT = 5000;
-
-/**
- * Marks every item of a view read for the member in this forAccount() transaction (spec F4 "Mark
- * all read for the current view"): the same scope and filters as the feed, newest first, up to
- * MARK_ALL_LIMIT. Returns how many were newly marked.
- */
-export async function markViewRead(db: Db, scope: FeedScope, filter: FeedFilter): Promise<number> {
-  if (scope.spaceIds.length === 0 && scope.streams.length === 0) return 0;
-  const where = feedWhere(scope, { ...filter, cursor: undefined });
-  const { rowCount } = await db.query(
-    `INSERT INTO river.read_state (item_id)
-     SELECT i.id
-       FROM river.items i
-       JOIN river.spaces s ON s.id = i.space_id
-      WHERE ${where.sql}
-      ORDER BY i.published_at DESC, i.id DESC
-      LIMIT $${where.values.length + 1}
-     ON CONFLICT (account_id, item_id) DO NOTHING`,
-    [...where.values, MARK_ALL_LIMIT],
-  );
-  return rowCount ?? 0;
 }
 
 function toFeedItem(row: ItemRow): FeedItem {

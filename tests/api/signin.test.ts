@@ -376,7 +376,6 @@ describe("a member's read state (check 23, API side)", () => {
 
   it("visitors can't write it, and their feed carries no read field", async () => {
     expect((await post("/read-state", { read: [] }, { origin })).status).toBe(401);
-    expect((await post("/read-state/all", {}, { origin })).status).toBe(401);
     const visitor = await feed();
     expect(visitor.viewer).toBeNull();
     expect(visitor.items.every((i) => i.read === undefined)).toBe(true);
@@ -402,40 +401,15 @@ describe("a member's read state (check 23, API side)", () => {
     expect((await post("/read-state", { read: ["00000000-0000-4000-8000-00000000dead"] }, { cookie, origin })).status).toBe(204);
   });
 
-  it("Mark all read covers the member's current view only", async () => {
+  it("Mark all read is gone: no route takes it (ui-revisions-5 item 1 removed its button)", async () => {
     const cookie = await member();
     await post("/read-state", { unread: (await feed(cookie)).items.map((i) => i.id) }, { cookie, origin });
-    const circles = (await feed(cookie)).circles;
-    const soccer = circles.find((c) => c.name === "Soccer");
-    expect(soccer).toBeDefined();
-    const res = await post("/read-state/all", { circle: soccer!.id }, { cookie, origin });
-    expect(res.status).toBe(200);
-    const { marked } = (await res.json()) as { marked: number };
-    expect(marked).toBeGreaterThan(0);
-    const inSoccer = await feed(cookie, `?circle=${soccer!.id}`);
-    expect(inSoccer.items.every((i) => i.read)).toBe(true);
-    const everything = await feed(cookie);
-    expect(everything.items.some((i) => i.read === false)).toBe(true);
-    expect((await post("/read-state/all", { circle: "Soccer" }, { cookie, origin })).status).toBe(400);
-    expect((await post("/read-state/all", { circle: [soccer!.id, 7] }, { cookie, origin })).status).toBe(400);
+    expect((await post("/read-state/all", {}, { cookie, origin })).status).toBe(404);
+    expect((await feed(cookie)).items.every((i) => i.read === false)).toBe(true);
   });
 
-  it("Mark all read takes one source (ui-revisions-11 item 2)", async () => {
+  it("several circles: the feed takes any of them (ui-revisions-4 item 1)", async () => {
     const cookie = await member();
-    await post("/read-state", { unread: (await feed(cookie)).items.map((i) => i.id) }, { cookie, origin });
-    const source = (await feed(cookie)).items[0].space.id;
-    const res = await post("/read-state/all", { source }, { cookie, origin });
-    expect(res.status).toBe(200);
-    expect(((await res.json()) as { marked: number }).marked).toBeGreaterThan(0);
-    expect((await feed(cookie, `?source=${source}`)).items.every((i) => i.read)).toBe(true);
-    const everything = await feed(cookie);
-    expect(everything.items.filter((i) => i.space.id !== source).every((i) => i.read === false)).toBe(true);
-    expect((await post("/read-state/all", { source: "not-a-uuid" }, { cookie, origin })).status).toBe(400);
-  });
-
-  it("several circles: the feed and Mark all read take any of them (ui-revisions-4 item 1)", async () => {
-    const cookie = await member();
-    await post("/read-state", { unread: (await feed(cookie)).items.map((i) => i.id) }, { cookie, origin });
     const circles = (await feed(cookie)).circles;
     const family = circles.find((c) => c.name === "Family")!;
     const soccer = circles.find((c) => c.name === "Soccer")!;
@@ -449,10 +423,6 @@ describe("a member's read state (check 23, API side)", () => {
     expect(both.items.length).toBeGreaterThanOrEqual(Math.max(...[family, soccer].map((c) => one.filter((i) => i.circle === c.id).length)));
     const ids = new Set(one.map((i) => i.id));
     expect(both.items.every((i) => ids.has(i.id))).toBe(true);
-    const res = await post("/read-state/all", { circle: [family.id, soccer.id] }, { cookie, origin });
-    expect(res.status).toBe(200);
-    expect((await feed(cookie, `?circle=${family.id}&circle=${soccer.id}`)).items.every((i) => i.read)).toBe(true);
-    expect((await feed(cookie)).items.some((i) => i.read === false)).toBe(true);
   });
 });
 

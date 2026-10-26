@@ -396,14 +396,12 @@ describe("visitors write nothing (check 23, visitor part)", () => {
     const start = await fetch(`${API}/auth/signin`, { redirect: "manual" });
     const origin = new URL(start.headers.get("location") ?? "").searchParams.get("client_id") ?? "";
     const before = await personalRows();
-    for (const path of ["/read-state", "/read-state/all"]) {
-      const res = await fetch(`${API}${path}`, {
-        method: "POST",
-        headers: { origin, "content-type": "application/json" },
-        body: JSON.stringify({ read: [] }),
-      });
-      expect(res.status).toBe(401);
-    }
+    const res = await fetch(`${API}/read-state`, {
+      method: "POST",
+      headers: { origin, "content-type": "application/json" },
+      body: JSON.stringify({ read: [] }),
+    });
+    expect(res.status).toBe(401);
     // And without the River's Origin, nothing state-changing is even considered.
     expect((await fetch(`${API}/read-state`, { method: "POST" })).status).toBe(403);
     expect(await personalRows()).toEqual(before);
