@@ -3,6 +3,7 @@
 // input, keyboard-reachable controls, no inline script or style (Appendix B CSP). Every value that
 // reaches the markup goes through esc(). The passkey ceremonies run in /passkey.js, which reads
 // its inputs from data-* attributes.
+import { CONFIRM_WARNING, nameLine } from "./email/messages.js";
 
 export function esc(value: string): string {
   return value
@@ -83,7 +84,7 @@ ${STATUS}
 <h2 id="reminder-heading" tabindex="-1">Please confirm your email</h2>
 <p data-reminder-text></p>
 <p><a data-continue href="/">Continue</a></p>
-<p><a href="/account/email">Send the link again or use another address</a></p>
+<p><a data-address-link href="/account/email">Send the link again or use another address</a></p>
 </section>`,
     { passkey: true },
   );
@@ -121,6 +122,13 @@ ${NOSCRIPT}
 <button type="submit">Create a new passkey</button>
 </form>
 ${STATUS}
+<section id="passkeys" hidden aria-labelledby="passkeys-heading">
+<h2 id="passkeys-heading" tabindex="-1">Your new passkey is ready</h2>
+<p data-passkey-count tabindex="-1"></p>
+<p>If you don't recognise one of them, remove it. Whoever holds it can sign in as you.</p>
+<ul data-passkey-list></ul>
+<p><a data-continue href="/">Continue</a></p>
+</section>
 <section id="recovered" hidden aria-labelledby="recovered-heading">
 <h2 id="recovered-heading" tabindex="-1">Your new passkey is ready</h2>
 <p>Go back to Mosaic River and sign in with it.</p>
@@ -140,10 +148,13 @@ export function linkGonePage(again: { href: string; label: string }): string {
   );
 }
 
-export function verifyPage(token: string): string {
+export function verifyPage(token: string, who: { displayName: string | null; signup: boolean }): string {
   return page(
     "Confirm your email",
     `<h1>Confirm your email</h1>
+<p class="notice">${esc(who.signup ? CONFIRM_WARNING.signup : CONFIRM_WARNING.change)}</p>
+<p>${esc(nameLine(who.displayName))}</p>
+<p>If it was you, press the button to confirm. The address is how you get back in if you lose your passkey.</p>
 <form method="post" action="/verify">
 <input type="hidden" name="token" value="${esc(token)}">
 <button type="submit">Confirm my address</button>
@@ -160,6 +171,7 @@ export function changeEmailPage(): string {
     "Change your email address",
     `<h1>Change your email address</h1>
 <p>Enter the new address, then confirm with your passkey. We send a link to the new address; it becomes your recovery address once you open it. Your current address gets a notice.</p>
+<p>No recovery address on your Mosaic ID? Add one here the same way.</p>
 ${NOSCRIPT}
 <form id="change-email" data-passkey="change-email" novalidate>
 <p><label for="new-email">New email address</label>
@@ -196,4 +208,7 @@ button { font: inherit; padding: 0.5rem 1rem; border-radius: var(--id-radius); b
 .help, .optional { color: var(--id-muted); font-weight: 400; }
 .status:empty { display: none; }
 .status, .notice { padding: 0.5rem; border-left: 4px solid var(--id-accent); }
+ul[data-passkey-list] { list-style: none; padding: 0; }
+ul[data-passkey-list] li { display: flex; gap: var(--id-space); align-items: center; justify-content: space-between;
+  padding: 0.5rem 0; border-bottom: 1px solid var(--id-border); }
 `;

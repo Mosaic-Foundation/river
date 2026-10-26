@@ -336,8 +336,11 @@ test("check 36: an emailed link adds a new passkey to the same person and DID", 
 
   // The link registers the new authenticator's passkey and finishes the sign-in it started, into
   // the same River account (check 36, River part).
+  // With another passkey on the Mosaic ID, the page lists it first (item 5); Continue goes on.
   await page.goto(link);
-  const callback = await throughCallback(page, () => page.getByRole("button", { name: "Create a new passkey" }).click());
+  await page.getByRole("button", { name: "Create a new passkey" }).click();
+  await expect(page.getByText("Your Mosaic ID now has 2 passkeys: the one you just made and 1 other.")).toBeVisible();
+  const callback = await throughCallback(page, () => page.getByRole("link", { name: "Continue to Mosaic River" }).click());
   const { note, state: returned } = callbackParams(callback);
   expect(returned).toBe(state);
   expect(note.payload).toMatchObject({ sub: did, nonce });
@@ -517,4 +520,134 @@ test("identity pages: the script runs under the CSP with no violation; axe finds
     expect(reached.size, url).toBe(controls);
   }
   expect(violations).toEqual([]);
+});
+
+// Security review of 3a86e8f, item 5: who holds an address, and what a recovery shows.
+test.describe("item 5: email reservation and recovery", () => {
+  test("the confirm email and page say who started it and what to do if it wasn't you", async ({ page, request }) => {
+    await addAuthenticator(page);
+    const email = testEmail("item5confirm");
+    await signUp(page, email, "Ada Example");
+    const [message] = (await mailbox(request, email)).filter((m) => m.kind === "verify_email");
+    const warning =
+      "Someone started a Mosaic ID with this address. If it wasn't you, don't confirm. Just ignore this email and the address will be released in 24 hours.";
+    expect(message.text).toContain(warning);
+    expect(message.text).toContain("The Mosaic ID gave the name “Ada Example”.");
+    await page.goto(linkIn(message));
+    await expect(page.getByText(warning)).toBeVisible();
+    await expect(page.getByText("The Mosaic ID gave the name “Ada Example”.")).toBeVisible();
+    // Opening the link confirms nothing; the button does.
+    const before = await withAdmin(async (db) => (await db.query("SELECT email_verified_at FROM identity.people WHERE email = $1", [email])).rows[0]);
+    expect(before.email_verified_at).toBeNull();
+    await page.getByRole("button", { name: "Confirm my address" }).click();
+    await expect(page.getByRole("heading", { name: "Your address is confirmed" })).toBeVisible();
+  });
+
+  test("a sign-up with an address someone confirmed works, but sends its owner a notice, not a link", async ({ page, request }) => {
+    await addAuthenticator(page);
+    const email = testEmail("item5owner");
+    await signUpAndContinue(page, email);
+    await verifyEmail(page, request, email);
+
+    // Someone else, on another device, signs up with the same address: the same answer as ever.
+    const other = await page.context().browser()!.newContext();
+    const otherPage = await other.newPage();
+    await addAuthenticator(otherPage);
+    const { redirect } = await signUp(otherPage, email.toUpperCase());
+    expect(redirect).toContain("note=");
+    await expect(otherPage.locator("[data-reminder-text]")).toContainText("We sent a link to");
+    await other.close();
+
+    const kinds = (await mailbox(request, email)).map((m) => m.kind);
+    expect(kinds.filter((k) => k === "verify_email")).toHaveLength(1); // the owner's own, from before
+    expect(kinds).toContain("signup_attempt");
+    const holders = await withAdmin(async (db) =>
+      (await db.query("SELECT count(*)::int AS n FROM identity.people WHERE email = $1 AND email_verified_at IS NOT NULL", [email])).rows[0].n,
+    );
+    expect(holders).toBe(1);
+  });
+
+  test("changing to an address someone confirmed answers as for a free one, and sends a notice, not a link", async ({ page, request }) => {
+    const owner = await page.context().browser()!.newContext();
+    const ownerPage = await owner.newPage();
+    await addAuthenticator(ownerPage);
+    const taken = testEmail("item5taken");
+    await signUpAndContinue(ownerPage, taken);
+    await verifyEmail(ownerPage, request, taken);
+    await owner.close();
+
+    await addAuthenticator(page);
+    await signUpAndContinue(page, testEmail("item5prober"));
+    const answers: string[] = [];
+    for (const target of [taken, testEmail("item5free")]) {
+      await page.goto(`${identityURL}/account/email`);
+      await page.getByLabel("New email address").fill(target);
+      await page.getByRole("button", { name: "Confirm with your passkey" }).click();
+      await expect(page.getByRole("status")).toContainText("We sent a link to");
+      answers.push(((await page.getByRole("status").textContent()) ?? "").replace(/to \S+\./, "to ….").trim());
+    }
+    expect(answers[0]).toBe(answers[1]);
+    const kinds = (await mailbox(request, taken)).map((m) => m.kind);
+    expect(kinds.filter((k) => k === "verify_email")).toHaveLength(1); // the owner's own
+    expect(kinds).toContain("signup_attempt");
+  });
+
+  test("a Mosaic ID whose address was released says so plainly after sign-in, with a link to add one", async ({ page }) => {
+    await addAuthenticator(page);
+    const { did } = await signUpAndContinue(page, testEmail("item5released"));
+    // What the daily job does 24 hours on, for an address never confirmed.
+    await withAdmin((db) => db.query("UPDATE identity.people SET email = NULL WHERE did = $1", [did]));
+    await page.context().clearCookies();
+    await startFromRiver(page);
+    await page.getByRole("button", { name: "Sign in with your passkey" }).click();
+    await expect(page.getByRole("heading", { name: "Your Mosaic ID has no recovery address" })).toBeVisible();
+    await expect(page.getByText("If you lose your passkey, there is no way back in.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Add a recovery address" })).toHaveAttribute("href", "/account/email");
+    const callback = await throughCallback(page, () => page.getByRole("link", { name: "Continue to Mosaic River" }).click());
+    expect(callbackParams(callback).note.payload.sub).toBe(did);
+  });
+
+  test("after a recovery the page counts the passkeys and removes the others", async ({ page, request }) => {
+    let auth = await addAuthenticator(page);
+    const email = testEmail("item5recover");
+    const { did } = await signUpAndContinue(page, email);
+    await verifyEmail(page, request, email);
+    const [original] = await credentials(auth);
+
+    // A second device: the one that recovers. The first keeps its passkey (as a squatter would).
+    await removeAuthenticator(auth);
+    auth = await addAuthenticator(page);
+    await page.goto(`${identityURL}/recover`);
+    await page.getByLabel("Email address").fill(email);
+    await page.getByRole("button", { name: "Send me a link" }).click();
+    // Polled: once recovery mail goes out after the answer (item 6), it may lag the page.
+    await expect.poll(async () => (await mailbox(request, email)).filter((m) => m.kind === "recover").length).toBe(1);
+    const [recover] = (await mailbox(request, email)).filter((m) => m.kind === "recover");
+    await page.goto(linkIn(recover));
+    await page.getByRole("button", { name: "Create a new passkey" }).click();
+
+    await expect(page.getByRole("heading", { name: "Your new passkey is ready" })).toBeFocused();
+    await expect(page.getByText("Your Mosaic ID now has 2 passkeys: the one you just made and 1 other.")).toBeVisible();
+    const items = page.locator("[data-passkey-list] li");
+    await expect(items).toHaveCount(1);
+    await expect(items.first()).toContainText(/Passkey added \d{4}-\d{2}-\d{2}, (last used \d{4}-\d{2}-\d{2}|never used)/);
+    await items.first().getByRole("button", { name: /Remove the passkey added/ }).click();
+    await expect(page.getByRole("status")).toHaveText("Passkey removed.");
+    await expect(page.getByText("Your Mosaic ID now has 1 passkey: the one you just made.")).toBeVisible();
+    await expect(items).toHaveCount(0);
+
+    const rows = await withAdmin(async (db) =>
+      (
+        await db.query(
+          `SELECT k.credential_id,
+                  (SELECT count(*)::int FROM identity.audit_log a WHERE a.person_id = p.id AND a.action = 'passkey_removed') AS removed
+             FROM identity.people p JOIN identity.passkeys k ON k.person_id = p.id WHERE p.did = $1`,
+          [did],
+        )
+      ).rows,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0].credential_id).not.toBe(Buffer.from(original.credentialId, "base64").toString("base64url"));
+    expect(rows[0].removed).toBe(1);
+  });
 });

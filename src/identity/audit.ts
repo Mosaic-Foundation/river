@@ -12,7 +12,8 @@ export type AuditAction =
   | "recovered"
   | "email_verified"
   | "email_change_requested"
-  | "did_recovered";
+  | "did_recovered"
+  | "passkey_removed";
 
 export async function audit(
   db: Db,

@@ -9,7 +9,7 @@ import { env } from "../../config/env.js";
 import { getFetchGuard, type FetchGuard } from "../../shared/fetch/index.js";
 import { maskEmail } from "./address.js";
 
-export type EmailKind = "verify_email" | "recover" | "recovery_notice" | "email_change_notice";
+export type EmailKind = "verify_email" | "signup_attempt" | "recover" | "recovery_notice" | "email_change_notice";
 
 export interface OutgoingEmail {
   kind: EmailKind;
