@@ -3,7 +3,8 @@
 // CSP); this reads each form's data-* attributes, runs the WebAuthn ceremony with
 // @simplewebauthn/browser, and talks only to its own origin (connect-src 'self').
 //
-// Forms: #signin and #signup (authorize page), #recover (recovery link page), #change-email.
+// Forms: #signin and #signup (authorize page), #recover (recovery link page), #change-email,
+// #account (account page).
 // Every message shown comes from the server's JSON or from here, set with textContent.
 import {
   startAuthentication,
@@ -23,6 +24,14 @@ interface Answer {
   /** After a recovery: how many passkeys the Mosaic ID has, and the others, to remove. */
   passkeys?: { total: number; others: Array<{ id: string; added: string; lastUsed: string | null }> };
   request?: string;
+  /** The account page's answer (flows/account.ts AccountView). */
+  account?: {
+    displayName: string | null;
+    did: string;
+    email: string | null;
+    emailConfirmed: boolean;
+    passkeys: Array<{ added: string; lastUsed: string | null; current: boolean }>;
+  };
   /** Options JSON from @simplewebauthn/server, passed straight to @simplewebauthn/browser. */
   options?: PublicKeyCredentialCreationOptionsJSON | PublicKeyCredentialRequestOptionsJSON;
 }
@@ -232,11 +241,62 @@ async function changeEmail(form: HTMLFormElement): Promise<void> {
   say(result.message ?? "Done.");
 }
 
+async function showAccount(form: HTMLFormElement): Promise<void> {
+  const answer = await post("/account/options", {});
+  if (!answer.options || !answer.request) throw new Error("Something went wrong. Try again.");
+  say("Confirm with your passkey…");
+  const response = await startAuthentication({ optionsJSON: answer.options as PublicKeyCredentialRequestOptionsJSON });
+  const { account } = await post("/account/verify", { request: answer.request, response });
+  const section = document.getElementById("account-details");
+  if (!account || !section) throw new Error("Something went wrong. Try again.");
+  const field = <T extends HTMLElement>(name: string) => section.querySelector<T>(`[data-account-${name}]`);
+
+  const name = field("name");
+  if (name) name.textContent = account.displayName ? `Name: ${account.displayName}` : "No name set.";
+  const did = field("did");
+  if (did) did.textContent = account.did;
+
+  // The address says plainly where things stand, and the link fits: add, confirm, or change.
+  const email = field("email");
+  const emailLink = field<HTMLAnchorElement>("email-link");
+  if (email && emailLink) {
+    if (!account.email) {
+      email.textContent = "Your Mosaic ID has no recovery address. If you lose your passkey, there is no way back in.";
+      emailLink.textContent = "Add a recovery address";
+    } else if (!account.emailConfirmed) {
+      email.textContent = `${account.email}, not confirmed yet. Open the link we sent to confirm it.`;
+      emailLink.textContent = "Send the link again or use another address";
+    } else {
+      email.textContent = `${account.email}, confirmed.`;
+      emailLink.textContent = "Change your address";
+    }
+  }
+
+  const count = field("passkey-count");
+  if (count) count.textContent = account.passkeys.length === 1 ? "1 passkey." : `${account.passkeys.length} passkeys.`;
+  const list = field<HTMLUListElement>("passkeys");
+  if (list) {
+    list.replaceChildren(
+      ...account.passkeys.map((p) => {
+        const item = document.createElement("li");
+        const used = p.lastUsed ? `last used ${p.lastUsed}` : "never used";
+        item.textContent = `Passkey added ${p.added}, ${used}${p.current ? " (the one you just used)" : ""}`;
+        return item;
+      }),
+    );
+  }
+  form.hidden = true;
+  say("");
+  section.hidden = false;
+  section.querySelector<HTMLElement>("h2")?.focus();
+}
+
 const FLOWS: Record<string, (form: HTMLFormElement) => Promise<void>> = {
   signin: signIn,
   signup: signUp,
   recover,
   "change-email": changeEmail,
+  account: showAccount,
 };
 
 for (const form of document.querySelectorAll<HTMLFormElement>("form[data-passkey]")) {

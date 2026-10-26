@@ -8,7 +8,7 @@ import type { Db } from "../db/context.js";
 export const AUTH_REQUEST_TTL_MS = 10 * 60_000;
 export const TOKEN_TTL_MS = { recover: 15 * 60_000, verify_email: 24 * 60 * 60_000 } as const;
 
-export type RequestPurpose = "authorize" | "recover" | "change_email";
+export type RequestPurpose = "authorize" | "recover" | "change_email" | "account";
 export type TokenPurpose = keyof typeof TOKEN_TTL_MS;
 
 // ---------------------------------------------------------------------------------------------
@@ -189,6 +189,20 @@ export interface PasskeySummary {
   id: string;
   created_at: Date;
   last_used_at: Date | null;
+}
+
+/** The person's passkeys, oldest first, and which one has this credential id (the account page). */
+export async function passkeysOf(
+  db: Db,
+  personId: string,
+  currentCredentialId: string,
+): Promise<Array<PasskeySummary & { current: boolean }>> {
+  const { rows } = await db.query<PasskeySummary & { current: boolean }>(
+    `SELECT id, created_at, last_used_at, credential_id = $2 AS current FROM identity.passkeys
+      WHERE person_id = $1 ORDER BY created_at, id`,
+    [personId, currentCredentialId],
+  );
+  return rows;
 }
 
 /** The person's passkeys, oldest first, except the one with this credential id. */

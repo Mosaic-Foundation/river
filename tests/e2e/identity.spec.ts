@@ -486,6 +486,62 @@ test("change email: a fresh passkey check, a link to the new address, a notice t
   expect((await mailbox(request, next)).filter((m) => m.kind === "verify_email")).toHaveLength(1);
 });
 
+test.describe("the account page: address and passkeys after a passkey check", () => {
+  const showAccount = async (page: Page) => {
+    await page.goto(`${identityURL}/account`);
+    await page.getByRole("button", { name: "Show my account" }).click();
+    await expect(page.getByRole("heading", { name: "Your Mosaic ID" })).toBeFocused();
+  };
+
+  test("an unconfirmed address, then confirmed; the passkey with its dates; the DID and name", async ({ page, request }) => {
+    await addAuthenticator(page);
+    const email = testEmail("account");
+    const { did } = await signUp(page, email, "Ada Account").then(async ({ redirect }) => {
+      const url = await throughCallback(page, () => page.goto(redirect));
+      return { did: callbackParams(url).note.payload.sub };
+    });
+    const today = new Date().toISOString().slice(0, 10);
+
+    await showAccount(page);
+    const details = page.locator("#account-details");
+    await expect(details.getByText(`${email}, not confirmed yet. Open the link we sent to confirm it.`)).toBeVisible();
+    await expect(details.getByRole("link", { name: "Send the link again or use another address" })).toHaveAttribute("href", "/account/email");
+    await expect(details.getByText("Name: Ada Account")).toBeVisible();
+    await expect(details.locator("code")).toHaveText(did);
+    await expect(details.getByText("1 passkey.")).toBeVisible();
+    await expect(details.getByRole("listitem")).toHaveText([`Passkey added ${today}, last used ${today} (the one you just used)`]);
+
+    await verifyEmail(page, request, email);
+    await showAccount(page);
+    await expect(details.getByText(`${email}, confirmed.`)).toBeVisible();
+    await expect(details.getByRole("link", { name: "Change your address" })).toHaveAttribute("href", "/account/email");
+  });
+
+  test("no recovery address: says so plainly and links to adding one; two passkeys, one never used", async ({ page }) => {
+    const auth = await addAuthenticator(page);
+    const { did } = await signUpAndContinue(page, testEmail("account-none"));
+    await withAdmin((db) => db.query("UPDATE identity.people SET email = NULL WHERE did = $1", [did]));
+    // A second passkey on file, added a week ago and never used.
+    await withAdmin((db) =>
+      db.query(
+        `INSERT INTO identity.passkeys (person_id, credential_id, public_key, created_at)
+         SELECT id, $2, '\\x00', now() - interval '7 days' FROM identity.people WHERE did = $1`,
+        [did, `e2e-${opaque()}`.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40).padEnd(20, "x")],
+      ),
+    );
+    await showAccount(page);
+    const details = page.locator("#account-details");
+    await expect(details.getByText("Your Mosaic ID has no recovery address. If you lose your passkey, there is no way back in.")).toBeVisible();
+    await expect(details.getByRole("link", { name: "Add a recovery address" })).toHaveAttribute("href", "/account/email");
+    await expect(details.getByText("2 passkeys.")).toBeVisible();
+    const items = details.getByRole("listitem");
+    await expect(items).toHaveCount(2);
+    await expect(items.filter({ hasText: "never used" })).toHaveCount(1);
+    await expect(items.filter({ hasText: "(the one you just used)" })).toHaveCount(1);
+    expect((await credentials(auth)).length).toBe(1);
+  });
+});
+
 test("identity pages: the script runs under the CSP with no violation; axe finds nothing serious; Tab reaches every control", async ({ page }) => {
   const violations: string[] = [];
   page.on("console", (msg) => {
@@ -494,6 +550,7 @@ test("identity pages: the script runs under the CSP with no violation; axe finds
   const pages = [
     { url: authorizeUrl(), script: true },
     { url: `${identityURL}/account/email`, script: true },
+    { url: `${identityURL}/account`, script: true },
     { url: `${identityURL}/recover`, script: false },
     { url: `${identityURL}/`, script: false },
   ];

@@ -173,6 +173,42 @@ describe("passkey options (spec 4.6)", () => {
   });
 });
 
+describe("the account page (address and passkeys after a fresh passkey check)", () => {
+  it("serves a page with one button, which loads the passkey script", async () => {
+    const res = await fetch(`${ID}/account`);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain('<form id="account" data-passkey="account">');
+    expect(html).toContain('<button type="submit">Show my account</button>');
+    expect(html).toContain('<script type="module" src="/passkey.js"></script>');
+    // Nothing about anyone is on the page until a passkey says whose it is.
+    expect(html).not.toMatch(/@example\.test|did:webvh/);
+    expect((await fetch(`${ID}/`)).ok).toBe(true);
+    expect(await (await fetch(`${ID}/`)).text()).toContain('<a href="/account">Your account</a>');
+  });
+
+  it("options: a fresh 32-byte challenge, any passkey of this site, user verification required", async () => {
+    const res = await post("/account/options", {});
+    expect(res.status).toBe(200);
+    const { request, options } = await res.json();
+    expect(request).toMatch(/^[0-9a-f-]{36}$/);
+    expect(options).toMatchObject({ rpId: "localhost", allowCredentials: [], userVerification: "required" });
+    expect(Buffer.from(options.challenge, "base64url")).toHaveLength(32);
+  });
+
+  it("refuses malformed, unknown and other ceremonies' requests, and other origins", async () => {
+    expect((await post("/account/verify", { request: "not-a-uuid", response: {} })).status).toBe(400);
+    const { request } = await (await post("/account/options", {})).json();
+    const junk = await post("/account/verify", { request, response: { id: "x".repeat(20), rawId: "x", type: "public-key", response: {} } });
+    expect(junk.status).toBe(400);
+    expect((await junk.json()).error).toBe("unknown_passkey");
+    // A request made for another ceremony can't show an account (and the reverse is checked in e2e).
+    const signin = await newRequest();
+    expect((await post("/account/verify", { request: signin, response: { id: "x".repeat(20), rawId: "x", type: "public-key", response: {} } })).status).toBe(400);
+    expect((await post("/account/options", {}, { origin: "https://evil.example" })).status).toBe(403);
+  });
+});
+
 describe("Lost your passkey? (check 36)", () => {
   it("answers the same for an unknown address and sends nothing", async () => {
     const email = `unknown-${randomBytes(4).toString("hex")}@example.test`;
@@ -224,11 +260,13 @@ describe("check 28: no private key material in any answer", () => {
         fetch(`${ID}/`),
         fetch(`${ID}/recover`),
         fetch(`${ID}/account/email`),
+        fetch(`${ID}/account`),
         fetch(`${ID}/identity.css`),
         fetch(`${ID}/passkey.js`),
         post("/authorize/signin/options", { request }),
         post("/authorize/signup/options", { request, email: `k-${randomBytes(3).toString("hex")}@example.test` }),
         post("/account/email/options", { email: "x@example.test" }),
+        post("/account/options", {}),
       ].map(async (res) => (await res).text()),
     );
     for (const body of bodies) {

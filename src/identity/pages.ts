@@ -1,5 +1,5 @@
 // The identity host's server-rendered pages (spec Appendix A): authorize, sign up (on the
-// authorize page), recover, verify email and change email. Semantic markup, a label on every
+// authorize page), recover, verify email, change email and the account page. Semantic markup, a label on every
 // input, keyboard-reachable controls, no inline script or style (Appendix B CSP). Every value that
 // reaches the markup goes through esc(). The passkey ceremonies run in /passkey.js, which reads
 // its inputs from data-* attributes.
@@ -48,6 +48,7 @@ export function homePage(): string {
     `<h1>Mosaic ID</h1>
 <p>Mosaic ID signs you in to Mosaic River with a passkey. Your River sees your DID, never your email address.</p>
 <ul>
+<li><a href="/account">Your account</a></li>
 <li><a href="/recover">Lost your passkey?</a></li>
 <li><a href="/account/email">Change your email address</a></li>
 </ul>`,
@@ -183,6 +184,32 @@ ${STATUS}`,
   );
 }
 
+export function accountPage(): string {
+  return page(
+    "Your account",
+    `<h1>Your account</h1>
+<p>Confirm with your passkey to see your recovery address and your passkeys. Mosaic ID keeps no session, so it asks each time.</p>
+${NOSCRIPT}
+<form id="account" data-passkey="account">
+<button type="submit">Show my account</button>
+</form>
+${STATUS}
+<section id="account-details" hidden aria-labelledby="account-heading">
+<h2 id="account-heading" tabindex="-1">Your Mosaic ID</h2>
+<p data-account-name></p>
+<p>Your DID: <code data-account-did></code></p>
+<h3>Recovery address</h3>
+<p data-account-email></p>
+<p><a data-account-email-link href="/account/email">Change your address</a></p>
+<h3>Passkeys</h3>
+<p data-account-passkey-count></p>
+<ul data-passkey-list data-account-passkeys></ul>
+<p class="help">Lost one? Use “Lost your passkey?” to add a new one by email.</p>
+</section>`,
+    { passkey: true },
+  );
+}
+
 /** Uses only the theme-free basics; the identity host has no theme tokens of its own yet. */
 export const IDENTITY_CSS = `:root {
   --id-bg: #fbfaf7; --id-fg: #1f2328; --id-muted: #57606a; --id-accent: #2f6fa8; --id-on-accent: #ffffff; --id-border: #d0d7de;
@@ -209,6 +236,7 @@ button { font: inherit; padding: 0.5rem 1rem; border-radius: var(--id-radius); b
 .status:empty { display: none; }
 .status, .notice { padding: 0.5rem; border-left: 4px solid var(--id-accent); }
 ul[data-passkey-list] { list-style: none; padding: 0; }
+code { overflow-wrap: anywhere; }
 ul[data-passkey-list] li { display: flex; gap: var(--id-space); align-items: center; justify-content: space-between;
   padding: 0.5rem 0; border-bottom: 1px solid var(--id-border); }
 `;
