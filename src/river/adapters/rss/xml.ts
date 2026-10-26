@@ -7,7 +7,11 @@
 //   references are decoded;
 // - fetch anything (DTDs, schemas, stylesheets);
 // - grow past MAX_DEPTH nesting levels or MAX_ELEMENTS elements (the fetch guard already caps the
-//   body at 2 MB).
+//   body at 2 MB), or read more than MAX_NAMESPACES namespace declarations (later ones are ignored,
+//   so their prefixes read as written);
+// - take more than linear time on hostile input: a "<" with no ">" after it ends the scan (the rest
+//   of the document is text), and after one tag whose quotes never close, tags end at the next ">"
+//   so no later tag rescans to the end of the document.
 //
 // Names are canonical: elements in the namespaces feeds use get fixed prefixes whatever prefix
 // the document chose (`itunes:duration`, `content:encoded`, `media:thumbnail`, `atom:entry`,
@@ -34,6 +38,7 @@ export class XmlError extends Error {
 
 export const MAX_DEPTH = 100;
 export const MAX_ELEMENTS = 50_000;
+export const MAX_NAMESPACES = 64;
 
 /** Namespace URIs (scheme and trailing slash ignored) and the prefix each always reads as. */
 const KNOWN_NAMESPACES: Readonly<Record<string, string>> = {
@@ -108,19 +113,25 @@ function declarationEnd(text: string, from: number): number {
   return -1;
 }
 
+/** prefix -> namespace URI in scope ("" is the default namespace). */
+type Namespaces = ReadonlyMap<string, string>;
+
 interface Frame {
   el: XmlElement;
   /** The tag name as written, to match its end tag. */
   rawName: string;
-  /** prefix -> namespace URI in scope ("" is the default namespace). */
-  ns: Record<string, string>;
+  /** Shared with the parent frame unless this element declares a namespace. */
+  ns: Namespaces;
 }
 
-function canonicalName(rawName: string, ns: Record<string, string>): { name: string; local: string } {
+/** A tag name at the start of a tag (sticky: set lastIndex to the character after "<"). */
+const TAG_NAME = /[A-Za-z_][\w.:-]*/y;
+
+function canonicalName(rawName: string, ns: Namespaces): { name: string; local: string } {
   const colon = rawName.indexOf(":");
   const prefix = colon === -1 ? "" : rawName.slice(0, colon);
   const local = colon === -1 ? rawName : rawName.slice(colon + 1);
-  const uri = ns[prefix];
+  const uri = ns.get(prefix);
   const known = uri === undefined ? undefined : knownPrefix(uri);
   if (known !== undefined) return { name: known ? `${known}:${local}` : local, local };
   return { name: prefix ? `${prefix}:${local}` : local, local };
@@ -132,8 +143,11 @@ function canonicalName(rawName: string, ns: Record<string, string>): { name: str
  */
 export function parseXml(text: string): XmlElement {
   const doc: XmlElement = { name: "#document", local: "#document", attrs: {}, children: [] };
-  const stack: Frame[] = [{ el: doc, rawName: "", ns: {} }];
+  const stack: Frame[] = [{ el: doc, rawName: "", ns: new Map() }];
   let elements = 0;
+  let namespaces = 0;
+  // Whether a ">" inside quotes is skipped when finding where a tag ends (see tagEnd).
+  let quoteAware = true;
   let i = text.charCodeAt(0) === 0xfeff ? 1 : 0;
 
   const top = (): Frame => stack[stack.length - 1] as Frame;
@@ -190,10 +204,24 @@ export function parseXml(text: string): XmlElement {
       continue;
     }
 
-    const end = tagEnd(text, lt + 1);
-    const nameMatch = /^[A-Za-z_][\w.:-]*/.exec(text.slice(lt + 1, lt + 200));
-    if (end === -1 || !nameMatch) {
+    TAG_NAME.lastIndex = lt + 1;
+    const nameMatch = TAG_NAME.exec(text);
+    if (!nameMatch) {
       // A stray "<" in text (sloppy feeds): keep it as text.
+      addText("<");
+      i = lt + 1;
+      continue;
+    }
+    const end = quoteAware ? tagEnd(text, lt + 1) : text.indexOf(">", lt + 1);
+    if (end === -1) {
+      if (!quoteAware || text.indexOf(">", lt + 1) === -1) {
+        // No ">" anywhere after this: the rest is text, and no later "<" can start a tag either.
+        addText(decodeEntities(text.slice(lt)));
+        break;
+      }
+      // A quote in this tag never closes. Keep the "<" as text, and from here on end tags at the
+      // next ">": scanning quotes again from every later "<" is what made this quadratic.
+      quoteAware = false;
       addText("<");
       i = lt + 1;
       continue;
@@ -204,10 +232,12 @@ export function parseXml(text: string): XmlElement {
     if (selfClosing) inner = inner.trimEnd().slice(0, -1);
     const attrs = parseAttributes(inner);
 
-    const ns = { ...top().ns };
+    let ns = top().ns;
     for (const [name, value] of Object.entries(attrs)) {
-      if (name === "xmlns") ns[""] = value;
-      else if (name.startsWith("xmlns:")) ns[name.slice(6)] = value;
+      if (name !== "xmlns" && !name.startsWith("xmlns:")) continue;
+      if (++namespaces > MAX_NAMESPACES) break;
+      if (ns === top().ns) ns = new Map(ns);
+      (ns as Map<string, string>).set(name === "xmlns" ? "" : name.slice(6), value);
     }
     elements++;
     if (elements > MAX_ELEMENTS) throw new XmlError("Too many elements");
