@@ -64,6 +64,11 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, email reservation (security review item 5): API db `emailReservation` (new; also
+  calls the identity dev server for `/verify` and sign-up options); API db `identity`
+  (`email_in_use` false while unverified); e2e `identity.spec.ts` (confirm wording and display
+  name, a taken address's notice, the no-address reminder, recovery's passkey list and Remove;
+  check 36 presses Continue after the list).
 - 2026-10-26, follow caps (security review item 3): API db `followCap` (new: the 2,000 cap by
   the follow box, a stream rule and an import; mutes allowed; an over-cap import stores nothing;
   two concurrent imports can't both pass); API `blueskyImport` (preview 20 and import 10 per
