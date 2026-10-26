@@ -20,9 +20,27 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Refresh budget: every adapter capped per feed open — 2026-10-26
+
+- Branch / PR: claude/refresh-budget → #56 (merge when ci is green)
+- Migrations: none
+
+**What it does.** Security review of 3a86e8f, item 2. `chooseForRefresh` now caps every adapter,
+not only Bluesky. One open claims at most 12 stale spaces each of hubs, fediverse accounts and
+feeds (`OTHER_REFRESH_CAP`), never-fetched first and then the longest waiting, so every space
+gets its turn over later opens. Spaces fetched within the claim's 120 s floor are skipped before
+the cap and don't use up a slot. DECISIONS.md has the entry.
+
+**Keys.** None (`OTHER_REFRESH_CAP = 12`, `CLAIM_FLOOR_MS = 120_000` in `rotation.ts`).
+
+**Tests.** Unit `blueskyRotation`: 2,000 feeds, 2,000 fediverse accounts and 50 hubs give 12 of
+each, in rotation order, and the next open reaches the next ones. A space inside the floor is
+skipped. Both failed before (4,050 chosen). `npm run check` (after merging main with #55): 51 files,
+719 tests passed; UI built.
+API (fresh stack): 17 files, 174 passed.
 ## Feed reader: linear time on hostile feeds — 2026-10-26
 
-- Branch / PR: claude/zealous-planck-pyye2b → PR (merge when ci is green)
+- Branch / PR: claude/zealous-planck-pyye2b → #55 (merged)
 - Migrations: none
 
 **What it does.** Security review of 3a86e8f, item 1. `parseXml` checks a tag's name before it
