@@ -64,6 +64,10 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, small hardening (security review item 8): unit `env` (NODE_ENV=production refusals,
+  capture refused in production); unit `identityHost` (Permissions-Policy and COOP in both
+  vercel.json files and the identity pages); unit `workflows` (new: checkout credentials, no
+  expressions in run scripts, deploy-migrations' secrets at step level).
 - 2026-10-26, row security (security review item 7): API db `rowSecurity` (new: accounts updates
   need an account in context; spaces and streams identity columns refused; written columns
   allowed; loadViewer by id). API 189.

@@ -3,7 +3,7 @@ import { checkEnv, env } from "../../src/config/env.js";
 
 const NAMES = [
   "APP", "PORT", "VERCEL", "VERCEL_ENV", "FETCH_FIXTURES_DIR", "TEST_ROUTES", "TEST_CLOCK_NOW", "TEST_DID_LOOPBACK", "EMAIL_TRANSPORT",
-  "TRUSTED_DID_HOSTS", "INSTANCE_HOST_ALIASES",
+  "TRUSTED_DID_HOSTS", "INSTANCE_HOST_ALIASES", "NODE_ENV",
 ];
 const saved = Object.fromEntries(NAMES.map((name) => [name, process.env[name]]));
 
@@ -88,6 +88,23 @@ describe("env", () => {
   it.each(Object.keys(TEST_VALUES))("refuses %s when VERCEL is set", (name) => {
     set({ VERCEL: "1", [name]: TEST_VALUES[name] });
     expect(() => checkEnv()).toThrow(new RegExp(`${name} is for local runs and CI only`));
+  });
+
+  // Security review of 3a86e8f, item 8: a production build anywhere, not only on Vercel.
+  it.each(Object.keys(TEST_VALUES))("refuses %s when NODE_ENV is production", (name) => {
+    set({ NODE_ENV: "production", [name]: TEST_VALUES[name] });
+    expect(() => checkEnv()).toThrow(new RegExp(`${name} is for local runs and CI only; it must not be set with NODE_ENV=production`));
+  });
+
+  it("refuses EMAIL_TRANSPORT=capture in production, and allows it on previews and locally", () => {
+    set({ EMAIL_TRANSPORT: "capture", VERCEL_ENV: "production" });
+    expect(() => checkEnv()).toThrow(/EMAIL_TRANSPORT=capture is for tests/);
+    set({ EMAIL_TRANSPORT: "capture", VERCEL_ENV: "preview" });
+    expect(env.emailTransport).toBe("capture");
+    set({ EMAIL_TRANSPORT: "capture" });
+    expect(() => checkEnv()).not.toThrow();
+    set({ EMAIL_TRANSPORT: "resend", VERCEL_ENV: "production" });
+    expect(env.emailTransport).toBe("resend");
   });
 
   it("starts on Vercel without the test-only variables", () => {

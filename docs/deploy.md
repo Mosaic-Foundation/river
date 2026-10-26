@@ -13,9 +13,17 @@ For Adam: the steps a thread can't take (they need the Vercel and Supabase dashb
 - [ ] `pg_cron` is enabled and the daily job is listed (`SELECT * FROM cron.job`).
 - [ ] The project isn't paused (free projects pause after about a week idle).
 
+## Previews
+
+Vercel previews no longer have `DATABASE_URL` or `SESSION_SECRET`, by design (2026-10-26). A
+preview builds and serves the UI, but its pages load no data and nobody can sign in there. Check a
+change with CI (`ci`: unit, API against a local Supabase stack, and e2e) and locally
+(`npm run check`, `npm run test:api`, `npm run test:e2e`), not with a preview.
+
 ## Vercel project `river` (repo root)
 
-Set for Production and Preview:
+Set for Production and Preview, except `DATABASE_URL` and `SESSION_SECRET`: Production only (see
+Previews):
 
 | Variable | Value |
 | --- | --- |
@@ -29,7 +37,8 @@ Set for Production and Preview:
 | `INSTANCE_HOST_ALIASES` | the River's vercel.app hosts, until river.mosaic.social resolves |
 
 Never set: `FETCH_FIXTURES_DIR`, `TEST_ROUTES`, `TEST_CLOCK_NOW`, `TEST_DID_LOOPBACK` (the app
-refuses to start with them on Vercel), `PORT`, `VERCEL_ENV` (Vercel sets it).
+refuses to start with them on Vercel or with `NODE_ENV=production`), `PORT`, `VERCEL_ENV` (Vercel
+sets it).
 
 ## Vercel project `mosaic-id` (Root Directory `identity/`)
 
@@ -46,11 +55,12 @@ Set for Production and Preview. Only this project holds `IDENTITY_MASTER_KEY` an
 | `RP_ID` | `id.mosaic.social` |
 | `IDENTITY_PUBLIC_ORIGIN` | `https://id.mosaic.social` |
 | `RIVER_CLIENT_ORIGINS` | `https://river.mosaic.social` (exact origins, comma-separated) |
-| `EMAIL_TRANSPORT` | `resend` (or `log` until Resend's DNS records are in) |
+| `EMAIL_TRANSPORT` | `resend` (or `log` until Resend's DNS records are in); `capture` is refused in Production |
 | `RESEND_API_KEY` | from Resend |
 | `EMAIL_FROM` | `Mosaic ID <id@mosaic.social>` |
 
-Never set: `FETCH_FIXTURES_DIR`, `TEST_ROUTES`, `PORT`.
+Never set: `FETCH_FIXTURES_DIR`, `TEST_ROUTES`, `PORT` (the test-only ones are refused on Vercel
+and with `NODE_ENV=production`).
 
 ## DNS and after
 

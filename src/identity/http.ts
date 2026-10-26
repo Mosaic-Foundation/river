@@ -12,6 +12,9 @@ export const IDENTITY_CSP =
   "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:; font-src 'self'; " +
   "connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
+/** No page here uses the camera, microphone, location or payments (vercel.json sends the same). */
+export const PERMISSIONS_POLICY = "camera=(), microphone=(), geolocation=(), payment=()";
+
 export function securityHeaders(_req: Request, res: Response, next: NextFunction): void {
   res.setHeader("Content-Security-Policy", IDENTITY_CSP);
   // Emailed tokens travel in URLs; never send them to another origin as a Referer. (Not
@@ -20,6 +23,7 @@ export function securityHeaders(_req: Request, res: Response, next: NextFunction
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Permissions-Policy", PERMISSIONS_POLICY);
   next();
 }
 
