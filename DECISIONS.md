@@ -356,6 +356,23 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-26 — 2,000 follows per account; the Bluesky import rate-limited (security review item 3)
+- Decision: an account follows at most 2,000 spaces and streams (`MAX_FOLLOWS` in
+  `src/river/following/service.ts`). The count is the rows in `river.follows` with `rule = 'follow'`
+  and no `ended_at`. Mutes and Ended rows don't count, so a member at the cap can still mute.
+  `enforceFollowCap` runs inside the follow box's, a stream rule's and an import's own
+  transaction, after their inserts. An advisory lock on the account makes concurrent changes take
+  turns, so a refusal rolls back the whole change and two imports at once can't both pass. An
+  import that would go over is refused whole, with how much room is left. A partial import would
+  leave a member unsure which accounts were followed. Seed copies at sign-up aren't checked
+  (a handful, chosen by the instance). The Bluesky preview is limited to 20 per 10 minutes per
+  account, and the import to 10 an hour (`src/river/rateLimit.ts`; 429 with a sentence). Like the
+  identity host's limits, they live in each function instance's memory.
+- Why: each follow is a space the refresh rotates through and the feed query joins. The import
+  reads up to 10 AppView pages a time, and nothing bounded either.
+- Alternatives: counting every rule (mutes too) would refuse a mute at the cap. A durable limit
+  table would need a migration. The River has no paid limiter service, and these routes are
+  members-only.
 ## 2026-10-26 — Every adapter is capped per feed open (security review item 2)
 - Decision: each feed open claims at most 12 stale spaces of each non-Bluesky adapter
   (`OTHER_REFRESH_CAP` in `src/river/feed/rotation.ts`), on top of Bluesky's 12. Stale means what

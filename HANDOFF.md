@@ -20,9 +20,30 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Follow caps: 2,000 per account; the Bluesky import rate-limited — 2026-10-26
+
+- Branch / PR: claude/follow-caps → #57 (merge when ci is green)
+- Migrations: none
+
+**What it does.** Security review of 3a86e8f, item 3. An account follows at most 2,000 spaces and
+streams (mutes don't count). The cap is enforced inside the follow box's, stream rule's and
+import's own transactions, under a per-account advisory lock. Going over is a 409 `follow_limit`
+with a sentence ("…Unfollow some on the Following page, then try again"); an import says how much
+room is left and stores nothing. `POST /follow/bluesky/preview` allows 20 per 10 minutes per
+account and `/import` 10 an hour (429 `rate_limited`, `Retry-After`), through a new in-memory
+limiter, `src/river/rateLimit.ts`. DECISIONS.md has the entry. The UI already shows these messages.
+
+**Keys.** None.
+
+**Tests.** API db `followCap` (new): 2,000 then refusals by the follow box, a stream rule and an
+import; a mute still allowed; an over-cap import stores nothing; two concurrent imports of 1,500
+leave exactly one. API `blueskyImport`: the 21st preview and 11th import are 429, and another member
+isn't affected. Unit `riverRateLimit`. All new ones failed before (no cap; both concurrent imports
+stored, 3,000). `npm run check` (after merging main with #55 and #56): 52 files, 720 tests passed;
+UI built. API: 18 files, 178 passed.
 ## Refresh budget: every adapter capped per feed open — 2026-10-26
 
-- Branch / PR: claude/refresh-budget → #56 (merge when ci is green)
+- Branch / PR: claude/refresh-budget → #56 (merged)
 - Migrations: none
 
 **What it does.** Security review of 3a86e8f, item 2. `chooseForRefresh` now caps every adapter,

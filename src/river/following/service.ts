@@ -21,6 +21,8 @@ import { addressOf, kindLabel } from "./resolve.js";
 export const QUIET_DAYS = 90;
 /** Known streams the Following page lists per hub space (newest first), besides those with rules. */
 export const STREAMS_PER_SPACE = 25;
+/** Most follows in effect (whole spaces and single streams; mutes don't count) per account. */
+export const MAX_FOLLOWS = 2000;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -41,6 +43,40 @@ export class FollowingError extends Error {
 }
 
 export type Rule = "follow" | "mute";
+
+/**
+ * Refuses, with a sentence for the member, a change that leaves the account following more than
+ * MAX_FOLLOWS. Runs inside the change's own transaction, after its inserts, so a refusal rolls
+ * the whole change back. The advisory lock makes one account's transactions take turns here, and
+ * under READ COMMITTED the count (a new statement) then sees what the other one committed, so two
+ * imports at once can't both slip under the cap.
+ */
+export async function enforceFollowCap(db: Db, adding = 1): Promise<void> {
+  await db.query(
+    "SELECT pg_advisory_xact_lock(hashtextextended('river.follows:' || current_setting('app.account_id', true), 0))",
+  );
+  const { rows } = await db.query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM river.follows
+      WHERE account_id = river.current_account_id() AND rule = 'follow' AND ended_at IS NULL`,
+  );
+  const count = rows[0]?.n ?? 0;
+  if (count <= MAX_FOLLOWS) return;
+  const limit = MAX_FOLLOWS.toLocaleString("en-US");
+  if (adding > 1) {
+    const room = Math.max(0, MAX_FOLLOWS - (count - adding));
+    throw new FollowingError(
+      409,
+      "follow_limit",
+      `This would follow ${adding.toLocaleString("en-US")} more, and you can follow at most ${limit} ` +
+        `(room for ${room.toLocaleString("en-US")} more). Unfollow some on the Following page, then try again.`,
+    );
+  }
+  throw new FollowingError(
+    409,
+    "follow_limit",
+    `You're following ${limit} spaces and streams, the most one account can. Unfollow some on the Following page, then try again.`,
+  );
+}
 
 /** Ensures the stream row exists (shared) and returns its id; a known title is kept. */
 export async function ensureStream(db: Db, spaceId: string, key: string, title?: string | null): Promise<string> {
@@ -80,6 +116,7 @@ export async function setStreamRule(db: Db, streamId: string, rule: Rule): Promi
         [stream.space_id, streamId, rule],
       );
   await db.query("SELECT river.mark_stream_follows_ended($1)", [streamId]);
+  if (rule === "follow") await enforceFollowCap(db);
   return { ruleId: rows[0]!.id, spaceId: stream.space_id };
 }
 
@@ -99,6 +136,7 @@ export async function followSpace(db: Db, spaceId: string): Promise<string> {
          RETURNING id`,
         [spaceId],
       );
+  await enforceFollowCap(db);
   return rows[0]!.id;
 }
 
@@ -148,6 +186,7 @@ export async function followSpaces(
       [[...spaceIds], [...circleIds]],
     );
   }
+  if (rowCount) await enforceFollowCap(db, rowCount);
   return rowCount ?? 0;
 }
 

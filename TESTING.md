@@ -64,6 +64,10 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, follow caps (security review item 3): API db `followCap` (new: the 2,000 cap by
+  the follow box, a stream rule and an import; mutes allowed; an over-cap import stores nothing;
+  two concurrent imports can't both pass); API `blueskyImport` (preview 20 and import 10 per
+  account, then 429); unit `riverRateLimit` (new). Unit 720, API 178.
 - 2026-10-26, refresh budget (security review item 2): unit `blueskyRotation` caps every other
   adapter per open (2,000 feeds, 2,000 fediverse accounts and 50 hubs give 12 each, in rotation
   order, then the next 12), and skips spaces inside the claim's 120 s floor. Unit 719.

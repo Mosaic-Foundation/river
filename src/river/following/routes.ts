@@ -17,7 +17,9 @@
 //   PUT    /circles/:id/spaces/:spaceId
 //   DELETE /circles/:id/spaces/:spaceId
 //
-// Visitors get 401 "sign_in_required"; the UI shows them a sign-up prompt instead.
+// Visitors get 401 "sign_in_required"; the UI shows them a sign-up prompt instead. A member follows
+// at most MAX_FOLLOWS (409 "follow_limit"), and the Bluesky preview and import are rate-limited
+// per account (429 "rate_limited").
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { forAccount, type RiverDb } from "../../db/context.js";
 import { getFetchGuard } from "../../shared/fetch/index.js";
@@ -29,6 +31,7 @@ import { riverNow } from "../clock.js";
 import { refreshSpaces, type RefreshDeps } from "../feed/refresh.js";
 import { upsertSpaces } from "../feed/store.js";
 import { requireInstance, type Instance } from "../instances.js";
+import { limitBy } from "../rateLimit.js";
 import { addCircleMember, createCircle, deleteCircle, removeCircleMember, updateCircle } from "./circles.js";
 import { followErrorMessage, previewView, resolveInput } from "./resolve.js";
 import {
@@ -157,6 +160,7 @@ function route(fn: Handler) {
 export function followingRoutes(deps: RefreshDeps = {}): Router {
   const router = Router();
   const members = [requireInstance(), readSession(), requireMember()];
+  const perAccount = (res: Response) => member(res).viewer.accountId;
 
   // The preview (spec F6): resolves through the adapters and the fetch guard; stores nothing.
   // A POST so a page elsewhere can't make the River fetch addresses (Origin is checked).
@@ -196,6 +200,7 @@ export function followingRoutes(deps: RefreshDeps = {}): Router {
   router.post(
     "/follow/bluesky/preview",
     ...members,
+    limitBy("blueskyPreview", perAccount),
     route(async (req, res) => {
       const listing = await readFollows(deps.guard ?? getFetchGuard(), importInput(body(req)));
       const removals = await inAccount(res, (db) => removalsFor(db, listing));
@@ -209,6 +214,7 @@ export function followingRoutes(deps: RefreshDeps = {}): Router {
   router.post(
     "/follow/bluesky/import",
     ...members,
+    limitBy("blueskyImport", perAccount),
     route(async (req, res) => {
       const raw = body(req);
       const { circleIds } = parseFollowRequest({ circleIds: raw.circleIds });

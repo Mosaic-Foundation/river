@@ -349,3 +349,21 @@ describe("follow origins, and an import offering only its own follows", () => {
     expect(page.spaces.find((s) => s.name === "Old Follow")?.origin).toBeNull();
   });
 });
+
+describe("Import from Bluesky is rate-limited per account (security review item 3)", () => {
+  it("answers 429 with a sentence after 20 previews or 10 imports, for that account only", async () => {
+    const busy = await logs.signIn();
+    // An empty input is refused (422) after the limit counts it, so these cost no fetches.
+    for (let i = 0; i < 20; i++) expect((await call("POST", "/follow/bluesky/preview", { input: "" }, busy)).status).toBe(422);
+    const preview = await call("POST", "/follow/bluesky/preview", { input: "@eff.org" }, busy);
+    expect(preview.status).toBe(429);
+    expect(preview.headers.get("retry-after")).toBe("600");
+    expect(((await preview.json()) as { error: string; message: string }).message).toMatch(/Wait a few minutes/);
+
+    for (let i = 0; i < 10; i++) expect((await call("POST", "/follow/bluesky/import", { input: "" }, busy)).status).toBe(422);
+    expect((await call("POST", "/follow/bluesky/import", { input: "@eff.org" }, busy)).status).toBe(429);
+
+    // Another member isn't held up by it.
+    expect((await call("POST", "/follow/bluesky/preview", { input: "" })).status).toBe(422);
+  });
+});
