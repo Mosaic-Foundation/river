@@ -20,6 +20,28 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Row security: accounts updates need an account; spaces and streams updatable only where written — 2026-10-26
+
+- Branch / PR: claude/row-security → PR (needs-adam: RLS policy and grants). Merge after #58 and #59.
+- Migrations: `20261026171000_row_security_hardening.sql` (accounts' FOR ALL policy split into
+  read, insert and update, where update needs an account in context; UPDATE on `river.spaces` and
+  `river.streams` narrowed to the columns the code writes). Idempotent.
+
+**What it does.** Security review of 3a86e8f, item 7. An instance-only transaction can no longer
+update accounts. Shared spaces and streams keep their identity columns (canonical_url, adapter,
+feed_url, home_url, key, space_id and the rest) out of river_app's reach. `loadViewer` selects
+`WHERE a.id = $1`. DECISIONS.md has the entry, with the column lists.
+
+**Keys.** None.
+
+**Tests.** API db `rowSecurity` (new, 11 cases): no account updated from forInstance and only your
+own from forAccount; six identity-column updates refused (42501); every written column still
+updates; loadViewer as postgres returns nothing for an unknown id. 8 of them failed before.
+`npm run check`: 52 files, 720 tests passed; UI built. API (fresh `db reset`): 19 files, 189 passed.
+
+### Follow-ups
+- A future migration that adds a space or stream column the refresh writes must grant UPDATE on it.
+
 ## Follow caps: 2,000 per account; the Bluesky import rate-limited — 2026-10-26
 
 - Branch / PR: claude/follow-caps → #57 (merge when ci is green)

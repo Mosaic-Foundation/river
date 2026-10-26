@@ -356,6 +356,28 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-26 — Row security: accounts updates need an account; shared rows' identity columns fixed (security review item 7)
+- Decision:
+  - `river.accounts` has three policies instead of one FOR ALL. `accounts_read` and
+    `accounts_insert` keep the old clause, which still allows no account in context for the
+    hostname and sign-in paths. `accounts_update` needs `app.account_id` set and reaches only that
+    row. No code updates accounts today.
+  - `river.spaces` and `river.streams` keep SELECT and INSERT, but UPDATE covers only the columns
+    the code writes. Spaces: etag, etag_url, newest_item_at, manifest, name, icon_url,
+    fetch_status, last_error, error_count, fetch_lock_until, last_fetched_at. Streams: title,
+    status, ended_at, last_checked_at. A new column the refresh writes needs its grant in the
+    same migration.
+  - `loadViewer` adds `WHERE a.id = $1` (and its DID subquery is tied to that account), so the
+    query alone names the account.
+  - Migration `20261026171000_row_security_hardening.sql`.
+- Why: an UPDATE inside forInstance() (no account) could rename every member of the instance.
+  Any instance transaction could rewrite a shared space's canonical_url, adapter or feed_url,
+  which redirects every follower's refresh. loadViewer relied on row security alone.
+- Alternatives: no UPDATE on accounts at all (nothing writes it yet, but display names are planned);
+  SECURITY DEFINER functions for every space write (more code for the same narrowing).
+- Merge order: after #58 and #59, whose migrations sort before this one.
+- Thread / PR: security review of 3a86e8f
+
 ## 2026-10-26 — 2,000 follows per account; the Bluesky import rate-limited (security review item 3)
 - Decision: an account follows at most 2,000 spaces and streams (`MAX_FOLLOWS` in
   `src/river/following/service.ts`). The count is the rows in `river.follows` with `rule = 'follow'`

@@ -64,6 +64,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, row security (security review item 7): API db `rowSecurity` (new: accounts updates
+  need an account in context; spaces and streams identity columns refused; written columns
+  allowed; loadViewer by id). API 189.
 - 2026-10-26, follow caps (security review item 3): API db `followCap` (new: the 2,000 cap by
   the follow box, a stream rule and an import; mutes allowed; an over-cap import stores nothing;
   two concurrent imports can't both pass); API `blueskyImport` (preview 20 and import 10 per
