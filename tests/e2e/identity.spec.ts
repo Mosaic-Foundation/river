@@ -330,6 +330,8 @@ test("check 36: an emailed link adds a new passkey to the same person and DID", 
   await page.getByLabel("Email address").fill(email.toUpperCase());
   await page.getByRole("button", { name: "Send me a link" }).click();
   await expect(page.getByRole("status")).toHaveText("If that address has an account, we sent a link.");
+  // The link is sent after the answer (security review item 6), so wait for it.
+  await expect.poll(async () => (await mailbox(request, email)).filter((m) => m.kind === "recover").length).toBe(1);
   const [recover] = (await mailbox(request, email)).filter((m) => m.kind === "recover");
   const link = linkIn(recover);
   expect(link).toMatch(/\/recover\/link\?token=[A-Za-z0-9_-]{43}$/);
@@ -375,8 +377,8 @@ test("check 36: an emailed link adds a new passkey to the same person and DID", 
   await page.goto(`${identityURL}/recover`);
   await page.getByLabel("Email address").fill(email);
   await page.getByRole("button", { name: "Send me a link" }).click();
+  await expect.poll(async () => (await mailbox(request, email)).filter((m) => m.kind === "recover").length).toBe(2);
   const links = (await mailbox(request, email)).filter((m) => m.kind === "recover").map(linkIn);
-  expect(links).toHaveLength(2);
   await setClock(request, 16 * 60_000);
   expect((await page.goto(links[1]))?.status()).toBe(410);
 

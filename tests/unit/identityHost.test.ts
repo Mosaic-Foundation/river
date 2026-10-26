@@ -17,6 +17,7 @@ import { esc } from "../../src/identity/pages.js";
 import { LIMITS, hit, resetRateLimits } from "../../src/identity/rateLimit.js";
 import { recoveryKeyFromFile, recoveryKeyFromPem, recoveryKeyFromPrompt } from "../../src/identity/recovery/key.js";
 import { displayNameParam, opaqueParam } from "../../src/identity/flows/common.js";
+import { recoverAddressKey } from "../../src/identity/flows/recover.js";
 import { createFetchGuard, type Resolver } from "../../src/shared/fetch/index.js";
 
 describe("clients from RIVER_CLIENT_ORIGINS (check 12)", () => {
@@ -65,6 +66,19 @@ describe("rate limits", () => {
     expect(hit("recoverAddress", "b", t0 + max)).toBe(true);
     expect(hit("signup", "a", t0)).toBe(true);
     expect(hit("recoverAddress", "a", t0 + windowMs)).toBe(true);
+  });
+
+  it("keys the per-address recovery limit on the IP and the address together (security review item 6)", () => {
+    const key = recoverAddressKey("203.0.113.5", "ada@example.org");
+    expect(recoverAddressKey("203.0.113.5", "ada@example.org")).toBe(key);
+    expect(recoverAddressKey("198.51.100.7", "ada@example.org")).not.toBe(key);
+    expect(recoverAddressKey("203.0.113.5", "bob@example.org")).not.toBe(key);
+    expect(key).not.toContain("ada");
+    // A stranger elsewhere using up the window leaves the owner's own allowance untouched.
+    resetRateLimits();
+    const t0 = 5_000_000;
+    for (let i = 0; i < LIMITS.recoverAddress.max + 2; i++) hit("recoverAddress", recoverAddressKey("198.51.100.7", "ada@example.org"), t0 + i);
+    expect(hit("recoverAddress", key, t0 + 10)).toBe(true);
   });
 
   it("covers /authorize and sign-up per IP and recovery per IP and per address (spec 4.6)", () => {
