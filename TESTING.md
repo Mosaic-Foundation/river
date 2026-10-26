@@ -68,6 +68,9 @@ Newest first: date, slice, tests added, counts.
   capture refused in production); unit `identityHost` (Permissions-Policy and COOP in both
   vercel.json files and the identity pages); unit `workflows` (new: checkout credentials, no
   expressions in run scripts, deploy-migrations' secrets at step level).
+- 2026-10-26, row security (security review item 7): API db `rowSecurity` (new: accounts updates
+  need an account in context; spaces and streams identity columns refused; written columns
+  allowed; loadViewer by id). API 189.
 - 2026-10-26, recovery timing (security review item 6): API db `recoveryTiming` (new; slows the
   capture transport with `POST /test/email-delay` and times `POST /recover`); unit `identityHost`
   (`recoverAddressKey`); e2e check 36 polls the mailbox for the recovery link, which now arrives
