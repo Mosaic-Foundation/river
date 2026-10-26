@@ -9,6 +9,8 @@
 //                         Any failure: 401 and no session.
 //   POST /auth/signout    clears the session (Origin-checked like every state-changing route).
 //
+// Sign-in and the callback are rate-limited per address (src/river/rateLimit.ts): 429 and a page.
+//
 // The note, the state and the cookies are never logged; a refusal logs its reason code only.
 import { randomBytes } from "node:crypto";
 import { Router, type Request, type Response } from "express";
@@ -16,6 +18,7 @@ import { env } from "../../config/env.js";
 import { forInstance } from "../../db/context.js";
 import { signInAccount } from "../accounts.js";
 import { requireInstance, type Instance } from "../instances.js";
+import { limitByIp } from "../rateLimit.js";
 import { STATE_COOKIE, STATE_MAX_AGE_S, cookieHeader, readCookie, sign, unsign } from "./cookies.js";
 import { DidResolver } from "./did.js";
 import { NoteError, verifySignInNote } from "./note.js";
@@ -76,7 +79,7 @@ function refuse(res: Response, reason: string): void {
 export function authRoutes(): Router {
   const router = Router();
 
-  router.get("/auth/signin", requireInstance(), async (_req, res, next) => {
+  router.get("/auth/signin", limitByIp("signin"), requireInstance(), async (_req, res, next) => {
     try {
       const instance = res.locals.instance as Instance;
       const state = opaque();
@@ -97,7 +100,7 @@ export function authRoutes(): Router {
     }
   });
 
-  router.get("/auth/callback", requireInstance(), async (req: Request, res: Response) => {
+  router.get("/auth/callback", limitByIp("callback"), requireInstance(), async (req: Request, res: Response) => {
     const instance = res.locals.instance as Instance;
     const cookieState = unsign(env.sessionSecret, "signin-state", readCookie(req.get("cookie"), STATE_COOKIE));
     let consumed = false;
