@@ -119,6 +119,7 @@ beforeAll(async () => {
   } catch {
     throw new Error(`No API at ${API}. Start it with \`npm run dev\` (see tests/api/README.md).`);
   }
+  await fetch(`${API}/test/rate-limits/reset`, { method: "POST" });
   await trustedServer.start(TRUSTED_PORT);
   await untrustedServer.start(UNTRUSTED_PORT);
   for (const [server, port, assign] of [
@@ -452,5 +453,24 @@ describe("a member's read state (check 23, API side)", () => {
     expect(res.status).toBe(200);
     expect((await feed(cookie, `?circle=${family.id}&circle=${soccer.id}`)).items.every((i) => i.read)).toBe(true);
     expect((await feed(cookie)).items.some((i) => i.read === false)).toBe(true);
+  });
+});
+
+describe("sign-in is rate-limited per address (security review item 4)", () => {
+  it("answers 429 with a page after 60 sign-in starts or 60 callbacks in 10 minutes", async () => {
+    await fetch(`${API}/test/rate-limits/reset`, { method: "POST" });
+    try {
+      for (let i = 0; i < 60; i++) expect((await fetch(`${API}/auth/signin`, { redirect: "manual" })).status).toBe(303);
+      const over = await fetch(`${API}/auth/signin`, { redirect: "manual" });
+      expect(over.status).toBe(429);
+      expect(over.headers.get("retry-after")).toBe("600");
+      expect(over.headers.get("location")).toBeNull();
+      expect(await over.text()).toContain("Too many sign-in attempts");
+
+      for (let i = 0; i < 60; i++) expect((await fetch(`${API}/auth/callback?state=x&note=y`)).status).toBe(401);
+      expect((await fetch(`${API}/auth/callback?state=x&note=y`)).status).toBe(429);
+    } finally {
+      await fetch(`${API}/test/rate-limits/reset`, { method: "POST" });
+    }
   });
 });

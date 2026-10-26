@@ -68,6 +68,11 @@ Newest first: date, slice, tests added, counts.
   capture refused in production); unit `identityHost` (Permissions-Policy and COOP in both
   vercel.json files and the identity pages); unit `workflows` (new: checkout credentials, no
   expressions in run scripts, deploy-migrations' secrets at step level).
+- 2026-10-26, sign-in limits (security review item 4): API `signin` (60 starts and 60 callbacks
+  per address, then 429); API db `dailyJob` (attempts older than an hour go); unit `riverSignIn`
+  (one fresh DID read per DID per minute). `POST /api/test/rate-limits/reset` (TEST_ROUTES) clears
+  the River's limits: `requireApi()`, `signin.test.ts` and the e2e `resetLimits` call it. Unit
+  721, API 179.
 - 2026-10-26, follow caps (security review item 3): API db `followCap` (new: the 2,000 cap by
   the follow box, a stream rule and an import; mutes allowed; an over-cap import stores nothing;
   two concurrent imports can't both pass); API `blueskyImport` (preview 20 and import 10 per
