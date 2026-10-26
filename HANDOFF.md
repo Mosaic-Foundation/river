@@ -20,6 +20,33 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Identity host: an account page with the address and passkeys — 2026-10-26
+
+- Branch / PR: claude/identity-account-page → PR (needs-adam: a passkey check, i.e.
+  authentication, and a constraint on an existing table). Merge after the session revocation PR,
+  whose migration sorts before this one.
+- Migrations: `20261026214500_account_requests.sql` (`identity.auth_requests` purpose may be
+  `account`). Idempotent.
+
+**What it does.** `/account` on the identity host: after a fresh passkey check it shows the Mosaic
+ID's name, DID, recovery address (none, unconfirmed or confirmed, with the matching link to add,
+re-send or change it at `/account/email`) and its passkeys with added and last-used dates, the one
+just used marked. The home page links to it. DECISIONS.md has the entry.
+
+**Keys.** None new.
+
+**Tests.** API `identity` (new describe: the page, the options, refused requests and origins; the
+page and options join check 28's no-private-key sweep). e2e `identity` (new describe: unconfirmed
+then confirmed address, the passkey and its dates, DID and name; no address with its link, two
+passkeys with one never used; `/account` joins the CSP, axe and Tab test). The 5 new tests failed
+before. Against the old schema the button answers 503. `npm run check`: 53 files, 734 tests passed;
+UI built. API (fresh `db reset`): 21 files, 203 passed. e2e: 153 passed.
+
+### Follow-ups
+- The no-address notice after sign-in still links to `/account/email` (adding is done there).
+- Removing a passkey from the account page (today only right after a recovery) would be its own
+  change: it needs a rule for which passkey a fresh check may remove.
+
 ## Small hardening: Permissions-Policy, COOP, test flags off in production, workflow credentials — 2026-10-26
 
 - Branch / PR: claude/small-hardening → PR (needs-adam: `vercel.json`, `identity/vercel.json`, `.github/`)

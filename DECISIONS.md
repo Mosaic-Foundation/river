@@ -356,6 +356,27 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-26 — The identity host's account page (Adam)
+- Decision:
+  - `GET /account` shows one button, "Show my account". It runs a fresh passkey check (an
+    `auth_requests` row with the new purpose `account`, then `POST /account/verify`), and only then
+    shows the Mosaic ID's name, DID, recovery address and passkeys. Mosaic ID keeps no session, so
+    it asks each time, as changing the address already does.
+  - The address reads one of three ways, each with its link to `/account/email`: none ("no recovery
+    address... no way back in", Add a recovery address), not confirmed yet (Send the link again or
+    use another address), confirmed (Change your address). The full address goes only to whoever
+    just used one of the Mosaic ID's passkeys, in a no-store answer, and is never logged.
+  - Each passkey shows its added and last-used dates (UTC days); the one just used says so.
+    Removing passkeys stays where it is, right after a recovery.
+  - The home page links to it ("Your account").
+  - Until migration `20261026214500_account_requests.sql` lands, "Show my account" answers 503
+    "This page isn't ready yet"; nothing else changes.
+- Why: Adam asked for an account page (address, passkeys with their dates, add or change the
+  address). The no-address notice after sign-in had nowhere to point but the change page.
+- Alternatives: a session on the identity host (a cookie and its revocation, for one page); reusing
+  the `change_email` purpose for the check (no migration, but a ceremony named for something else).
+- Thread / PR: identity account page
+
 ## 2026-10-26 — Row security: accounts updates need an account; shared rows' identity columns fixed (security review item 7)
 - Decision:
   - `river.accounts` has three policies instead of one FOR ALL. `accounts_read` and
