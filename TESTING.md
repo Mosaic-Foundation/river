@@ -68,6 +68,11 @@ Newest first: date, slice, tests added, counts.
   capture transport with `POST /test/email-delay` and times `POST /recover`); unit `identityHost`
   (`recoverAddressKey`); e2e check 36 polls the mailbox for the recovery link, which now arrives
   after the answer.
+- 2026-10-26, email reservation (security review item 5): API db `emailReservation` (new; also
+  calls the identity dev server for `/verify` and sign-up options); API db `identity`
+  (`email_in_use` false while unverified); e2e `identity.spec.ts` (confirm wording and display
+  name, a taken address's notice, the no-address reminder, recovery's passkey list and Remove;
+  check 36 presses Continue after the list).
 - 2026-10-26, sign-in limits (security review item 4): API `signin` (60 starts and 60 callbacks
   per address, then 429); API db `dailyJob` (attempts older than an hour go); unit `riverSignIn`
   (one fresh DID read per DID per minute). `POST /api/test/rate-limits/reset` (TEST_ROUTES) clears

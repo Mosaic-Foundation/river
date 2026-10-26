@@ -42,6 +42,47 @@ leave the owner's allowance). e2e check 36 waits for the recovery mail. `npm run
 ### Follow-ups
 - The per-person cap of 3 links an hour can still be used up from several addresses (see
   DECISIONS).
+## Mosaic ID: only verified addresses held; unverified ones released after 24 hours — 2026-10-26
+
+- Branch / PR: claude/email-reservation → #59 (merged by Adam)
+- Migrations: `20261026163500_email_reservation.sql` (changes `identity.people`: email nullable,
+  UNIQUE replaced by a unique index over verified addresses, CHECK verified ⇒ address;
+  `identity.email_in_use` verified only; new `identity.remove_other_passkey`; `audit_log` gains
+  `passkey_removed`; `river.daily_job` replaced again, with #58's hour-long attempt purge and the
+  address release). Idempotent.
+
+**What it does.** Security review of 3a86e8f, item 5, with Adam's choices of 2026-10-26. Only a
+verified address is reserved, and whoever confirms first keeps it. A later confirm of the same
+address is refused. Sign-up step 1 answers the same whether or not the address is taken. After the
+passkey is made, a taken address gets a `signup_attempt` notice instead of a confirm link. The daily
+job releases an address still unverified 24 hours after sign-up; the Mosaic ID, its DID and passkeys
+stay. After sign-in, a Mosaic ID with no address says "Your Mosaic ID has no recovery address" and
+links to "Add a recovery address". The confirm email and page carry Adam's wording ("Someone started
+a Mosaic ID with this address. If it wasn't you, don't confirm…") and the sign-up's display name.
+After a recovery, the page counts the passkeys and offers Remove on the others for 10 minutes. The
+change-email page answers the same for a taken address (notice, not link). Display names refuse
+invisible formatting characters. The ADR note is in DECISIONS.md. A review pass found the
+change-email check and the display-name point; both are fixed here.
+
+**Keys.** None.
+
+**Tests.** API db `emailReservation` (new, 9: shared unverified addresses; first confirm wins, the
+second is refused; step 1 answers alike; the confirm page's warning and escaped name; the daily
+job's release at 24 h and not at 23 h, and the CHECK; `remove_other_passkey`'s window, the new
+passkey, another person's, no DELETE grant). It talks to the identity dev server for `/verify` and
+sign-up options. The five schema tests fail without the migration. API db `identity`
+(`email_in_use` is false for an unverified address). e2e `identity.spec.ts`: five new tests
+(confirm wording and name; a taken address at sign-up and at change-email sends its owner a notice,
+not a link; no-address reminder; recovery counts and removes passkeys), and check 36 continues past
+the passkey list. Unit `identityHost` (names with bidi overrides, zero-width marks and line
+separators are refused). `npm run check`: 52 files, 720 tests passed; UI built. API (fresh `db
+reset`): 19 files, 187 passed. e2e: all 150 passed before the review fixes, `identity.spec.ts` 14
+passed after.
+
+### Follow-ups
+- The identity host has no signed-in account page. The no-address notice shows after every
+  passkey sign-in, as the "please confirm" reminder does. A real account page (address, passkeys)
+  would be its own slice.
 ## Sign-in rate limits, one fresh DID read a minute, attempts kept an hour — 2026-10-26
 
 - Branch / PR: claude/signin-rate-limit → #58 (merged by Adam)

@@ -32,6 +32,9 @@ responses replayed through the real fetch guard and a MockAgent that counts requ
 
 `db/recoveryTiming.test.ts` makes a person as identity_app, then times `POST /recover` against the
 identity dev server with its capture transport slowed (`POST /test/email-delay`, TEST_ROUTES).
+`db/emailReservation.test.ts` makes people as identity_app like the other identity tests, but
+posts their confirm links and sign-up options to the identity dev server (`npm run dev:identity`),
+because those answers are decided there.
 
 `signin.test.ts` (M8) signs notes with test keys and serves their DID logs itself, on
 `localhost:3005` (listed in the dev server's `TRUSTED_DID_HOSTS`, read over loopback because

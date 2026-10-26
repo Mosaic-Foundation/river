@@ -6,6 +6,11 @@
 //   POST /authorize/signin/verify   {request, response}   assertion → note → {redirect}
 //   POST /authorize/signup/options  {request, email, display_name}  registration options
 //   POST /authorize/signup/verify   {request, response}   registration → person, DID → {redirect}
+//
+// Sign-up answers the same whether or not the address belongs to someone (security review of
+// 3a86e8f, item 5): only a verified address is reserved, and it is checked after the passkey is
+// made. A taken address gets a notice instead of a confirm link; the new Mosaic ID works but can't
+// use that address, which the daily job releases from it 24 hours on.
 import { randomUUID } from "node:crypto";
 
 import { forIdentity } from "../../db/context.js";
@@ -13,7 +18,7 @@ import { identityNow } from "../clock.js";
 import { findClient, identityConfig } from "../config.js";
 import { maskEmail, normalizeEmail } from "../email/address.js";
 import { sendEmail } from "../email/index.js";
-import { verifyEmailMessage } from "../email/messages.js";
+import { signupAttemptMessage, verifyEmailMessage } from "../email/messages.js";
 import { authenticationOptions, assertionCredentialId, registrationOptions, verifyAssertion, verifyRegistration } from "../passkeys.js";
 import { authorizePage, errorPage } from "../pages.js";
 import { EmailInUseError, RequestGoneError, createPerson, newWebauthnUserId, signInRedirect } from "../people.js";
@@ -114,6 +119,7 @@ export function authorizeRoutes(router: Routes): void {
       const person = await getPerson(db, personId);
       if (!person) return { error: "unknown_passkey" } as const;
       const redirect = await signInRedirect(db, person, request, now);
+      if (!person.email) return { redirect, noAddress: true };
       return { redirect, reminder: person.email_verified_at ? undefined : maskEmail(person.email) };
     });
     if (result.error !== undefined) {
@@ -135,9 +141,6 @@ export function authorizeRoutes(router: Routes): void {
     const displayName = displayNameParam(req.body?.display_name);
     if (displayName === null) return fail(res, 400, "invalid_name", "Use up to 64 characters for your name.");
 
-    if (await forIdentity({}, (db) => lookups.emailInUse(db, email))) {
-      return fail(res, 409, "email_in_use", MESSAGES.emailInUse);
-    }
     const challenge = randomToken();
     const userId = newWebauthnUserId();
     const ok = await forIdentity({ authRequestId: id }, async (db) => {
@@ -191,9 +194,20 @@ export function authorizeRoutes(router: Routes): void {
         requestId: id,
         now,
       });
-      await sendEmail(verifyEmailMessage(email, `${config.origin}/verify?token=${created.verifyToken}`));
+      // Checked now, not at step 1, so the answer never says whether an address is taken. Either
+      // way one email goes out.
+      const taken = await forIdentity({}, (db) => lookups.emailInUse(db, email));
+      await sendEmail(
+        taken
+          ? signupAttemptMessage(email)
+          : verifyEmailMessage(email, `${config.origin}/verify?token=${created.verifyToken}`, {
+              displayName: request.pending.display_name,
+              signup: true,
+            }),
+      );
       res.json({ redirect: created.redirect, reminder: maskEmail(email), did: created.person.did });
     } catch (err) {
+      // Only before 20261026163500_email_reservation.sql, while people.email is still UNIQUE.
       if (err instanceof EmailInUseError) return fail(res, 409, "email_in_use", MESSAGES.emailInUse);
       if (err instanceof RequestGoneError) return fail(res, 410, "request_gone", MESSAGES.gone);
       throw err;
