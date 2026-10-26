@@ -6,6 +6,7 @@ import {
   importDoneSentence,
   importWho,
   nextCircleColor,
+  originLine,
   toggleId,
   type ImportPreview,
 } from "../../../ui/src/lib/following";
@@ -93,5 +94,24 @@ describe("circles menu helpers", () => {
     const all = CIRCLE_COLORS.map((c) => ({ color: c.value }));
     expect(nextCircleColor(all)).toBe(CIRCLE_COLORS[0]!.value);
     expect(nextCircleColor([...all, { color: null }])).toBe(CIRCLE_COLORS[1]!.value);
+  });
+});
+
+// A Following row's origin line (Adam, 2026-10-26): nothing for unknown.
+describe("originLine", () => {
+  it("says where each kind of follow came from", () => {
+    expect(originLine({ origin: "manual", label: null })).toBe("Added by you");
+    expect(originLine({ origin: "seed", label: null })).toBe("Seed copy");
+    expect(originLine({ origin: "bluesky_import", label: "eff.org" })).toBe("Imported from @eff.org");
+  });
+
+  it("an import without a handle names Bluesky", () => {
+    expect(originLine({ origin: "bluesky_import", label: null })).toBe("Imported from Bluesky");
+  });
+
+  it("shows nothing for an unknown origin or a linked account", () => {
+    expect(originLine(null)).toBeNull();
+    expect(originLine(undefined)).toBeNull();
+    expect(originLine({ origin: "linked", label: null })).toBeNull();
   });
 });

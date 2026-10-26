@@ -44,6 +44,14 @@ export interface SpaceView {
   lastError: string | null;
   circleIds: string[];
   streams: StreamView[];
+  /** Where the follow came from; null when unknown (follows from before origins were kept). */
+  origin?: SpaceOrigin | null;
+}
+
+export interface SpaceOrigin {
+  origin: "manual" | "seed" | "bluesky_import" | "linked";
+  /** An import's Bluesky handle, without "@". */
+  label: string | null;
 }
 
 export interface EndedView {
@@ -271,4 +279,18 @@ export function quietSentence(count: number): string {
 /** "3 spaces" */
 export function spacesCount(count: number): string {
   return count === 1 ? "1 space" : `${count} spaces`;
+}
+
+/** A Following row's muted origin line ("Added by you"), or null to show nothing. */
+export function originLine(origin: SpaceOrigin | null | undefined): string | null {
+  switch (origin?.origin) {
+    case "manual":
+      return "Added by you";
+    case "seed":
+      return "Seed copy";
+    case "bluesky_import":
+      return origin.label ? `Imported from @${origin.label}` : "Imported from Bluesky";
+    default:
+      return null; // unknown, and linked accounts until they exist
+  }
 }

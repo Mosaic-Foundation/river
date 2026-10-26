@@ -284,6 +284,14 @@ export interface SpaceView {
   circleIds: string[];
   /** Streams with the member's rules first, then other known streams (hub spaces only). */
   streams: StreamView[];
+  /** Where the follow came from (the whole-space follow, else its first stream rule); null when unknown. */
+  origin: SpaceOrigin | null;
+}
+
+/** A follow's origin as the Following page shows it; `label` is an import's handle (no "@"). */
+export interface SpaceOrigin {
+  origin: "manual" | "seed" | "bluesky_import" | "linked";
+  label: string | null;
 }
 
 export interface EndedView {
@@ -319,6 +327,16 @@ interface RuleRow {
   key: string | null;
   title: string | null;
   status: "open" | "ended" | null;
+  origin: string | null;
+  origin_label: string | null;
+}
+
+const SHOWN_ORIGINS = new Set<string>(["manual", "seed", "bluesky_import", "linked"]);
+
+/** A rule row's origin for the page: null for 'unknown' (rows from before origins) or the old schema. */
+function spaceOrigin(row: RuleRow | undefined): SpaceOrigin | null {
+  if (!row?.origin || !SHOWN_ORIGINS.has(row.origin)) return null;
+  return { origin: row.origin as SpaceOrigin["origin"], label: row.origin_label };
 }
 
 /** The process id at the end of a stream key, for a stream that has no title yet. */
@@ -345,8 +363,10 @@ export function quietCutoff(now: Date): Date {
 /** Everything the Following page shows, from the member's own rows. Runs inside forAccount(). */
 export async function followingPage(db: Db, now: Date): Promise<FollowingPage> {
   const cutoff = quietCutoff(now).toISOString();
+  // On the schema before follow origins the columns read null (origin.ts).
+  const origins = (await hasFollowOrigin(db)) ? "f.origin, f.origin_label" : "NULL::text AS origin, NULL::text AS origin_label";
   const { rows: rules } = await db.query<RuleRow>(
-    `SELECT f.id, f.space_id, f.stream_id, f.rule, f.ended_at, st.key,
+    `SELECT f.id, f.space_id, f.stream_id, f.rule, f.ended_at, st.key, ${origins},
             coalesce(st.title, (SELECT i.title FROM river.items i
                                  WHERE i.space_id = st.space_id AND i.stream_key = st.key
                                    AND i.title IS NOT NULL AND NOT i.hidden
@@ -437,6 +457,7 @@ export async function followingPage(db: Db, now: Date): Promise<FollowingPage> {
       lastError: row.fetch_status && row.fetch_status !== "ok" ? row.last_error : null,
       circleIds: circleIdsBySpace.get(row.id) ?? [],
       streams,
+      origin: spaceOrigin(whole ?? active[0]),
     });
   }
   ended.sort((a, b) => b.endedAt.localeCompare(a.endedAt));

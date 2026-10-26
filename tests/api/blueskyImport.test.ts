@@ -323,4 +323,29 @@ describe("follow origins, and an import offering only its own follows", () => {
     expect((await origins()).some((r) => r.canonical_url === `at://${GONE_DID}`)).toBe(false);
     expect((await origins()).some((r) => r.canonical_url === `at://${BSKY_DID}`)).toBe(true);
   });
+
+  it("the Following page gives each space its origin, and null for unknown", async () => {
+    // A follow from before origins were kept: inserted without one, so it reads 'unknown'.
+    await admin(async (c) => {
+      const { rows } = await c.query<{ id: string }>(
+        `INSERT INTO river.spaces (adapter, canonical_url, name, network, category)
+         VALUES ('atproto', 'at://did:plc:cccccccccccccccccccccccc', 'Old Follow', 'bluesky', 'person')
+         ON CONFLICT (canonical_url) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
+      );
+      await c.query(
+        `INSERT INTO river.follows (instance_id, account_id, space_id)
+         SELECT a.instance_id, a.id, $2 FROM river.accounts a WHERE a.id = $1`,
+        [accountId, rows[0]!.id],
+      );
+    });
+    const page = (await (await as("GET", "/following")).json()) as {
+      spaces: Array<{ name: string; address: string; origin: { origin: string; label: string | null } | null }>;
+    };
+    const byOrigin = (o: string) => page.spaces.filter((s) => s.origin?.origin === o);
+    expect(byOrigin("seed").length).toBeGreaterThan(0);
+    expect(page.spaces.find((s) => s.address === "@bsky.app")?.origin).toEqual({ origin: "manual", label: null });
+    expect(byOrigin("bluesky_import").length).toBeGreaterThan(200); // the import above, less the one it unfollowed
+    expect(byOrigin("bluesky_import").every((s) => s.origin!.label === "eff.org")).toBe(true);
+    expect(page.spaces.find((s) => s.name === "Old Follow")?.origin).toBeNull();
+  });
 });
