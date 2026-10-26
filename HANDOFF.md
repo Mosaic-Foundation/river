@@ -38,6 +38,7 @@ feed_url, home_url, key, space_id and the rest) out of river_app's reach. `loadV
 own from forAccount; six identity-column updates refused (42501); every written column still
 updates; loadViewer as postgres returns nothing for an unknown id. 8 of them failed before.
 `npm run check`: 52 files, 720 tests passed; UI built. API (fresh `db reset`): 19 files, 189 passed.
+e2e: 146 passed.
 
 ### Follow-ups
 - A future migration that adds a space or stream column the refresh writes must grant UPDATE on it.
