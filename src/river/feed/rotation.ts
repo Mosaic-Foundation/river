@@ -1,4 +1,4 @@
-// Which Bluesky spaces a feed open refreshes (docs/spec/bluesky-1.md item 4; DECISIONS.md "Refreshing
+// Which spaces a feed open refreshes (docs/spec/bluesky-1.md item 4; DECISIONS.md "Refreshing
 // hundreds of Bluesky accounts"). A member who imports their Bluesky follows can follow hundreds
 // of accounts, each one AppView request (or two) through a guard that sends at most 2 at a time
 // to one host, inside a 6 s response budget and Vercel's function limits. So each open refreshes
@@ -19,7 +19,13 @@
 //      to the others.
 //
 // A refreshed space isn't due again until its interval passes, so the next open reaches others:
-// that is the rotation. Other adapters are unchanged: every stale space is claimed, as before.
+// that is the rotation.
+//
+// Every other adapter (hubs, fediverse accounts, feeds) has a cap too, OTHER_REFRESH_CAP per
+// adapter per open, so following a few thousand feeds can't make one open fetch them all. Within
+// an adapter, stale spaces (never fetched, or not in the last CLAIM_FLOOR_MS, the claim's own
+// test) are taken longest-waiting first, never-fetched first of all, so each stale space gets its
+// turn over the next opens.
 import type { SpaceRow } from "./spaces.js";
 
 /** Bluesky spaces refreshed per feed open (ADR-009 item 6). */
@@ -28,6 +34,10 @@ export const BLUESKY_REFRESH_CAP = 12;
 export const NEW_SHARE = 4;
 /** And this many of the due spaces that have waited longest (round robin). */
 export const WAIT_SHARE = 4;
+/** Spaces of each other adapter refreshed per feed open. */
+export const OTHER_REFRESH_CAP = 12;
+/** A space fetched more recently than this is never claimed (spec 4.3, store.ts CLAIM_SQL). */
+export const CLAIM_FLOOR_MS = 120_000;
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -51,8 +61,9 @@ export function isDue(space: Rotatable, now: number): boolean {
 }
 
 /**
- * The spaces to try to claim on this open: every non-Bluesky space as given, and at most
- * `cap` due Bluesky spaces chosen as the header says. Order of the result: non-Bluesky first.
+ * The spaces to try to claim on this open: at most `otherCap` stale spaces of each non-Bluesky
+ * adapter, and at most `cap` due Bluesky spaces, chosen as the header says. Order of the result:
+ * non-Bluesky first, in the order their adapters first appear.
  */
 export function chooseForRefresh<T extends Rotatable>(
   rows: readonly T[],
@@ -60,8 +71,21 @@ export function chooseForRefresh<T extends Rotatable>(
   cap = BLUESKY_REFRESH_CAP,
   newShare = NEW_SHARE,
   waitShare = WAIT_SHARE,
+  otherCap = OTHER_REFRESH_CAP,
 ): T[] {
-  const others = rows.filter((r) => r.adapter !== "atproto");
+  const byAdapter = new Map<string, T[]>();
+  for (const r of rows) {
+    if (r.adapter === "atproto") continue;
+    if (r.last_fetched_at && now - r.last_fetched_at.getTime() < CLAIM_FLOOR_MS) continue;
+    const group = byAdapter.get(r.adapter);
+    if (group) group.push(r);
+    else byAdapter.set(r.adapter, [r]);
+  }
+  // Never fetched first (in the order given: sort is stable), then the oldest last fetch.
+  const lastFetched = (r: T) => r.last_fetched_at?.getTime() ?? 0;
+  const others = [...byAdapter.values()].flatMap((group) =>
+    group.sort((a, b) => lastFetched(a) - lastFetched(b)).slice(0, otherCap),
+  );
   const due = rows.filter((r) => r.adapter === "atproto" && isDue(r, now));
   const fresh = due.filter((r) => !r.last_fetched_at);
   const fetched = due.filter((r) => r.last_fetched_at);

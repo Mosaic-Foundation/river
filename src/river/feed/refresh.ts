@@ -3,8 +3,9 @@
 //
 //   1. A followed name with no stored space yet (a seed follow on first visit) is resolved through
 //      its adapter and stored.
-//   2. Bluesky spaces are first narrowed to a capped, rotating subset (rotation.ts), so a member
-//      who imported hundreds of accounts still gets an answer within the budget.
+//   2. Stored spaces are first narrowed to a capped, rotating subset of each adapter's
+//      (rotation.ts), so a member who follows hundreds of accounts or feeds still gets an answer
+//      within the budget.
 //      Each stale space is claimed with the one-statement UPDATE of spec 4.5. Only claimed spaces
 //      are fetched, so two visitors (or members) opening the River within 120 s cause one upstream
 //      fetch (check 24), and no space is fetched more often than every 120 s (spec 4.3).
@@ -137,8 +138,8 @@ class Run {
   }
 
   /**
-   * Claims the stale ones among stored spaces (one transaction) and starts fetching them. Bluesky
-   * spaces are first narrowed to a capped, rotating subset (rotation.ts).
+   * Claims the stale ones among stored spaces (one transaction) and starts fetching them. They
+   * are first narrowed to a capped, rotating subset per adapter (rotation.ts).
    */
   async addStored(rows: readonly SpaceRow[]): Promise<void> {
     const unique = [...new Map(rows.map((row) => [row.id, row])).values()].filter(
