@@ -64,6 +64,10 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, small hardening (security review item 8): unit `env` (NODE_ENV=production refusals,
+  capture refused in production); unit `identityHost` (Permissions-Policy and COOP in both
+  vercel.json files and the identity pages); unit `workflows` (new: checkout credentials, no
+  expressions in run scripts, deploy-migrations' secrets at step level).
 - 2026-10-26, follow caps (security review item 3): API db `followCap` (new: the 2,000 cap by
   the follow box, a stream rule and an import; mutes allowed; an over-cap import stores nothing;
   two concurrent imports can't both pass); API `blueskyImport` (preview 20 and import 10 per

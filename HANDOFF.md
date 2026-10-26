@@ -20,6 +20,37 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Small hardening: Permissions-Policy, COOP, test flags off in production, workflow credentials — 2026-10-26
+
+- Branch / PR: claude/small-hardening → PR (needs-adam: `vercel.json`, `identity/vercel.json`, `.github/`)
+- Migrations: none
+
+**What it does.** Security review of 3a86e8f, item 8. Both `vercel.json` files send
+`Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`, and the identity host's
+pages send it too. `identity/vercel.json` also sends COOP `same-origin`, which its Express pages
+already did. The test-only variables are refused with `NODE_ENV=production` as well as on Vercel,
+and `EMAIL_TRANSPORT=capture` is refused when `VERCEL_ENV=production`. Both workflows check out
+with `persist-credentials: false`. deploy-migrations sets its Supabase secrets only on the three
+CLI steps, not the job, so `npm ci` never sees them, and passes `SUPABASE_PROJECT_REF` through
+`env:`. `docs/deploy.md` records that previews have no `DATABASE_URL` or `SESSION_SECRET`, by
+design: check changes with CI and locally.
+
+**Keys.** None new.
+
+**Tests.** Unit `env` (each test-only variable refused with NODE_ENV=production; capture refused in
+production, allowed on previews). Unit `identityHost` (both vercel.json files and the identity
+pages send the headers). Unit `workflows` (new: every checkout has `persist-credentials: false`; no
+`${{ }}` inside a run script; no Supabase secret at job level). All 10 failed before. `npm run check`:
+53 files, 732 tests passed; UI built. API: 18 files, 178 passed. e2e `identity`, `signin`: 14 passed.
+
+### Follow-ups
+- **Session revocation** (security review of 3a86e8f, left out of this batch on purpose): a session
+  epoch on `river.accounts` that each session cookie carries, so "sign out everywhere" (or a
+  recovery) can end every session at once. It needs an additive column, a cookie format change and
+  a check in `readSession()` (needs-adam: sessions and schema).
+- deploy-migrations' new step-level secrets can only be proven by its next run on main (it needs
+  the `supabase-dev` environment).
+
 ## Follow caps: 2,000 per account; the Bluesky import rate-limited — 2026-10-26
 
 - Branch / PR: claude/follow-caps → #57 (merge when ci is green)
