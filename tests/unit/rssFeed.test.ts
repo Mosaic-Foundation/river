@@ -12,6 +12,7 @@ import {
   parseXml,
   XmlError,
 } from "../../src/river/adapters/rss/index.js";
+import type { XmlElement } from "../../src/river/adapters/rss/xml.js";
 import { discoverFeeds, looksLikeHtml } from "../../src/river/adapters/rss/discover.js";
 
 const NOW = new Date("2026-10-21T00:00:00Z");
@@ -80,6 +81,62 @@ describe("the XML reader", () => {
 
   it("refuses runaway nesting", () => {
     expect(() => parseXml("<a>".repeat(200))).toThrow(XmlError);
+  });
+
+  // Each case below took the old reader minutes or worse: it scanned to the end of the document
+  // for every "<", and copied the whole namespace map for every element.
+  it("reads two million stray < in linear time", () => {
+    const started = performance.now();
+    const root = parseXml("<rss>" + "<".repeat(2_000_000));
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(root.name).toBe("rss");
+    expect(root.children).toEqual(["<".repeat(2_000_000)]);
+  });
+
+  it("reads a tag that never closes as text and stops", () => {
+    const started = performance.now();
+    const root = parseXml("<rss>" + "<a ".repeat(500_000));
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(root.children).toEqual(["<a ".repeat(500_000)]);
+  });
+
+  it("reads tags whose quotes never close in linear time, and keeps reading after one", () => {
+    const started = performance.now();
+    parseXml("<r>" + "<a'".repeat(300_000) + '<a">');
+    expect(performance.now() - started).toBeLessThan(1000);
+
+    const root = parseXml('<r><a href="x>t</a><b>ok</b></r>');
+    expect(root.children.map((c) => (typeof c === "string" ? c : c.name))).toEqual(['<a href="x>t', "b"]);
+  });
+
+  it("reads a thousand namespace declarations over twenty thousand children quickly", () => {
+    const declarations = Array.from({ length: 1000 }, (_, n) => ` xmlns:p${n}="https://ns.test.example/${n}"`).join("");
+    const started = performance.now();
+    const root = parseXml(`<r${declarations}>${"<p1:c/>".repeat(20_000)}</r>`);
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(root.children).toHaveLength(20_000);
+  });
+
+  it("reads at most 64 namespace declarations per document", () => {
+    const declarations = Array.from({ length: 70 }, (_, n) => ` xmlns:p${n}="http://www.w3.org/2005/Atom"`).join("");
+    const root = parseXml(`<r${declarations}><p63:entry/><p64:entry/></r>`);
+    expect(root.children.map((c) => (typeof c === "string" ? c : c.name))).toEqual(["atom:entry", "p64:entry"]);
+  });
+
+  it("scopes a namespace to the element that declares it", () => {
+    const root = parseXml(
+      '<r><a xmlns:x="http://www.w3.org/2005/Atom"><x:entry/></a><x:entry/><b xmlns="http://www.w3.org/2005/Atom"><entry/></b></r>',
+    );
+    const [a, outside, b] = root.children as XmlElement[];
+    expect(a?.children.map((c) => (c as XmlElement).name)).toEqual(["atom:entry"]);
+    expect(outside?.name).toBe("x:entry");
+    expect(b?.name).toBe("atom:b");
+    expect(b?.children.map((c) => (c as XmlElement).name)).toEqual(["atom:entry"]);
+  });
+
+  it("reads a prefix that names an Object property as an unknown prefix", () => {
+    const root = parseXml("<r><constructor:a/><toString:b/></r>");
+    expect(root.children.map((c) => (c as XmlElement).name)).toEqual(["constructor:a", "toString:b"]);
   });
 });
 
@@ -301,6 +358,12 @@ describe("feed autodiscovery", () => {
       "https://site.test.example/feed.xml",
       "https://other.test.example/atom.xml",
     ]);
+  });
+
+  it("reads a page of unclosed <link tags in linear time", () => {
+    const started = performance.now();
+    expect(discoverFeeds("<link ".repeat(50_000), "https://site.test.example/")).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 
   it("tells pages from feeds", () => {

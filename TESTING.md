@@ -66,7 +66,11 @@ Newest first: date, slice, tests added, counts.
 
 - 2026-10-26, refresh budget (security review item 2): unit `blueskyRotation` caps every other
   adapter per open (2,000 feeds, 2,000 fediverse accounts and 50 hubs give 12 each, in rotation
-  order, then the next 12), and skips spaces inside the claim's 120 s floor. Unit 711.
+  order, then the next 12), and skips spaces inside the claim's 120 s floor. Unit 719.
+- 2026-10-26, feed reader linear time (security review item 1): unit `rssFeed` gains timed
+  cases (each under 1 s with `performance.now()`) for 2M stray `<`, a tag that never closes,
+  quotes that never close, 1,000 xmlns over 20,000 children and 50,000 unclosed `<link` tags,
+  plus the 64-declaration cap, namespace scoping and `constructor:`/`toString:` prefixes. Unit 718.
 - 2026-10-26, where a Following row's follow came from: unit `ui/following` (`originLine`: Added
   by you, Seed copy, Imported from @handle or Bluesky, nothing for unknown or linked); API
   `blueskyImport` (the page's `origin` for seed, manual and import rows, null for an admin-written

@@ -11,7 +11,9 @@ export const FEED_TYPES: readonly string[] = ["application/rss+xml", "applicatio
 /** Most feeds a page may name that the follow box tries. */
 export const MAX_DISCOVERED = 3;
 
-const LINK_TAG = /<link\b([^>]*)>/gi;
+// [^<>], not [^>]: a "<link" with no ">" before the next tag fails at once instead of scanning to
+// the end of the head for every "<link".
+const LINK_TAG = /<link\b([^<>]*)>/gi;
 const ATTRIBUTE = /([a-zA-Z_:][\w:.-]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g;
 
 function attributes(source: string): Record<string, string> {
