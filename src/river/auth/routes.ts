@@ -8,6 +8,9 @@
 //                         session cookie, Referrer-Policy: no-referrer and a redirect to / at once.
 //                         Any failure: 401 and no session.
 //   POST /auth/signout    clears the session (Origin-checked like every state-changing route).
+//   POST /auth/signout-everywhere
+//                         raises the account's session epoch, so every session cookie issued
+//                         before now (on any device) reads as a visitor, and clears this one.
 //
 // Sign-in and the callback are rate-limited per address (src/river/rateLimit.ts): 429 and a page.
 //
@@ -16,13 +19,13 @@ import { randomBytes } from "node:crypto";
 import { Router, type Request, type Response } from "express";
 import { env } from "../../config/env.js";
 import { forInstance } from "../../db/context.js";
-import { signInAccount } from "../accounts.js";
+import { endAllSessions, signInAccount, type Viewer } from "../accounts.js";
 import { requireInstance, type Instance } from "../instances.js";
 import { limitByIp } from "../rateLimit.js";
 import { STATE_COOKIE, STATE_MAX_AGE_S, cookieHeader, readCookie, sign, unsign } from "./cookies.js";
 import { DidResolver } from "./did.js";
 import { NoteError, verifySignInNote } from "./note.js";
-import { clearSessionCookie, nowSeconds, sessionCookie } from "./session.js";
+import { clearSessionCookie, nowSeconds, readSession, requireMember, sessionCookie } from "./session.js";
 
 /** The River's callback, as registered with the identity host (RIVER_CLIENT_ORIGINS). */
 export const CALLBACK_PATH = "/api/auth/callback";
@@ -121,13 +124,13 @@ export function authRoutes(): Router {
           now: nowSeconds,
         },
       );
-      const { accountId } = await signInAccount(instance, verified);
+      const { accountId, sessionEpoch } = await signInAccount(instance, verified);
       res
         .status(303)
         .set("Cache-Control", "no-store")
         .set("Referrer-Policy", "no-referrer")
         .append("Set-Cookie", cookieHeader(STATE_COOKIE, "", 0))
-        .append("Set-Cookie", sessionCookie(instance.id, accountId))
+        .append("Set-Cookie", sessionCookie(instance.id, accountId, sessionEpoch))
         .location("/")
         .end();
     } catch (err) {
@@ -145,6 +148,21 @@ export function authRoutes(): Router {
 
   router.post("/auth/signout", (_req, res) => {
     res.status(204).set("Cache-Control", "no-store").append("Set-Cookie", clearSessionCookie()).end();
+  });
+
+  router.post("/auth/signout-everywhere", requireInstance(), readSession(), requireMember(), async (_req, res, next) => {
+    try {
+      const viewer = res.locals.viewer as Viewer;
+      const epoch = await endAllSessions((res.locals.instance as Instance).id, viewer.accountId);
+      if (epoch === undefined) {
+        // The migration hasn't reached this database yet; nothing could be revoked.
+        res.status(503).set("Cache-Control", "no-store").json({ error: "not_ready", message: "Try again in a few minutes." });
+        return;
+      }
+      res.status(204).set("Cache-Control", "no-store").append("Set-Cookie", clearSessionCookie()).end();
+    } catch (err) {
+      next(err);
+    }
   });
 
   return router;

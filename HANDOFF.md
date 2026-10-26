@@ -47,6 +47,35 @@ Mark all read's tests). e2e: 153 passed.
 - The no-address notice after sign-in still links to `/account/email` (adding is done there).
 - Removing a passkey from the account page (today only right after a recovery) would be its own
   change: it needs a rule for which passkey a fresh check may remove.
+## Session revocation: an epoch per account, Sign out everywhere — 2026-10-26
+
+- Branch / PR: claude/session-revocation → #63 (merged by Adam)
+- Migrations: `20261026201500_session_epoch.sql` (`river.accounts.session_epoch`, integer, default
+  1, at least 1). Idempotent.
+
+**What it does.** The security review's session-revocation follow-up. Every River session cookie
+now carries its account's session epoch (token `v: 2`), and `readSession()` accepts it only while
+that is still the account's epoch. `POST /api/auth/signout-everywhere` raises the epoch, which
+ends every session of the account on every device; the profile menu and the phone's You tab have
+"Sign out everywhere" under Sign out. Cookies from before this change carry no epoch and are
+refused, so every member (today, only Adam) signs in once after the deploy (Adam's call). A Mosaic
+ID recovery doesn't sign out the River: logged under "Spec questions" for the Phase 2 design.
+
+**Keys.** None new.
+
+**Tests.** Unit `riverSignIn` (the epoch in the token; v1 and malformed epochs refused). API db
+`sessionRevocation` (new: a new account's cookie at epoch 1; Sign out everywhere ends two devices'
+sessions and a new sign-in works; a v1 cookie and a later epoch refused; another member can't
+raise yours). API `signin` (the route over HTTP: 204, the cookie cleared, both devices visitors;
+401 for a visitor; 403 without Origin). e2e `signin` (two browsers, Sign out everywhere in one ends
+both; the You tab's button) and `profile` (the menu lists it). The 9 new unit and API tests failed
+before. Against the old schema the new code signs in (epoch 1) and the route answers 503.
+`npm run check`: 53 files, 735 tests passed; UI built. API (fresh `db reset`): 22 files, 207
+passed. e2e: 152 passed.
+
+### Follow-ups
+- Recovery-triggered sign-out: a spec question for the Phase 2 design (ADR-002 has no channel from
+  the identity host to the River).
 ## Mark all read's route removed — 2026-10-26
 
 - Branch / PR: claude/remove-read-state-all → #64 (merged)
@@ -71,7 +100,7 @@ passed. No UI change, so no e2e run.
 
 ## Small hardening: Permissions-Policy, COOP, test flags off in production, workflow credentials — 2026-10-26
 
-- Branch / PR: claude/small-hardening → PR (needs-adam: `vercel.json`, `identity/vercel.json`, `.github/`)
+- Branch / PR: claude/small-hardening → #62 (merged by Adam)
 - Migrations: none
 
 **What it does.** Security review of 3a86e8f, item 8. Both `vercel.json` files send

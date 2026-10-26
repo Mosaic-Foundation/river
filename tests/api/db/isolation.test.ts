@@ -339,7 +339,7 @@ describe("check 27 with real sign-ups, and the sign-in tables", () => {
 
   it("signing in again finds the same account by SCID, on this instance only", async () => {
     const again = await signInAccount(instance, { did: `did:webvh:${c.scid}:moved.example:u:abcdefgh`, scid: c.scid }, river);
-    expect(again).toEqual({ accountId: c.accountId, created: false });
+    expect(again).toEqual({ accountId: c.accountId, created: false, sessionEpoch: 1 });
     // The stored DID follows a move (same SCID).
     const logins = await forAccount(SEED_INSTANCE, c.accountId, (db) => db.query("SELECT did FROM river.login_methods"), river);
     expect(logins.rows).toEqual([{ did: `did:webvh:${c.scid}:moved.example:u:abcdefgh` }]);

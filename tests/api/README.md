@@ -35,6 +35,9 @@ identity dev server with its capture transport slowed (`POST /test/email-delay`,
 `db/emailReservation.test.ts` makes people as identity_app like the other identity tests, but
 posts their confirm links and sign-up options to the identity dev server (`npm run dev:identity`),
 because those answers are decided there.
+`db/sessionRevocation.test.ts` runs the session middleware itself, as the server does, with its
+own SESSION_SECRET and DATABASE_URL set to the river_app connection, and signs members in through
+`signInAccount()`.
 
 `signin.test.ts` (M8) signs notes with test keys and serves their DID logs itself, on
 `localhost:3005` (listed in the dev server's `TRUSTED_DID_HOSTS`, read over loopback because

@@ -252,10 +252,10 @@ export async function saveReadState(change: { read?: string[]; unread?: string[]
   }
 }
 
-/** Ends the River session (spec F10). */
-export async function signOut(): Promise<boolean> {
+/** Ends the River session (spec F10), or with `everywhere` every session of this account. */
+export async function signOut(everywhere = false): Promise<boolean> {
   try {
-    return (await post("/api/auth/signout")).ok;
+    return (await post(everywhere ? "/api/auth/signout-everywhere" : "/api/auth/signout")).ok;
   } catch {
     return false;
   }

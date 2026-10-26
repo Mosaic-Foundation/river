@@ -44,7 +44,7 @@ function deps(): RefreshDeps {
 async function newMember(): Promise<Viewer> {
   const accountId = randomUUID();
   await forAccount(SEED_INSTANCE, accountId, (db) => db.insert("accounts", { id: accountId }), river);
-  return { accountId, did: null, displayName: null };
+  return { accountId, did: null, displayName: null, sessionEpoch: 1 };
 }
 
 function as<T>(viewer: Viewer, fn: Parameters<typeof forAccount<T>>[2]): Promise<T> {

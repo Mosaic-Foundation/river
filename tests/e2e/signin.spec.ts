@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
 import { identityURL } from "../../playwright.config";
-import { expect, test } from "./fixtures";
+import { cutOff, expect, test, type Blocked } from "./fixtures";
 import {
   CLIENT,
   SESSION_COOKIE,
@@ -62,7 +62,7 @@ test("check 10: sign-up makes an account with a did login method, the seeds copi
   // The River shows who is signed in, by DID (the note carries no name), under the profile menu's
   // My information (ui-revisions-9 item 1); the top bar no longer shows it.
   await page.getByRole("button", { name: "Your profile and settings" }).click();
-  await expect(page.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Sign out", exact: true })).toBeVisible();
   await page.getByRole("menuitem", { name: "My information" }).click();
   await expect(page.getByTestId("my-did")).toHaveText(did);
   await page.getByRole("dialog", { name: "My information" }).getByRole("button", { name: "Done" }).click();
@@ -188,11 +188,40 @@ test("check 23: a member's Mark read, Mark unread and opened links persist acros
 test("sign out (F10) clears the River session; the page is a visitor's again", async ({ page, context }) => {
   await signUpFromRiver(page, "signout");
   await page.getByRole("button", { name: "Your profile and settings" }).click();
-  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await page.getByRole("menuitem", { name: "Sign out", exact: true }).click();
   await expect(page.locator(".topbar").getByRole("link", { name: "Sign in" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("sample-banner")).toBeVisible();
   expect((await context.cookies(CLIENT)).find((c) => c.name === SESSION_COOKIE)).toBeUndefined();
   expect((await feed(page)).viewer).toBeNull();
+});
+
+test("Sign out everywhere ends the session in every browser, this one included (session revocation)", async ({ page, context, browser }) => {
+  await signUpFromRiver(page, "everywhere");
+  // The same session on another device: a second browser holding the same cookie.
+  const session = (await context.cookies(CLIENT)).find((c) => c.name === SESSION_COOKIE);
+  expect(session).toBeDefined();
+  const other = await browser.newContext({ baseURL: CLIENT });
+  const blocked: Blocked[] = [];
+  await cutOff(other, blocked);
+  try {
+    await other.addCookies([session!]);
+    const phone = await other.newPage();
+    await openFeed(phone);
+    expect((await feed(phone)).viewer).not.toBeNull();
+
+    await page.getByRole("button", { name: "Your profile and settings" }).click();
+    await page.getByRole("menuitem", { name: "Sign out everywhere" }).click();
+    await expect(page.locator(".topbar").getByRole("link", { name: "Sign in" })).toBeVisible({ timeout: 30_000 });
+    expect((await context.cookies(CLIENT)).find((c) => c.name === SESSION_COOKIE)).toBeUndefined();
+
+    // The other browser still holds its cookie, and it no longer signs anyone in.
+    await openFeed(phone);
+    expect((await feed(phone)).viewer).toBeNull();
+    await expect(phone.locator(".topbar").getByRole("link", { name: "Sign in" })).toBeVisible();
+    expect(blocked.filter((b) => b.resourceType !== "image" && b.resourceType !== "document")).toEqual([]);
+  } finally {
+    await other.close();
+  }
 });
 
 test("phone: the You tab offers Sign up and Sign in, then shows the member and Sign out", async ({ page }) => {
@@ -214,7 +243,8 @@ test("phone: the You tab offers Sign up and Sign in, then shows the member and S
   await expect(page.locator(".topbar")).not.toContainText(did);
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter((v) => v.impact === "critical" || v.impact === "serious").map((v) => v.id)).toEqual([]);
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page.getByRole("button", { name: "Sign out everywhere" })).toBeVisible();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await tabs.getByRole("button", { name: "You" }).click();
   await expect(page.getByRole("link", { name: "Sign up" })).toBeVisible({ timeout: 30_000 });
 });

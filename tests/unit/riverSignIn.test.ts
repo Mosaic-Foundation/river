@@ -456,12 +456,24 @@ describe("the River's cookies", () => {
   });
 
   it("sessions expire and must be well formed", () => {
-    const token = { v: 1 as const, instance: "00000000-0000-4000-8000-000000000001", account: "00000000-0000-4000-8000-0000000000aa", iat: NOW, exp: NOW + 100 };
+    const token = { v: 2 as const, instance: "00000000-0000-4000-8000-000000000001", account: "00000000-0000-4000-8000-0000000000aa", epoch: 1, iat: NOW, exp: NOW + 100 };
     const raw = encodeSession(secret, token);
     expect(decodeSession(secret, raw, NOW + 50)).toEqual(token);
     expect(decodeSession(secret, raw, NOW + 100)).toBeUndefined();
     expect(decodeSession(secret, raw.replace(/^./, "x"), NOW)).toBeUndefined();
     expect(decodeSession(secret, sign(secret, "session", b64({ ...token, account: "not-a-uuid" })), NOW)).toBeUndefined();
+  });
+
+  it("sessions carry the account's session epoch; a cookie without one is refused (DECISIONS, 2026-10-26)", () => {
+    const token = { v: 2 as const, instance: "00000000-0000-4000-8000-000000000001", account: "00000000-0000-4000-8000-0000000000aa", epoch: 3, iat: NOW, exp: NOW + 100 };
+    expect(decodeSession(secret, encodeSession(secret, token), NOW)?.epoch).toBe(3);
+    const { epoch: _epoch, ...noEpoch } = token;
+    // The cookie every member held before this change: v1, no epoch.
+    expect(decodeSession(secret, sign(secret, "session", b64({ ...noEpoch, v: 1 })), NOW)).toBeUndefined();
+    expect(decodeSession(secret, sign(secret, "session", b64(noEpoch)), NOW)).toBeUndefined();
+    for (const epoch of [0, -1, 1.5, "1", null]) {
+      expect(decodeSession(secret, sign(secret, "session", b64({ ...token, epoch })), NOW), String(epoch)).toBeUndefined();
+    }
   });
 
   it("are HttpOnly, Secure, SameSite=Lax and host-wide; a repeated name is trusted neither way", () => {

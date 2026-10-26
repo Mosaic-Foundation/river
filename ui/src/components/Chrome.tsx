@@ -68,7 +68,8 @@ export interface HeaderProps {
   onFollow: (trigger: HTMLButtonElement) => void;
   /** Undefined while the first feed loads; null for a visitor. */
   viewer: Viewer | null | undefined;
-  onSignOut: () => void;
+  /** `everywhere`: end every session of this account, on every device. */
+  onSignOut: (everywhere?: boolean) => void;
   /** A title centred in the bar (Civic mode's "Citizen Dashboard", ui-revisions-5 item 2). */
   title?: string | null;
 }
@@ -148,8 +149,8 @@ export function TabBar({ active, onChange }: { active: Tab; onChange: (tab: Tab)
   );
 }
 
-/** The You tab (phone): sign up or sign in, or who is signed in and Sign out (spec F2, F3, F10). */
-export function YouPanel({ viewer, onSignOut }: { viewer: Viewer | null | undefined; onSignOut: () => void }) {
+/** The You tab (phone): sign up or sign in, or who is signed in, Sign out and Sign out everywhere (spec F2, F3, F10). */
+export function YouPanel({ viewer, onSignOut }: { viewer: Viewer | null | undefined; onSignOut: (everywhere?: boolean) => void }) {
   if (viewer === undefined) return null;
   if (viewer === null) {
     return (
@@ -176,10 +177,14 @@ export function YouPanel({ viewer, onSignOut }: { viewer: Viewer | null | undefi
       <p className="account-id">{viewerLabel(viewer)}</p>
       <p className="card-muted">What you mark read is saved to your account.</p>
       <p className="account-actions">
-        <button type="button" className="button button-secondary" onClick={onSignOut}>
+        <button type="button" className="button button-secondary" onClick={() => onSignOut()}>
           Sign out
         </button>
+        <button type="button" className="button button-secondary" onClick={() => onSignOut(true)}>
+          Sign out everywhere
+        </button>
       </p>
+      <p className="card-muted">Sign out everywhere ends your sessions on every device, this one included.</p>
     </>
   );
 }

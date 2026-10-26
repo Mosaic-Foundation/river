@@ -67,6 +67,12 @@ Newest first: date, slice, tests added, counts.
 - 2026-10-26, identity account page: API `identity` (the page, `/account/options`, refused
   requests and origins; check 28 covers both); e2e `identity` (the account page's two cases; the
   CSP, axe and Tab test covers `/account`). Unit 734, API 203, e2e 153.
+- 2026-10-26, session revocation: unit `riverSignIn` (the epoch in the token; v1 and malformed
+  epochs refused); API db `sessionRevocation` (new: runs `readSession()` against the database as
+  river_app, with its own SESSION_SECRET and DATABASE_URL); API `signin` (Sign out everywhere over
+  HTTP); e2e `signin` (two browser contexts share a session; the second uses `cutOff()` from
+  `fixtures.ts`, now exported) and `profile` (the menu's items; "Sign out" matched exactly, since
+  "Sign out everywhere" contains it). Unit 735, API 207, e2e 152.
 - 2026-10-26, Mark all read's route removed: API `signin` (one test: 404, nothing marked; the
   four Mark all read tests go); API `feed` (visitor check on `/read-state` only); API db `modes`
   (Mark all read in Civic removed). Unit 734, API 198.

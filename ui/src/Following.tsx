@@ -65,7 +65,7 @@ export function FollowingPage() {
             <ProfileMenu
               viewer={state.status === "ok" ? (state.page.viewer ?? { did: null, displayName: null }) : null}
               followingHref={withMode("/following", mode)}
-              onSignOut={() => void signOut().then(() => window.location.assign(withMode("/", mode)))}
+              onSignOut={(everywhere) => void signOut(everywhere).then(() => window.location.assign(withMode("/", mode)))}
             />
           )}
         </div>
