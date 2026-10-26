@@ -8,6 +8,7 @@
 import path from "node:path";
 import express, { Router, type NextFunction, type Request, type Response } from "express";
 import { env } from "../config/env.js";
+import { accountRoutes } from "./flows/account.js";
 import { authorizeRoutes } from "./flows/authorize.js";
 import { asyncRoutes } from "./flows/common.js";
 import { didLogRoutes } from "./flows/didLog.js";
@@ -65,6 +66,7 @@ export function identityRoutes(): Router {
   authorizeRoutes(routes);
   recoverRoutes(routes);
   emailRoutes(routes);
+  accountRoutes(routes);
 
   router.use((_req, res) => {
     res.status(404).type("html").send(errorPage("Not found", "There is nothing at this address."));

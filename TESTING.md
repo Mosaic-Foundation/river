@@ -64,6 +64,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, identity account page: API `identity` (the page, `/account/options`, refused
+  requests and origins; check 28 covers both); e2e `identity` (the account page's two cases; the
+  CSP, axe and Tab test covers `/account`). Unit 734, API 203, e2e 153.
 - 2026-10-26, session revocation: unit `riverSignIn` (the epoch in the token; v1 and malformed
   epochs refused); API db `sessionRevocation` (new: runs `readSession()` against the database as
   river_app, with its own SESSION_SECRET and DATABASE_URL); API `signin` (Sign out everywhere over
