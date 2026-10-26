@@ -1,10 +1,13 @@
 // Which Bluesky spaces a feed open refreshes (src/river/feed/rotation.ts; docs/spec/bluesky-1.md
 // item 4; DECISIONS.md "Refreshing hundreds of Bluesky accounts"): a capped, rotating subset,
-// most recent posters first, with a share for accounts just imported. Other adapters are untouched.
+// most recent posters first, with a share for accounts just imported. Every other adapter is capped
+// per open too, longest-waiting first.
 import { describe, expect, it } from "vitest";
 import {
   BLUESKY_REFRESH_CAP,
   chooseForRefresh,
+  CLAIM_FLOOR_MS,
+  OTHER_REFRESH_CAP,
   isDue,
   NEW_SHARE,
   refreshInterval,
@@ -17,7 +20,7 @@ const DAY = 24 * HOUR;
 
 interface Row {
   id: string;
-  adapter: "atproto" | "fediverse" | "civic_hub";
+  adapter: "atproto" | "fediverse" | "civic_hub" | "rss";
   newest_item_at: Date | null;
   last_fetched_at: Date | null;
 }
@@ -50,12 +53,43 @@ describe("refreshInterval and isDue", () => {
 });
 
 describe("chooseForRefresh", () => {
-  it("passes every other space through untouched", () => {
+  it("passes a few stale other spaces through, and skips ones the claim would refuse", () => {
     const others: Row[] = [
-      { id: "hub", adapter: "civic_hub", newest_item_at: null, last_fetched_at: new Date(NOW) },
+      { id: "hub", adapter: "civic_hub", newest_item_at: null, last_fetched_at: new Date(NOW - 10 * MIN) },
       { id: "fedi", adapter: "fediverse", newest_item_at: null, last_fetched_at: null },
+      { id: "recent", adapter: "rss", newest_item_at: null, last_fetched_at: new Date(NOW - CLAIM_FLOOR_MS + 1000) },
     ];
     expect(chooseForRefresh(others, NOW).map((r) => r.id)).toEqual(["hub", "fedi"]);
+  });
+
+  it("caps every other adapter per open, so thousands of feeds can't all be fetched at once", () => {
+    const other = (adapter: Row["adapter"], i: number, fetchedAgo: number | null): Row => ({
+      id: `${adapter}${i}`,
+      adapter,
+      newest_item_at: null,
+      last_fetched_at: fetchedAgo === null ? null : new Date(NOW - fetchedAgo),
+    });
+    const rows = [
+      ...Array.from({ length: 2000 }, (_, i) => other("rss", i, null)),
+      ...Array.from({ length: 2000 }, (_, i) => other("fediverse", i, (i + 3) * MIN)),
+      ...Array.from({ length: 50 }, (_, i) => other("civic_hub", i, HOUR)),
+    ];
+    const chosen = chooseForRefresh(rows, NOW);
+    expect(chosen).toHaveLength(3 * OTHER_REFRESH_CAP);
+    // Never fetched first, in the order given; then the longest waiting.
+    expect(chosen.filter((r) => r.adapter === "rss").map((r) => r.id)).toEqual(
+      Array.from({ length: OTHER_REFRESH_CAP }, (_, i) => `rss${i}`),
+    );
+    expect(chosen.filter((r) => r.adapter === "fediverse").map((r) => r.id)).toEqual(
+      Array.from({ length: OTHER_REFRESH_CAP }, (_, i) => `fediverse${1999 - i}`),
+    );
+
+    // The next open, with those fetched, reaches the next ones.
+    const fetched = new Set(chosen.map((r) => r.id));
+    const after = rows.map((r) => (fetched.has(r.id) ? { ...r, last_fetched_at: new Date(NOW) } : r));
+    const next = chooseForRefresh(after, NOW + MIN);
+    expect(next).toHaveLength(3 * OTHER_REFRESH_CAP);
+    expect(next.some((r) => fetched.has(r.id))).toBe(false);
   });
 
   it("refreshes at most the cap of hundreds, the most overdue first, recent posters on a tie", () => {

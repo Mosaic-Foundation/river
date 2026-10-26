@@ -22,7 +22,7 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 ## Follow caps: 2,000 per account; the Bluesky import rate-limited — 2026-10-26
 
-- Branch / PR: claude/follow-caps → PR (merge when ci is green)
+- Branch / PR: claude/follow-caps → #57 (merge when ci is green)
 - Migrations: none
 
 **What it does.** Security review of 3a86e8f, item 3. An account follows at most 2,000 spaces and
@@ -39,7 +39,45 @@ limiter, `src/river/rateLimit.ts`. DECISIONS.md has the entry. The UI already sh
 import; a mute still allowed; an over-cap import stores nothing; two concurrent imports of 1,500
 leave exactly one. API `blueskyImport`: the 21st preview and 11th import are 429, and another member
 isn't affected. Unit `riverRateLimit`. All new ones failed before (no cap; both concurrent imports
-stored, 3,000). `npm run check`: 52 files, 711 tests passed; UI built. API: 18 files, 178 passed.
+stored, 3,000). `npm run check` (after merging main with #55 and #56): 52 files, 720 tests passed;
+UI built. API: 18 files, 178 passed.
+## Refresh budget: every adapter capped per feed open — 2026-10-26
+
+- Branch / PR: claude/refresh-budget → #56 (merged)
+- Migrations: none
+
+**What it does.** Security review of 3a86e8f, item 2. `chooseForRefresh` now caps every adapter,
+not only Bluesky. One open claims at most 12 stale spaces each of hubs, fediverse accounts and
+feeds (`OTHER_REFRESH_CAP`), never-fetched first and then the longest waiting, so every space
+gets its turn over later opens. Spaces fetched within the claim's 120 s floor are skipped before
+the cap and don't use up a slot. DECISIONS.md has the entry.
+
+**Keys.** None (`OTHER_REFRESH_CAP = 12`, `CLAIM_FLOOR_MS = 120_000` in `rotation.ts`).
+
+**Tests.** Unit `blueskyRotation`: 2,000 feeds, 2,000 fediverse accounts and 50 hubs give 12 of
+each, in rotation order, and the next open reaches the next ones. A space inside the floor is
+skipped. Both failed before (4,050 chosen). `npm run check` (after merging main with #55): 51 files,
+719 tests passed; UI built.
+API (fresh stack): 17 files, 174 passed.
+## Feed reader: linear time on hostile feeds — 2026-10-26
+
+- Branch / PR: claude/zealous-planck-pyye2b → #55 (merged)
+- Migrations: none
+
+**What it does.** Security review of 3a86e8f, item 1. `parseXml` checks a tag's name before it
+looks for the tag's `>`. A `<` with no `>` after it makes the rest of the document text and ends
+the scan, so `"<rss>" + "<".repeat(2_000_000)` now takes milliseconds, not hours. After one tag whose
+quotes never close, tags end at the next `>`, so the parser keeps reading without rescanning. Elements
+share their parent's namespace map unless they declare one (a `Map`, so a prefix like
+`constructor:` no longer throws), and only the first 64 namespace declarations in a document are
+read. Autodiscovery's `<link` pattern stops at the next `<`.
+
+**Keys.** None (`MAX_NAMESPACES = 64` in `xml.ts`).
+
+**Tests.** Unit `rssFeed`: timed cases (each under 1 s; the old code hung or took 6–8 s) for 2M
+stray `<`, a never-closed tag, never-closed quotes, 1,000 xmlns over 20,000 children, and 50,000
+unclosed `<link`. Also checks the 64-declaration cap, namespace scoping and `Object` property prefixes.
+`npm run check`: 51 files, 718 tests passed; UI built.
 
 ### Follow-ups
 - None.

@@ -373,6 +373,19 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Alternatives: counting every rule (mutes too) would refuse a mute at the cap. A durable limit
   table would need a migration. The River has no paid limiter service, and these routes are
   members-only.
+## 2026-10-26 — Every adapter is capped per feed open (security review item 2)
+- Decision: each feed open claims at most 12 stale spaces of each non-Bluesky adapter
+  (`OTHER_REFRESH_CAP` in `src/river/feed/rotation.ts`), on top of Bluesky's 12. Stale means what
+  the claim already tests: never fetched, or not in the last 120 s (`CLAIM_FLOOR_MS`). Within an
+  adapter, never-fetched spaces go first in the order given, then the oldest last fetch, so a
+  member with 300 feeds has each one refreshed within 25 opens. Spaces the claim would refuse
+  no longer take a slot.
+- Why: before, every stale hub, fediverse account and feed was claimed and fetched on one open.
+  A member who followed a few thousand feeds made every open fetch thousands of hosts. Spec 4.5
+  gives the open a 6 s budget, and Bluesky already had a cap for the same reason.
+- Alternatives: one cap shared across adapters, but then a large import into one network could
+  starve the others. Bluesky's quiet-account intervals for every adapter would change how often
+  hubs and feeds refresh, which is more than this fix needs.
 - Thread / PR: security review of 3a86e8f
 
 ## 2026-10-26 — A Following row's origin line (Adam)
