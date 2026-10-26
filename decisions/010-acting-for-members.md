@@ -45,14 +45,14 @@ Consent never carries over: linking a second fediverse account, or a grant with 
 
 - The River's server builds the outgoing request from the member's input, stores it as a `previewed` row in `river.member_actions` (§7) with the account's current session epoch, and returns it. The page shows it twice: as the reader will see it (text, content warning, visibility, the post or item it answers, the account or DID it comes from, the server or space it goes to), and under "Show exactly what will be sent" as the request itself (the JSON or form fields, every value escaped as text).
 - Send names that row. The server sends exactly the stored request, never a rebuilt one, so what was shown is what goes. A row is good for 15 minutes; an expired one answers "This preview is out of date. Check it again." and is purged by the daily job.
-- For a signed action, the preview shows the claims Mosaic ID will sign except the three it adds when signing (`iat`, `exp`, `jti`), and names them.
+- For a signed action, the preview shows every claim Mosaic ID will sign with its value (`iss`, `sub`, `aud`, `htm`, `htu`, `client`, `assurance`, `act`), and names the three whose values Mosaic ID sets when it signs (`iat`, `exp`, `jti`).
 - Toggle acts skip the stored preview; their row is written and sent in one request.
 
 ### 5. Credentials, encrypted at rest
 
 - **No private keys.** Constraint 7 is unchanged: a member's DID key stays at Mosaic ID; ADR-012 has Mosaic ID sign. The River's own credential for Mosaic ID is a client secret, not a key (ADR-012).
 - **Tokens never leave the River's server.** Linked-account access tokens, OAuth client secrets from per-server app registration, and Mosaic ID grant tokens are stored only in the River's database, encrypted. They are never sent to the browser, logged, put in an error, exported, or written to a fixture.
-- **Envelope encryption, as Mosaic ID does it.** `src/identity/keys/envelope.ts` already does what's needed: a fresh 32-byte data key per value encrypts it with AES-256-GCM, and a master key wraps the data key with AES-256-GCM, both with additional authenticated data so a ciphertext copied to another row fails to open. It moves to `src/shared/crypto/envelope.ts` (Mosaic ID imports it from there; no behaviour change), and the River uses it with its own master key, `RIVER_TOKEN_KEY` (32 random bytes, base64, River project only; never in the identity project or the database). The additional data is `river-token:v1|{instance_id}|{account_id}|{row id}|{purpose}`. Each row stores the master key's version, so the key can be rotated by re-wrapping data keys.
+- **Envelope encryption, as Mosaic ID does it.** `src/identity/keys/envelope.ts` already does what's needed: a fresh 32-byte data key per value encrypts it with AES-256-GCM, and a master key wraps the data key with AES-256-GCM, both with additional authenticated data so a ciphertext copied to another row fails to open. It moves to `src/shared/crypto/envelope.ts` (Mosaic ID imports it from there; no behaviour change), and the River uses it with its own master key, `RIVER_TOKEN_KEY` (32 random bytes, base64, River project only; never in the identity project or the database). The additional data is `river-token:v1|{instance_id}|{account_id}|{row id}|{purpose}` for a member's credential, and `river-client:v1|{instance_id}|{server host}` for a server's client secret, which belongs to the instance, not to an account. Each row stores the master key's version, so the key can be rotated by re-wrapping data keys.
 - **Mosaic ID keeps only hashes** of the grant tokens it issues (SHA-256, as for recovery tokens).
 - **What a leak costs.** The database alone gives nothing usable. The database plus `RIVER_TOKEN_KEY` gives every linked token: then every link is revoked (`npm run revoke-links`, which calls each server's revoke endpoint and deletes the rows), Mosaic ID revokes every grant for the River's client in one statement, and members are told. The runbook goes in `docs/deploy.md` with the first PR that stores a token.
 
@@ -80,15 +80,25 @@ Consent never carries over: linking a second fediverse account, or a grant with 
 
 ### 9. Limits and failures
 
-- **Per-account limits, in the database.** Before any outbound request the River counts the account's rows in rolling windows, holding a row lock on the account so two requests can't both pass. The numbers are in each spec (for example, text acts 30 an hour and 100 a day). Over a limit: 429 and "You've sent a lot from the River in the last hour. Try again after 14:20." Mosaic ID applies its own per-person signing limits, so even a compromised River can't exceed them, and spaces apply theirs.
+- **Per-account limits, in the database.** Before any outbound request the River counts the account's rows in rolling windows under a row lock on the account, writes the new row and commits, so two requests can't both take the last allowance and no lock or pooler connection is held while the other side answers. One table for every channel:
+
+  | Kind | Acts | Limit |
+  | --- | --- | --- |
+  | Text | post, reply, comment, poll answer | 30 an hour, 100 a day |
+  | Toggle | boost, favourite, support, RSVP, and every undo except delete | 120 an hour, 600 a day |
+  | Follow | follow, unfollow | 50 a day |
+  | Delete | delete a post or reply | 30 in 30 minutes |
+
+  Over a limit: 429 and "You've sent a lot from the River in the last hour. Try again after 14:20." Mosaic ID applies its own per-person signing limits (ADR-012), set above these so they only bind a River that ignores its own, and spaces and servers apply theirs.
 - **No silent retries.** The River never retries an act on its own.
 - **Text acts are never optimistic.** The composer keeps the text until the other side confirms; on failure the text stays and the error shows beside Send. Toggle acts change on click and change back, with the error, if the request fails (as the circles menu does, `ui-revisions-7.md` item 2).
-- **Unknown is not failed.** A request that times out may have arrived. Its row is `unknown`, and the member sees "We couldn't tell whether example.social got it" with "Check on example.social" and "Try again". Try again is safe: fediverse posts carry an `Idempotency-Key` where the server supports it, and a space returns the stored answer for a repeated signed action (ADR-012).
+- **Unknown is not failed.** A request that times out at the side that acts may have arrived. Its row is `unknown`, and the member sees "We couldn't tell whether example.social got it" with "Check on example.social". "Try again" is offered only while it is safe: within an hour on Mastodon (it keeps an `Idempotency-Key` that long), within 24 hours at a space (it keeps each action's `ref`, ADR-012), and never on servers not known to honour the key (GoToSocial until checked). A failure before the acting side was reached (Mosaic ID didn't sign, a search to resolve a post failed) is `failed`, since nothing was sent.
 - **Messages name the other side.** Every failure maps to one message from a fixed list in the spec, naming the server or space. A message from the other side is shown as plain text, at most 300 characters, after its host's name ("example.social says: …").
 
 ### 10. Sessions: a stolen session can't act after "Sign out everywhere"
 
-- Every acting route needs a signed-in member at the account's current session epoch (`readSession()` already refuses any other cookie), an `Origin` check, and, for Send, a previewed row whose stored epoch is still the account's epoch.
+- Every acting route needs a signed-in member at the account's current session epoch (`readSession()` already refuses any other cookie), an `Origin` check, and, for Send, a previewed row whose stored epoch is still the account's epoch. Redirect callbacks (linking, granting, step-up) never send an act: they store what came back and return the member to the page, where Send is a new click under these checks.
+- Callbacks that receive a code send `Referrer-Policy: no-referrer` and redirect at once, as the sign-in callback does, and live under `/api/auth/` so `vercel.json`'s header for that path applies too.
 - Credentials never reach the browser (§5), so a stolen session holds nothing but its cookie, and "Sign out everywhere" ends that cookie on its next request. Nothing it previewed can be sent afterwards, and nothing is queued for later (§2), so nothing it started can complete after the epoch moves.
 - If a later ADR queues acts (for example, delivery from a River ActivityPub actor, ADR-011's alternative), each queued act carries the epoch it was made under and is dropped, not sent, if the account's epoch has moved by the time it runs.
 - "Sign out everywhere" says: "Check Your activity for anything you didn't send." Unlinking stays separate: the credentials were never in the stolen session.
@@ -106,8 +116,8 @@ Consent never carries over: linking a second fediverse account, or a grant with 
 
 ## Consequences
 
-- New tables `river.member_actions`, `river.linked_accounts` and `river.oauth_clients` (all new, RLS in the same migration), a new River secret `RIVER_TOKEN_KEY`, and the envelope module moving to `src/shared/crypto/` (touches `src/identity/keys/`, so `needs-adam`).
+- New tables `river.member_actions`, `river.linked_accounts` (kind `fediverse` or `mosaic_grant`: a fediverse token or a Mosaic ID grant token), `river.oauth_clients` and `river.acting_attempts` (all new, RLS in the same migration), a new River secret `RIVER_TOKEN_KEY`, a revocation script (`npm run revoke-links`) with Mosaic ID's revoke-every-grant step, and the envelope module moving to `src/shared/crypto/` (touches `src/identity/keys/`, so `needs-adam`).
 - New screens: Settings → Linked accounts, and Your activity.
-- Each act is a database write plus one or two outbound requests inside the click's request, so a send takes as long as the other side does, up to the guard's 6 s.
+- Each act is a database write plus one or two outbound requests in a row inside the click's request (a reply resolves the post, then posts; a space action is signed, then sent), so a send can take up to about 12 s, inside the function's 60 s.
 - The River becomes a holder of credentials that can speak for people. The limits, the audit list, and the revocation runbook are what keep that bounded.
 - Revisit when acts need to be queued (a River actor, scheduled posts), when the export grows an activity list, and when River sessions can be signed out after a Mosaic ID recovery.

@@ -151,7 +151,6 @@ The body is one compact JWS, at most 16 KB. No cookies and no `Authorization` he
   "jti": "3mJ2rTq0V5yWcQ8xZk1bNw",
   "client": "https://river.mosaic.social",
   "assurance": "grant",
-  "name": "Ana Ruiz",
   "act": {
     "verb": "comment",
     "target": "https://demosville.civic.social/process/proc_4",
@@ -171,7 +170,6 @@ The body is one compact JWS, at most 16 KB. No cookies and no `Authorization` he
 | `jti` | 16 random bytes, base64url. Unique per JWS. |
 | `client` | The origin of the client Mosaic ID authenticated. Set by the signer, never by the client. |
 | `assurance` | `grant` (signed under a standing grant) or `passkey` (a passkey check for this action). |
-| `name` | Optional: the Mosaic ID's display name when signed. Not verified; for display. |
 | `act` | The action (3.4). |
 
 ### 3.4 `act`
@@ -182,7 +180,7 @@ The body is one compact JWS, at most 16 KB. No cookies and no `Authorization` he
 | `support` | `target` |
 | `rsvp` | `target`, `answer` (`yes`, `no` or `maybe`) |
 | `poll_answer` | `target`, `choices` (choice ids, one unless `multiple`) |
-| `withdraw` | `target`: the `id` the space returned for the action being withdrawn |
+| `withdraw` | `target`: the `id` the space returned for the action being withdrawn; `withdraws`: that action's verb |
 
 Every `act` also carries `ref`: a client-chosen UUID, the same on every retry of one action,
 and new for each new action. No other fields are allowed in 0.1; a space MUST refuse unknown
@@ -236,14 +234,21 @@ the stored answer with its original status code.
 
 ### 3.6 Replay and idempotency
 
-- A space MUST remember each `(iss, act.ref)` with its answer for 24 hours. A request whose
-  `(iss, ref)` is known and whose `act` is identical returns the stored answer, whatever its
-  `jti`: that is how a client safely retries after a timeout. A different `act` with a known
-  `ref` is `ref_conflict`.
+- A space MUST remember each `(iss, act.ref)` with its **final** answer for 24 hours: 201, 202,
+  and the refusals no retry can change (`blocked`, `unknown_target`, `closed`, `not_accepted`,
+  `too_long`, `not_withdrawable`, `not_eligible`). It MUST NOT store a retryable answer
+  (`not_member`, `assurance_required`, `rate_limited`, `did_unavailable`, `unavailable`,
+  `expired`), so the same action can succeed once the cause is fixed. A request whose
+  `(iss, ref)` has a stored answer and whose `act` is identical gets that answer, whatever its
+  `jti` or `assurance`: that is how a client safely retries after a timeout. A different `act`
+  with a known `ref` is `ref_conflict`.
 - For a new `ref`, a space MUST remember each `jti` until `exp` plus 60 s and refuse a repeat
   (`replayed`).
-- `aud`, `htm` and `htu` stop a JWS for one space or endpoint being used at another; `typ` stops a
-  sign-in note being used as an action or an action as a note.
+- `aud`, `htm` and `htu` stop a JWS for one space or endpoint being used at another. `typ`
+  stops a sign-in note being used as an action. The other way round, an action can't pass as a
+  sign-in note: it has no `nonce`, Mosaic ID refuses to sign an action whose `aud` is a
+  registered client's origin (5.2), and sign-in verifiers refuse `typ: "mosaic-action+jwt"`
+  (5.5).
 
 ## 4. How a space verifies a request
 
@@ -267,8 +272,9 @@ In this order, stopping at the first failure. Each step is a conformance case (s
 10. `client` is not blocked and the DID is not blocked (`blocked`).
 11. The target exists, is visible, is on this space, currently accepts this verb, is not past
     `closes_at`, and the answer is one of its options (`unknown_target`, `closed`,
-    `not_accepted`, `too_long`, `not_withdrawable`). If the target is marked `"passkey"`,
-    `assurance` is `passkey` (`assurance_required`).
+    `not_accepted`, `too_long`, `not_withdrawable`); for `withdraw`, the action named is this
+    DID's and its verb is `withdraws`. If the target is marked `"passkey"`, `assurance` is
+    `passkey` (`assurance_required`).
 12. The DID is a member of the space and allowed this action under the space's own rules
     (`not_member`, `not_eligible`).
 13. Limits and moderation (section 6), then the action is recorded and answered.
@@ -282,17 +288,20 @@ said what with proof.
 
 1. The River creates a grant attempt (state, PKCE verifier) and sets a 10-minute `HttpOnly`,
    `Secure`, `SameSite=Lax` state cookie, then redirects to
-   `https://id.mosaic.social/grant?response_type=code&client_id=https://river.mosaic.social&redirect_uri=https://river.mosaic.social/api/acting/grant/callback&state={state}&code_challenge={S256}&code_challenge_method=S256&scope=space-actions:comment%20space-actions:support%20space-actions:rsvp%20space-actions:poll_answer`.
+   `https://id.mosaic.social/grant?response_type=code&client_id=https://river.mosaic.social&redirect_uri=https://river.mosaic.social/api/auth/grant/callback&state={state}&code_challenge={S256}&code_challenge_method=S256&scope=space-actions:comment%20space-actions:support%20space-actions:rsvp%20space-actions:poll_answer`.
 2. Mosaic ID checks `client_id` and the exact `redirect_uri` (as for sign-in), and shows:
    "**Mosaic River** asks to send these as you (your Mosaic ID): comments, support, RSVPs and poll
    answers, to Mosaic spaces you choose in the River. You'll see each one in the River before it's
    sent. Mosaic ID keeps a list of everything it signs. You can stop this at any time on your
    account page." It runs a passkey check (user verification required), records the grant, and
    redirects to `redirect_uri?state={state}&code={code}` (one use, 60 s).
-3. The River requires the cookie to match `state`, consumes the attempt, and calls
+3. The callback sends `Referrer-Policy: no-referrer` and redirects at once so the code doesn't
+   linger (as spec 4.6's sign-in callback). The River requires the cookie to match `state`,
+   consumes the attempt, and calls
    `POST https://id.mosaic.social/grant/token` (form body: `grant_type=authorization_code`, `code`,
    `redirect_uri`, `code_verifier`; HTTP Basic with the client id and `MOSAIC_ID_CLIENT_SECRET`).
 4. Mosaic ID answers `{ "grant_token": "…", "token_type": "mosaic-grant", "scope": "…", "sub": "did:webvh:…" }`.
+   The code is bound to the client, the redirect URI and the PKCE challenge, and works once.
    The River refuses a `sub` that isn't the signed-in account's DID (and revokes it), then stores
    the token encrypted (ADR-010 §5). Mosaic ID keeps only its SHA-256.
 5. If the person's DID document has no `assertionMethod`, Mosaic ID appends a DID log entry
@@ -307,8 +316,11 @@ A grant lasts until revoked; one unused for 180 days lapses on both sides.
 
 Mosaic ID: authenticates the client; finds the grant by the token's hash (`grant_revoked` if
 missing, revoked or lapsed); checks `act` against 3.4 and that the grant's scope covers its verb
-(`withdraw` is covered by any scope); checks `htu` is `https:` and `aud` is a `did:web` or an
-`https:` origin; applies the person's limits (60 signatures an hour, 300 a day) and the client's
+(for `withdraw`, the scope of the verb named in `withdraws`); checks `htu` is `https:` and `aud`
+is a `did:web` or an `https:` origin that is **not** a registered client's origin (so an action
+is never aimed at a sign-in verifier); applies the person's limits (200 signatures an hour,
+1,000 a day: above the River's own limits, so they bind only a River that ignores its own) and
+the client's
 (5,000 an hour across all people); signs with `assurance: "grant"` (this endpoint never signs
 `passkey`; a target marked `"passkey"` goes through 5.3); writes `audit_log` `action_signed`
 `{client, aud_host, verb, jti}`; returns `{ "jws": "…", "jti": "…", "exp": 1793050120 }`.
@@ -321,18 +333,40 @@ Errors: 401 `invalid_client`, 401 `grant_revoked`, 403 `scope`, 422 `invalid_act
 1. The River `POST /actions/requests` (client-authenticated) with the grant token, `aud`, `htu`,
    `act`, and `display` (plain-text target title and choice labels, at most 500 characters in all).
    Mosaic ID answers `{ "request_uri": "urn:mosaic:action-request:…", "expires_in": 300 }`.
-2. The River sets a state cookie and sends the member to
-   `https://id.mosaic.social/actions/confirm?client_id=…&request_uri=…&state=…&redirect_uri=https://river.mosaic.social/api/acting/step-up/callback`.
+2. The River stores a step-up attempt (state, PKCE verifier) for the previewed row, sets a state
+   cookie, and sends the member to
+   `https://id.mosaic.social/actions/confirm?client_id=…&request_uri=…&state=…&code_challenge=…&code_challenge_method=S256&redirect_uri=https://river.mosaic.social/api/auth/step-up/callback`.
 3. Mosaic ID shows the action (verb, space host, content or choice ids) and the River's
-   `display` labelled "as Mosaic River describes it", runs a passkey check, and redirects back
-   with a one-use code.
-4. The River `POST /actions/token` with the code and gets the JWS (`assurance: "passkey"`).
+   `display` labelled "as Mosaic River describes it", and runs a passkey check that must use
+   **one of the grant's person's passkeys** (anyone else's is refused). It redirects back with a
+   code bound to the client, the request, the redirect URI and the PKCE challenge: one use, 60 s.
+4. The callback (`Referrer-Policy: no-referrer`, immediate redirect) checks the state cookie,
+   consumes the attempt, calls `POST /actions/token` (client-authenticated, the code and
+   `code_verifier`) and stores the JWS (`assurance: "passkey"`) on the previewed row. It sends
+   nothing to the space. The member is back on the preview, now marked "Confirmed with your
+   passkey", and Send (an Origin-checked click at the current session epoch, ADR-010 §10)
+   delivers it. A JWS not sent before its `exp` is dropped and the step-up starts again.
 
 ### 5.4 Revoking
 
 `POST /grant/revoke` (client-authenticated, the grant token) answers 204. The account page at
 Mosaic ID lists each grant (client, scopes, created, last used) with Revoke, and "Signed for apps"
 (the `action_signed` lines: when, space host, verb). A recovery revokes every grant of the person.
+The daily job deletes action requests older than a day, and grants that lapsed or were revoked
+more than 30 days ago (their `action_signed` lines stay in `audit_log`).
+
+### 5.5 Clients and the sign-in note
+
+- Each registered client has capabilities: `signin` (the sign-in note, ADR-002) and
+  `space-actions` (grants and signing). The River has both; a Civic Hub registered to sign people
+  in has `signin` only, so it can't ask for grants. Mosaic ID refuses grant and signing requests
+  from a client without `space-actions`.
+- Sign-in notes gain `typ: "mosaic-signin+jwt"` in their header. Every sign-in verifier (the
+  River's callback, and a hub's) refuses a JWS whose `typ` is `mosaic-action+jwt`, and keeps
+  accepting notes with no `typ` until every note carries one.
+- Space Actions is for any Mosaic space, but a space only verifies actions; it never relies on the
+  sign-in note. A space outside the Foundation that wants "Sign in with Mosaic ID" waits for the
+  OAuth profile ADR-002 requires.
 
 ## 6. Moderation and abuse limits at the space
 
@@ -366,22 +400,29 @@ A conforming space:
 3. **First use.** With no grant, the first click explains: "To comment from the River, let
    Mosaic River send actions as your Mosaic ID. You'll see each one before it's sent." Continue
    goes to Mosaic ID (5.1) and back to the same card. The first action at each space adds one line
-   to its preview: "demosville.civic.social will see your Mosaic ID and its name."
+   to its preview: "demosville.civic.social will see your Mosaic ID (its DID) with this."
 4. **Comment and poll answer** open a composer with the text box (or the choices), a live
    character count against `max_length`, and Preview. The preview shows the text as the space will
-   get it, the target's title, the space's host, "as Ana Ruiz (Mosaic ID)", and, under "Show
-   exactly what will be sent", the claims Mosaic ID will sign (ADR-010 §4). Send signs and posts.
+   get it, the target's title, the space's host, "as your Mosaic ID", and, under "Show exactly
+   what will be sent", every claim Mosaic ID will sign: `iss`, `sub`, `aud`, `htm`, `htu`,
+   `client`, `assurance` and `act` with their values, and `iat`, `exp` and `jti` named as "set by
+   Mosaic ID when it signs" (ADR-010 §4). Send signs and posts.
 5. **Support and RSVP** are toggles: Support shows "Supported ✓" once sent and Withdraw beside it;
    RSVP is a three-way choice where changing the answer sends a new `rsvp`.
-6. **Sending.** One request from the page: the River checks the session and limits, writes the
-   row, asks Mosaic ID to sign (5.2, or 5.3 for `"passkey"` targets), posts the JWS to the space,
-   and stores the answer. A timeout at either step leaves the row `unknown`; Try again reuses the
-   row's `ref` with a fresh signature, which the space answers from its stored result.
+6. **Sending.** One request from the page (for a `"passkey"` target, the Send after the step-up,
+   5.3): the River checks the session, then takes the limits' lock, writes the row and commits
+   before any outbound request, so no lock or pooler connection is held while it waits. It then
+   asks Mosaic ID to sign (5.2), posts the JWS to the space, and stores the answer: two requests
+   in a row, so up to about 12 s. A failure or timeout at Mosaic ID leaves the row `failed`
+   (nothing reached the space). A timeout at the space leaves it `unknown`; for 24 hours (the
+   space's `ref` window, 3.6) Try again reuses the row's `ref` with a fresh signature and the
+   space answers from its stored result; after that only "Check on demosville.civic.social"
+   is offered.
 7. **Results.** `accepted`: "Sent to demosville.civic.social" with View ↗ (`url`). `held`:
    "demosville.civic.social will show it after review" plus the space's `message`.
    Every action appears in Your activity (ADR-010 §7) with Withdraw where `withdrawable`.
-8. **Limits (River side, per account, all channels):** text actions 30 an hour and 100 a day;
-   toggles 120 an hour and 600 a day.
+8. **Limits:** the River's per-account limits are ADR-010 §9's table (shared with fediverse
+   posting); Mosaic ID's (5.2) sit above them.
 9. **Messages** (every refusal maps to one):
 
 | Code | The member sees |
@@ -392,9 +433,12 @@ A conforming space:
 | `too_long` | "That's longer than demosville.civic.social allows ({n} characters)." |
 | `rate_limited` | "demosville.civic.social asks you to wait until {time}." |
 | `assurance_required` | The River runs the step-up (5.3) and sends again |
-| `grant_revoked` | "Your Mosaic ID no longer lets the River send actions. Allow it again?" |
+| `grant_revoked` (Mosaic ID) | "Your Mosaic ID no longer lets the River send actions. Allow it again?" |
+| `rate_limited` (Mosaic ID) | "Mosaic ID asks you to wait until {time} before sending more." |
+| `scope` (Mosaic ID) | "Your Mosaic ID hasn't allowed the River to send this kind of action. Allow it?" (a new grant with that scope) |
+| `invalid_client`, a timeout or any other Mosaic ID failure | "Mosaic ID couldn't sign this just now. Nothing was sent." |
 | `blocked` | "demosville.civic.social isn't accepting actions from you." |
-| timeout | "We couldn't tell whether demosville.civic.social got it." Try again |
+| timeout at the space | "We couldn't tell whether demosville.civic.social got it." Try again (within 24 hours) |
 | any other | "demosville.civic.social couldn't take this ({code})." |
 
 ## 8. Conformance
@@ -427,12 +471,15 @@ stand-in space locally against local Supabase; e2e uses Playwright's virtual aut
    vector's status and `code`; step 4 makes no request for an untrusted DID host (counted in the
    injected resolver).
 2. A JWS signed for one space's `aud` or `htu` is refused by another; a sign-in note sent as an
-   action is refused `bad_type`; an action is refused by the River's sign-in callback.
+   action is refused `bad_type`; an action is refused by the River's sign-in callback (`typ`, and
+   no `nonce`); Mosaic ID refuses to sign an action whose `aud` is a registered client's origin;
+   a client with only `signin` can't get a grant.
 3. A signature by a key listed only under `authentication` is refused `bad_signature`; after the
    grant adds `assertionMethod`, the same key verifies.
 4. A repeated request with the same `ref` and `act` returns the stored answer and records one
    action; the same `ref` with another `act` is `ref_conflict`; a new `ref` with a used `jti` is
-   `replayed`.
+   `replayed`; after a `rate_limited` or `assurance_required` answer, the same `ref` sent again
+   (after the wait, or with `assurance: "passkey"`) is processed, not answered from storage.
 5. `exp - iat` of 301, `iat` 61 s ahead, and `exp` 61 s past are each `expired`; 59 s either way
    is accepted.
 6. The hub adapter stores a fixture's `civic:actions` in `items.actions` and the manifest's block
@@ -445,29 +492,34 @@ stand-in space locally against local Supabase; e2e uses Playwright's virtual aut
    after the passkey check the member is back on the same card, the River holds an encrypted grant
    token (the stored bytes don't contain it), and Mosaic ID's table holds only its hash.
 9. A grant whose `sub` isn't the signed-in account's DID is refused and revoked.
-10. The comment preview shows the text, the target title, the space host, the member's name, and
-    the exact claims except `iat`, `exp` and `jti`; Send posts exactly the previewed `act` (the
-    stand-in records it); a Send after 15 minutes is refused as out of date.
+10. The comment preview shows the text, the target title, the space host, and every claim with
+    its value except `iat`, `exp` and `jti`, which are named; the JWS the stand-in receives has
+    exactly those values; a Send after 15 minutes is refused as out of date.
 11. A sent comment shows "Sent to stand-in.example" and appears in Your activity with View ↗;
     Withdraw sends `withdraw` with the returned id and the row reads Withdrawn, its text erased.
 12. Support toggles on at once, then shows Withdraw; when the stand-in refuses, the toggle goes
     back and the message shows.
 13. A `"passkey"` poll goes through Mosaic ID's confirm page, which shows the choice ids and the
-    River's labels as the River's; the stand-in receives `assurance: "passkey"`; without the
-    step-up the stand-in answers `assurance_required` and the River starts the step-up.
+    River's labels as the River's and refuses a passkey that isn't the grant's person's; back on
+    the River nothing has been sent until the member presses Send, and then the stand-in receives
+    `assurance: "passkey"`; the step-up code works once, within 60 s, with its PKCE verifier only;
+    without the step-up the stand-in answers `assurance_required` and the River starts it. A
+    comment-only grant can't withdraw a support (`scope`).
 14. With the stand-in set to `not_member`, the message shows Join ↗ opening the stand-in's join
     page in a new tab; set to `held`, the review message shows and the row reads Held.
 15. Mosaic ID: a revoked grant gives `grant_revoked` and the River asks to allow again; a
-    recovery revokes every grant of that person; the 61st signature in an hour is `rate_limited`;
+    recovery revokes every grant of that person; the 201st signature in an hour is `rate_limited`;
     `audit_log` has one `action_signed` per signature with no content.
 16. River limits: the 31st text action in an hour answers 429 and reaches neither Mosaic ID nor
     the stand-in (counted); two Sends racing for the last allowance send one.
 17. "Sign out everywhere" in one browser, then Send from a second browser's previewed comment:
     401, and nothing reaches Mosaic ID or the stand-in.
 18. A timeout from the stand-in (fake timers) leaves the row `unknown` with Try again; Try again
-    re-signs with the same `ref` and the stand-in records one comment.
+    re-signs with the same `ref` and the stand-in records one comment; 24 hours later only "Check on"
+    is offered. A timeout at Mosaic ID leaves the row `failed` and nothing reaches the stand-in.
 19. Every River request to the stand-in and Mosaic ID goes through the guard with redirects off: a
-    3xx from either is a failure and no second request is made.
+    3xx from either is a failure and no second request is made. The grant and step-up callbacks
+    answer with `Referrer-Policy: no-referrer` and an immediate redirect.
 20. `river_app` as member A can't read member B's `member_actions` or grant tokens; no API
     response, log line or error contains a grant token, a JWS, or a client secret.
 21. axe finds no serious issue on a card with actions, the composer, the preview and Your

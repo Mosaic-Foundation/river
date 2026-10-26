@@ -16,23 +16,27 @@ differs from `river-v1.md` (section 5: no posting), this file wins. Reading the 
    (`@ana@example.social`) or a profile URL. A member may link up to 3 accounts.
 2. **Finding the server.** The River resolves the handle with WebFinger (spec 4.3) and takes the
    host of the actor URL as the server. It reads NodeInfo. `software.name` must be `mastodon` at
-   4.0 or later or `gotosocial` at 0.19 or later; otherwise: "The River can't post through
-   {software} yet." It reads `/api/v2/instance` for the limits (item 3) and
-   `/.well-known/oauth-authorization-server` for PKCE support (a 404 means a server before 4.3:
-   no PKCE, and `read:accounts` instead of `profile`).
+   4.3 or later or `gotosocial` at 0.19 or later; otherwise: "The River can't post through
+   {software} yet" (or "… through this version of Mastodon yet"). It reads `/api/v2/instance`
+   for the limits (item 3). Both always use PKCE with S256. Per software:
+   - **Mastodon 4.3+:** `/.well-known/oauth-authorization-server` must list `S256` (else the
+     link is refused as an unsupported version); the identity scope is `profile`.
+   - **GoToSocial 0.19+:** PKCE S256 without a discovery document; the identity scope is
+     `read:accounts`.
 3. **What the member is told first:** "Mosaic River will be able to post and reply as
    @ana@example.social, boost, favourite, follow and unfollow, and delete posts you make from
    the River. It can't read your messages or change your profile. You'll see each post before
    it's sent. You can unlink at any time." Then "Continue to example.social".
 4. **App registration**, once per server and River instance (`river.oauth_clients`):
    `POST /api/v1/apps` with `client_name=Mosaic River`,
-   `redirect_uris[]=https://river.mosaic.social/api/fediverse/callback`,
-   `scopes=profile write:statuses write:favourites write:follows read:follows read:search` (or
-   `read:accounts` for `profile`), `website=https://river.mosaic.social`.
+   `redirect_uris[]=https://river.mosaic.social/api/auth/fediverse/callback`,
+   `scopes={identity scope} write:statuses write:favourites write:follows read:follows read:search`,
+   `website=https://river.mosaic.social`.
 5. **Authorization.** The River stores an attempt (state, PKCE verifier, encrypted) and sets a
    10-minute state cookie (`HttpOnly`, `Secure`, `SameSite=Lax`), then sends the browser to
    `https://{server}/oauth/authorize?response_type=code&client_id=…&redirect_uri=…&scope=…&state=…&code_challenge=…&code_challenge_method=S256`.
-6. **Callback** (`GET /api/fediverse/callback`): the state cookie must match and the attempt is
+6. **Callback** (`GET /api/auth/fediverse/callback`; `Referrer-Policy: no-referrer` and an
+   immediate redirect, so the code doesn't linger): the state cookie must match and the attempt is
    consumed. `POST /oauth/token` (`grant_type=authorization_code`, `code`, `redirect_uri`,
    `client_id`, `client_secret`, `code_verifier`), then
    `GET /api/v1/accounts/verify_credentials`. The account's `url` or `acct` must match what the
@@ -104,9 +108,9 @@ keep them." Mastodon returns the deleted text; the River doesn't keep it (ADR-01
 
 ## 5. Limits
 
-- **River, per account** (ADR-010 §9; all linked accounts and space actions together): posts,
-  replies and comments 30 an hour and 100 a day; toggles 120 an hour and 600 a day; follows 50 a
-  day; deletes 30 in 30 minutes.
+- **River, per account:** ADR-010 §9's table, shared by every linked account and space actions
+  (text 30 an hour and 100 a day; toggles 120 an hour and 600 a day; follows 50 a day; deletes 30
+  in 30 minutes).
 - **Mastodon's own** (source, 2026-10-26): 300 requests per 5 minutes per token, 300 posts per 3
   hours per account, 30 deletes or unboosts per 30 minutes. A 429 sets the guard's wait for that
   server and shows "example.social asks you to wait until {time}".
@@ -129,7 +133,8 @@ the request limit, with required alt text and `write:media`.
 | 404 on resolve | `failed` | "example.social couldn't find this post." |
 | 422 | `failed` | "example.social says: {message}" (plain text, 300 characters) |
 | 429 | `failed` | "example.social asks you to wait until {time}." |
-| timeout, 502, 503 or 504 on a send | `unknown` | "We couldn't tell whether example.social got it." Check on example.social ↗ and Try again (same `Idempotency-Key`). |
+| timeout, 502, 503 or 504 on a send | `unknown` | "We couldn't tell whether example.social got it." Check on example.social ↗, and on Mastodon, for an hour, Try again (same `Idempotency-Key`, which Mastodon keeps an hour). GoToSocial gets Check on only, until its `Idempotency-Key` support is checked. |
+| failure on the search that resolves a post | `failed` | Nothing was sent; the matching message above. |
 | other 5xx, connection refused, DNS failure | `failed` | "We couldn't reach example.social. Nothing was sent." |
 | server's software changed to an unsupported one | `failed` | "The River can't post through {software} yet." |
 
@@ -156,7 +161,7 @@ New variable: `RIVER_TOKEN_KEY` (River only).
 ## 9. Tests and fixtures
 
 - **Stand-in server** (`tests/support/standInMastodon/`): a Mastodon-shaped server built from the
-  documented requests and answers (`docs.joinmastodon.org` sources, 2026-10-26), with a
+  documented requests and answers (the `mastodon/documentation` repo, read 2026-10-26), with a
   GoToSocial mode (NodeInfo `gotosocial`, 5,000 characters, no discovery document). It runs
   behind the guard's injected dispatcher at `https://mastodon.stand-in.example` and
   `https://gts.stand-in.example`, enabled by the test-only `TEST_STAND_IN_FEDIVERSE=1` (refused on
@@ -169,15 +174,16 @@ New variable: `RIVER_TOKEN_KEY` (River only).
 
 ## 10. Acceptance checks
 
-1. Linking `@ana@mastodon.stand-in.example`: NodeInfo, discovery and instance are read; the
+1. Linking `@ana@mastodon.stand-in.example` (Mastodon 4.3): NodeInfo, discovery and instance are read; the
    explainer lists the verbs; the app is registered once (a second member on the same server
    reuses it); the authorize URL carries `state`, S256 `code_challenge` and exactly the scopes in
    1.4; after the callback the row holds an encrypted token and the database bytes don't contain
    it.
 2. A callback with a missing or different state cookie, a used attempt, or an account other than
    the one typed creates no link (the last revokes the token at the stand-in).
-3. A GoToSocial account links with its instance's 5,000-character limit; a server whose NodeInfo
-   says `akkoma` or anything else is refused with the message, and nothing is registered.
+3. A GoToSocial account links with PKCE, `read:accounts` and its instance's 5,000-character
+   limit; Mastodon 4.2, a Mastodon without a discovery document, and a server whose NodeInfo says
+   `akkoma` or anything else are each refused with the message, and nothing is registered.
 4. A fediverse card shows Reply, Boost and Favourite to a linked member, none to a visitor or an
    unlinked member, and none on sample, hub, feed or Bluesky cards; a boost card's actions target
    the boosted post (the stand-in receives its URI in `search`).
@@ -199,7 +205,8 @@ New variable: `RIVER_TOKEN_KEY` (River only).
     again"; a 403 shows the scope message; a 422 shows the server's message as text (a `<b>` in
     it shows as characters).
 12. A send that times out (fake timers) is `unknown` with Try again; Try again sends the same
-    `Idempotency-Key`, and the stand-in records one post.
+    `Idempotency-Key`, and the stand-in records one post; after an hour only Check on is offered;
+    on the GoToSocial stand-in only Check on is offered.
 13. A 3xx from the stand-in on any token-carrying request is a failure, and nothing reaches the
     redirect's target (counted).
 14. Unlink calls `/oauth/revoke` and deletes the token; with the stand-in down, the token is still

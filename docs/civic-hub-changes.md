@@ -46,7 +46,9 @@ learns their DID, so actions signed by that DID count as that member.
 
 1. **Register the hub as a Mosaic ID client.** Mosaic ID builds its client list from
    `RIVER_CLIENT_ORIGINS`; each hub origin is added there (renaming the variable to
-   `MOSAIC_ID_CLIENT_ORIGINS` would be a Mosaic ID change, `needs-adam` here). ADR-002 says the
+   `MOSAIC_ID_CLIENT_ORIGINS` would be a Mosaic ID change, `needs-adam` here) with the `signin`
+   capability only, so a hub can sign people in but can't ask Mosaic ID for signing grants
+   (space-actions-1 5.5). ADR-002 says the
    signed note must become an OAuth profile "before any third-party site relies on it": the hubs
    are the Foundation's own sites, so this reads them as first-party, which is a question for
    Adam (PR questions).
@@ -57,7 +59,9 @@ learns their DID, so actions signed by that DID count as that member.
    (`river/src/river/auth/note.ts`): `alg` EdDSA only, `iss == sub`, `kid` under the DID, the DID's
    host in the hub's trusted list (`id.mosaic.social`), `aud` the hub's origin, the nonce, times
    with 60 s leeway, the DID log resolved through the hub's guard and verified, the key from
-   `authentication`. The River's verifier can be ported (both AGPL).
+   `authentication`, and a JWS whose `typ` is `mosaic-action+jwt` refused (notes will carry
+   `typ: "mosaic-signin+jwt"`, space-actions-1 5.5). The River's verifier can be ported (both
+   AGPL).
 3. **Accounts.** Step one links: a signed-in hub user chooses "Use my Mosaic ID to sign in", runs
    the flow, and the hub writes `users.identity_did` (with `identity_did_source = 'self'`) after
    checking no other user on that hub holds the DID. A unique index on `(hub_id, identity_did)`
@@ -150,8 +154,9 @@ context:
   WebKit bug report (306194, seen as a search snippet) says Safari 26.2 drops partitioned cookies
   after a cross-site redirect chain, which is exactly what a sign-in redirect is.
 - **Storage Access API** (`document.requestStorageAccess()`): Safari 11.1+, Firefox 65+, Chrome
-  119+. It needs a click inside the frame, usually a browser prompt, and a recent first-party
-  visit to the hub (within 30 days); Safari asks per page, and grants lapse. It can reach the
+  119+ (MDN browser-compat-data). It needs a click inside the frame, usually a browser prompt, and
+  a first-party visit to the hub within the last 30 days (MDN's Storage Access API guide); Safari
+  asks per page, and grants lapse after 30 days of use without interaction (MDN). It can reach the
   hub's real cookies, but the hub's session is in `localStorage`, which the API reaches only
   through the newer storage handle (`requestStorageAccess({ localStorage: true })`; browser
   support not checked this session).
