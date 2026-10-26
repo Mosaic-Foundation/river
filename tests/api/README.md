@@ -30,6 +30,10 @@ The refresh tests (`db/refresh.test.ts`) also call the feed modules directly, wi
 responses replayed through the real fetch guard and a MockAgent that counts requests, and
 `db/isolation.test.ts` signs members up through the callback's own `signInAccount()`.
 
+`db/emailReservation.test.ts` makes people as identity_app like the other identity tests, but
+posts their confirm links and sign-up options to the identity dev server (`npm run dev:identity`),
+because those answers are decided there.
+
 `signin.test.ts` (M8) signs notes with test keys and serves their DID logs itself, on
 `localhost:3005` (listed in the dev server's `TRUSTED_DID_HOSTS`, read over loopback because
 `TEST_DID_LOOPBACK=1`) and `localhost:3006` (not trusted; it must receive no request).

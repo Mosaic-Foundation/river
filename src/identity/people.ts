@@ -50,7 +50,7 @@ export interface NewPerson {
 }
 
 export interface CreatedPerson {
-  person: Pick<Person, "id" | "code" | "did" | "scid" | "email">;
+  person: Pick<Person, "id" | "code" | "did" | "scid"> & { email: string };
   /** The emailed verification token (verify_email, 24 hours). */
   verifyToken: string;
   /** redirect_uri?state=…&note=… when the request came from a River client. */

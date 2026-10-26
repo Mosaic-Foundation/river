@@ -103,7 +103,7 @@ describe("email transports", () => {
     vi.stubEnv("EMAIL_TRANSPORT", "log");
     const spy = vi.spyOn(console, "log").mockImplementation(() => {});
     try {
-      await sendEmail(verifyEmailMessage("ada@example.org", "https://id.mosaic.social/verify?token=secret"));
+      await sendEmail(verifyEmailMessage("ada@example.org", "https://id.mosaic.social/verify?token=secret", { displayName: null, signup: true }));
       expect(spy.mock.calls).toEqual([["email kind=verify_email to=a***@e***.org"]]);
     } finally {
       spy.mockRestore();
@@ -127,7 +127,7 @@ describe("email transports", () => {
     const resolver: Resolver = async () => [{ address: "93.184.215.14", family: 4 }];
     const guard = createFetchGuard({ resolver, dispatcher: mock as unknown as Dispatcher });
     try {
-      await sendWithResend(verifyEmailMessage("ada@example.org", "https://id.mosaic.social/verify?token=t"), guard);
+      await sendWithResend(verifyEmailMessage("ada@example.org", "https://id.mosaic.social/verify?token=t", { displayName: null, signup: true }), guard);
     } finally {
       vi.unstubAllEnvs();
     }
@@ -188,6 +188,11 @@ describe("pages and parameters", () => {
     expect(displayNameParam("")).toBeUndefined();
     expect(displayNameParam("x".repeat(65))).toBeNull();
     expect(displayNameParam("a\u0000b")).toBeNull();
+    // Nothing that can reorder or hide the confirm page's warning around it (security review item 5).
+    expect(displayNameParam("Ada\u202Eevil")).toBeNull();
+    expect(displayNameParam("Ada\u200Bx")).toBeNull();
+    expect(displayNameParam("Ada\u2028x")).toBeNull();
+    expect(displayNameParam("Zoë Ångström")).toBe("Zoë Ångström");
   });
 });
 

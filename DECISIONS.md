@@ -356,6 +356,57 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-26 — Only a verified address is held by a Mosaic ID (ADR note; security review item 5, Adam)
+- Decision: a Mosaic ID holds an email address only once it is verified.
+  - **Reservation.** `identity.email_in_use` counts verified addresses only. `people.email`'s
+    UNIQUE constraint gives way to a unique index over verified addresses
+    (`people_verified_email_key`). Unverified sign-ups may share an address, and whoever confirms
+    first keeps it.
+  - **At confirm time.** `POST /verify` is refused ("Another Mosaic ID confirmed that address
+    first") when someone else verified the address meanwhile. The unique index decides, so two
+    confirms at once can't both win.
+  - **Sign-up answers the same.** Step 1 (`/authorize/signup/options`) no longer checks the
+    address. After the passkey is made, a taken address gets `signup_attempt` (a notice that
+    someone tried, with a pointer to sign-in and "Lost your passkey?") instead of a confirm link.
+    The person signing up sees the usual "We sent a link to …" either way. Their new Mosaic ID
+    works but can't take that address. The change-email page does the same: a confirmed address
+    of someone else's gets "We sent a link to …" and a notice instead of a link. A 409 there would
+    have told anyone with a Mosaic ID which addresses are taken. "Send the link again" on a
+    taken address also sends the notice.
+  - **Expiry: the address, not the Mosaic ID** (Adam, 2026-10-26). The daily job sets
+    `people.email` to NULL when it is still unverified 24 hours after sign-up. The person keeps
+    their DID, passkeys and River account. The DID log is append-only and public, so deleting the
+    Mosaic ID would mean deleting DID history. `people.email` is nullable; a verified person
+    always has one (CHECK `people_verified_has_email`). After sign-in, a Mosaic ID with no address
+    says so plainly: "Your Mosaic ID has no recovery address", with "Add a recovery address"
+    (the change-email page, which now says it adds one too). The identity host has no signed-in
+    account page, so this screen after every passkey sign-in is where that shows, like the
+    "please confirm" reminder already was.
+  - **The confirm email and page** (Adam) begin "Someone started a Mosaic ID with this address. If
+    it wasn't you, don't confirm. Just ignore this email and the address will be released in 24
+    hours." Both show the display name the sign-up gave ("The Mosaic ID gave the name “…”." or "gave
+    no name"). The page is escaped; the email is plain text. Names are limited to 64 characters and
+    now refuse control and invisible formatting characters (bidi overrides, zero-width marks, line
+    separators), so a name can't reorder or hide the warning around it. A Mosaic ID that had a confirmed address and is moving
+    to a new one gets the same shape: "Someone asked to move their Mosaic ID to this address…
+    nothing changes." Confirming is still the one button on the page; opening the link does
+    nothing.
+  - **Recovery shows the passkeys.** After a recovery adds a passkey, the page says how many the
+    Mosaic ID has and lists the others (added, last used) with Remove. This matters when the
+    owner confirmed an address someone else signed up with: the squatter still holds their own
+    passkey. Removal goes through `identity.remove_other_passkey(passkey, at)`, a SECURITY DEFINER
+    function, so identity_app still has no DELETE grant. It acts only for the person and the
+    recover request in the transaction's settings, only within 10 minutes of that request's use,
+    and never on the passkey the request added (recorded in `pending.new_credential_id`).
+    `audit_log` gains `passkey_removed`. With no other passkeys, recovery continues as before.
+- Why: `email_in_use` counted unverified addresses, so anyone could squat an address. If its
+  owner clicked confirm, they ended up co-holding a Mosaic ID someone else made. Step 1's 409
+  also told anyone whether an address had a Mosaic ID.
+- Alternatives: deleting unverified Mosaic IDs after 24 hours (breaks the append-only DID log and
+  the person's River account); blocking sign-in for them (keeps rows nobody can use); a DELETE
+  grant on passkeys (the schema's rule is no DELETE for identity_app anywhere).
+- Merge order: after the sign-in rate-limit PR. This migration's `river.daily_job` includes that
+  PR's hour-long attempt purge, and its timestamp sorts after that PR's.
 ## 2026-10-26 — Sign-in rate limits, fresh DID reads, an hour of attempts (security review item 4)
 - Decision: `GET /api/auth/signin` and `GET /api/auth/callback` allow 60 each per address per 10
   minutes, matching the identity host's `/authorize`. Over the limit is a 429 with a short page.

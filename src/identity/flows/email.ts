@@ -1,8 +1,11 @@
 // Email verification and change (spec 4.6, check 35).
 //
-//   GET  /verify?token=            a page with one button (mail scanners that open links don't use them up)
+//   GET  /verify?token=            a page with one button (mail scanners that open links don't use them up):
+//                                  who is asking (the Mosaic ID's display name) and what to do if it
+//                                  wasn't you, in the same words as the email
 //   POST /verify       token       marks the address verified (and makes a new address the recovery
-//                                  address); works once, for 24 hours
+//                                  address); works once, for 24 hours. Refused when another Mosaic ID
+//                                  verified the address meanwhile (only verified addresses are held)
 //   GET  /account/email            the change-email page
 //   POST /account/email/options {email}                fresh passkey check: authentication options
 //   POST /account/email/verify  {request, response}    link to the new address, notice to the old
@@ -13,7 +16,7 @@ import { identityNow } from "../clock.js";
 import { identityConfig } from "../config.js";
 import { maskEmail, normalizeEmail } from "../email/address.js";
 import { sendEmail } from "../email/index.js";
-import { emailChangeNoticeMessage, verifyEmailMessage } from "../email/messages.js";
+import { emailChangeNoticeMessage, signupAttemptMessage, verifyEmailMessage } from "../email/messages.js";
 import { authenticationOptions, assertionCredentialId, verifyAssertion } from "../passkeys.js";
 import { changeEmailPage, errorPage, linkGonePage, verifiedPage, verifyPage } from "../pages.js";
 import {
@@ -44,11 +47,13 @@ export function emailRoutes(router: Routes): void {
     const live = token && personId
       ? await forIdentity({ personId }, (db) => liveToken(db, token, "verify_email", identityNow()))
       : undefined;
-    if (!token || !live) {
+    const person = token && personId && live ? await forIdentity({ personId }, (db) => getPerson(db, personId)) : undefined;
+    if (!token || !live || !person) {
       res.status(410).type("html").send(linkGonePage(AGAIN));
       return;
     }
-    res.type("html").send(verifyPage(token));
+    // A Mosaic ID that never had a confirmed address reads as a sign-up; one that had, as a move.
+    res.type("html").send(verifyPage(token, { displayName: person.display_name, signup: !person.email_verified_at }));
   });
 
   router.post("/verify", async (req, res) => {
@@ -80,7 +85,7 @@ export function emailRoutes(router: Routes): void {
         res
           .status(409)
           .type("html")
-          .send(errorPage("That address is taken", "Another Mosaic ID started using that address. Choose a different one."));
+          .send(errorPage("That address is taken", "Another Mosaic ID confirmed that address first. Choose a different one."));
         return;
       }
       throw err;
@@ -140,16 +145,25 @@ export function emailRoutes(router: Routes): void {
 
       const same = newEmail === person.email;
       if (same && person.email_verified_at) return { message: "That is already your address, and it is confirmed." } as const;
-      if (!same && (await lookups.emailInUse(db, newEmail))) return { error: "email_in_use" } as const;
+      // Someone else's verified address gets the same answer as a free one, and a notice instead
+      // of a link (security review item 5): this page mustn't tell anyone who has a Mosaic ID.
+      const taken = await lookups.emailInUse(db, newEmail);
 
       // Only the newest link works: earlier ones (for this or another address) stop working.
       await db.query(
         "UPDATE identity.recovery_tokens SET used_at = $2 WHERE person_id = $1 AND purpose = 'verify_email' AND used_at IS NULL",
         [personId, now],
       );
-      const token = await createToken(db, { personId, purpose: "verify_email", email: newEmail, now });
+      const token = taken ? undefined : await createToken(db, { personId, purpose: "verify_email", email: newEmail, now });
       if (!same) await audit(db, personId, "email_change_requested", { to: maskEmail(newEmail) }, now);
-      return { token, newEmail, oldEmail: same ? undefined : person.email } as const;
+      return {
+        token,
+        newEmail,
+        // The old address gets a notice only if there is one (a released address leaves none).
+        oldEmail: same ? undefined : (person.email ?? undefined),
+        displayName: person.display_name,
+        verified: person.email_verified_at !== null,
+      } as const;
     });
 
     if (result.error !== undefined) {
@@ -157,7 +171,6 @@ export function emailRoutes(router: Routes): void {
         request_gone: [410, MESSAGES.gone],
         unknown_passkey: [400, MESSAGES.unknownPasskey],
         passkey_failed: [400, MESSAGES.passkeyFailed],
-        email_in_use: [409, MESSAGES.emailInUse],
       };
       const [status, message] = messages[result.error];
       return fail(res, status, result.error, message);
@@ -166,7 +179,14 @@ export function emailRoutes(router: Routes): void {
       res.json({ message: result.message });
       return;
     }
-    await sendEmail(verifyEmailMessage(result.newEmail, `${config.origin}/verify?token=${result.token}`));
+    await sendEmail(
+      result.token === undefined
+        ? signupAttemptMessage(result.newEmail)
+        : verifyEmailMessage(result.newEmail, `${config.origin}/verify?token=${result.token}`, {
+            displayName: result.displayName,
+            signup: !result.verified,
+          }),
+    );
     if (result.oldEmail) await sendEmail(emailChangeNoticeMessage(result.oldEmail, maskEmail(result.newEmail)));
     res.json({ message: `We sent a link to ${maskEmail(result.newEmail)}. Your address changes once you open it.` });
   });
