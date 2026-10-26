@@ -22,7 +22,7 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 ## Phase 2 design: acting for members (fediverse posting and space actions) — 2026-10-26
 
-- Branch / PR: claude/admiring-lamport-esckd6 → PR (needs-adam: three ADRs, docs only, no code)
+- Branch / PR: claude/admiring-lamport-esckd6 → #66 (needs-adam: three ADRs, docs only, no code)
 - Migrations: none
 
 **What it does.** The design for the River acting on a member's behalf. ADR-010 is the shared
