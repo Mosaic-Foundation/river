@@ -12,7 +12,7 @@ import type { Viewer } from "./accounts.js";
 import { authRoutes } from "./auth/routes.js";
 import { checkOrigin, readSession, requireMember } from "./auth/session.js";
 import { memberExport } from "./export/index.js";
-import { FeedInputError, memberFeed, memberMarkAllRead, readerItem, visitorFeed, type FeedParams } from "./feed/index.js";
+import { FeedInputError, memberFeed, readerItem, visitorFeed, type FeedParams } from "./feed/index.js";
 import { checkFraming } from "./frame/check.js";
 import { followingRoutes } from "./following/routes.js";
 import { requireInstance, type Instance } from "./instances.js";
@@ -48,25 +48,6 @@ function indexed(value: object): unknown[] {
   const entries = Object.entries(value);
   if (!entries.every(([key]) => /^\d+$/.test(key))) return [value];
   return entries.sort(([a], [b]) => Number(a) - Number(b)).map(([, v]) => v);
-}
-
-/** A field of a JSON body that holds one string or a list of them (circles). */
-function bodyParamList(body: unknown, name: keyof FeedParams): string[] | undefined {
-  const value = (body as Record<string, unknown> | undefined)?.[name];
-  if (value === undefined || value === null) return undefined;
-  const values = Array.isArray(value) ? (value as unknown[]) : [value];
-  if (!values.every((v): v is string => typeof v === "string")) {
-    throw new FeedInputError(name as FeedInputError["field"], `${name} must be a string or a list of strings`);
-  }
-  return values;
-}
-
-/** A string field of a JSON body, for the view parameters "Mark all read" takes. */
-function bodyParam(body: unknown, name: keyof FeedParams): string | undefined {
-  const value = (body as Record<string, unknown> | undefined)?.[name];
-  if (value === undefined || value === null) return undefined;
-  if (typeof value !== "string") throw new FeedInputError(name as FeedInputError["field"], `${name} must be a string`);
-  return value;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -198,23 +179,6 @@ export function riverRoutes(): Router {
       res.status(204).set("Cache-Control", "no-store").end();
     } catch (err) {
       next(err);
-    }
-  });
-
-  // "Mark all read" for the member's current view: { mode?, circle? (one or a list), type?, network?, q?, source? }.
-  router.post("/read-state/all", requireInstance(), readSession(), requireMember(), async (req, res, next) => {
-    try {
-      const marked = await memberMarkAllRead(res.locals.instance as Instance, res.locals.viewer as Viewer, {
-        mode: bodyParam(req.body, "mode"),
-        circle: bodyParamList(req.body, "circle"),
-        type: bodyParam(req.body, "type"),
-        network: bodyParam(req.body, "network"),
-        q: bodyParam(req.body, "q"),
-        source: bodyParam(req.body, "source"),
-      });
-      res.set("Cache-Control", "no-store").json({ marked });
-    } catch (err) {
-      feedError(err, res, next);
     }
   });
 
