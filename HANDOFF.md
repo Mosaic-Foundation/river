@@ -46,7 +46,7 @@ passed; UI built. API (fresh `db reset`): 18 files, 179 passed. e2e `signin`, `p
 
 ## Follow caps: 2,000 per account; the Bluesky import rate-limited — 2026-10-26
 
-- Branch / PR: claude/follow-caps → #57 (merge when ci is green)
+- Branch / PR: claude/follow-caps → #57 (merged)
 - Migrations: none
 
 **What it does.** Security review of 3a86e8f, item 3. An account follows at most 2,000 spaces and
