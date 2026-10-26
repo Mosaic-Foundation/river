@@ -356,6 +356,24 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-26 — Recovery answers before it looks; its per-address limit is per IP too (security review item 6)
+- Decision: `POST /recover` answers at once. The lookup, the token and the email run afterwards
+  under `waitUntil` (`@vercel/functions`; a no-op off Vercel, where the promise simply runs on).
+  A known address now takes as long as an unknown one. The in-memory per-address limit is keyed
+  on the IP and the address together (`recoverAddressKey`, hashed), so requests from elsewhere
+  can't use up the owner's own allowance. The per-IP limit is unchanged. The test-only
+  `POST /test/email-delay` (TEST_ROUTES) slows the capture transport, so a test can see whether
+  the request waited.
+- Why: awaiting the email made a known address measurably slower, which told anyone who has a
+  Mosaic ID. A limit keyed on the address alone let a stranger lock its owner out of "Lost your
+  passkey?" for an hour.
+- Still true: the durable cap of 3 recovery links per person per hour (in the database) protects
+  the inbox, and a stranger at several addresses can still use it up. Keying it by IP would let
+  the same stranger send more mail, so it stays as it is. Raise it if owners hit it.
+- Alternatives: padding every answer to a fixed time (slower for everyone, and still leaky under
+  load).
+- Thread / PR: security review of 3a86e8f
+
 ## 2026-10-26 — 2,000 follows per account; the Bluesky import rate-limited (security review item 3)
 - Decision: an account follows at most 2,000 spaces and streams (`MAX_FOLLOWS` in
   `src/river/following/service.ts`). The count is the rows in `river.follows` with `rule = 'follow'`

@@ -30,6 +30,9 @@ The refresh tests (`db/refresh.test.ts`) also call the feed modules directly, wi
 responses replayed through the real fetch guard and a MockAgent that counts requests, and
 `db/isolation.test.ts` signs members up through the callback's own `signInAccount()`.
 
+`db/recoveryTiming.test.ts` makes a person as identity_app, then times `POST /recover` against the
+identity dev server with its capture transport slowed (`POST /test/email-delay`, TEST_ROUTES).
+
 `signin.test.ts` (M8) signs notes with test keys and serves their DID logs itself, on
 `localhost:3005` (listed in the dev server's `TRUSTED_DID_HOSTS`, read over loopback because
 `TEST_DID_LOOPBACK=1`) and `localhost:3006` (not trusted; it must receive no request).

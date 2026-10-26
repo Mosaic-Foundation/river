@@ -64,6 +64,10 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, recovery timing (security review item 6): API db `recoveryTiming` (new; slows the
+  capture transport with `POST /test/email-delay` and times `POST /recover`); unit `identityHost`
+  (`recoverAddressKey`); e2e check 36 polls the mailbox for the recovery link, which now arrives
+  after the answer.
 - 2026-10-26, follow caps (security review item 3): API db `followCap` (new: the 2,000 cap by
   the follow box, a stream rule and an import; mutes allowed; an over-cap import stores nothing;
   two concurrent imports can't both pass); API `blueskyImport` (preview 20 and import 10 per
