@@ -15,7 +15,6 @@ import {
   FeedInputError,
   parseContentTypes,
   parseNetworks,
-  markViewRead,
   queryFeed,
   querySources,
   queryViewItems,
@@ -267,23 +266,6 @@ export async function memberFeed(
       viewer: { did: viewer.did, displayName: viewer.displayName },
     };
   });
-}
-
-/** "Mark all read" for a member's current view (mode, circles, type, search). */
-export async function memberMarkAllRead(
-  instance: Instance,
-  viewer: Viewer,
-  params: Omit<FeedParams, "cursor">,
-  deps: Pick<RefreshDeps, "source"> = {},
-): Promise<number> {
-  const { mode, filter } = parseCommon(instance, { ...params, cursor: undefined });
-  const circles = parseMemberCircles(params.circle);
-  return forAccount(
-    instance.id,
-    viewer.accountId,
-    async (db) => markViewRead(db, scopeFor(await memberView(db), mode, circles), filter),
-    deps.source,
-  );
 }
 
 /**

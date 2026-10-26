@@ -70,6 +70,9 @@ Newest first: date, slice, tests added, counts.
   HTTP); e2e `signin` (two browser contexts share a session; the second uses `cutOff()` from
   `fixtures.ts`, now exported) and `profile` (the menu's items; "Sign out" matched exactly, since
   "Sign out everywhere" contains it). Unit 735, API 207, e2e 152.
+- 2026-10-26, Mark all read's route removed: API `signin` (one test: 404, nothing marked; the
+  four Mark all read tests go); API `feed` (visitor check on `/read-state` only); API db `modes`
+  (Mark all read in Civic removed). Unit 734, API 198.
 - 2026-10-26, small hardening (security review item 8): unit `env` (NODE_ENV=production refusals,
   capture refused in production); unit `identityHost` (Permissions-Policy and COOP in both
   vercel.json files and the identity pages); unit `workflows` (new: checkout credentials, no
