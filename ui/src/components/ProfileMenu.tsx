@@ -1,6 +1,6 @@
 // The profile menu (docs/spec/ui-revisions-9.md item 1): a round button at the right of the top
 // bar, a member's initials or a person icon, opening a menu of My information and Following
-// (members), Settings and Sign out (or Sign in for a visitor). My information explains DIDs and shows the member's;
+// (members), Settings, Sign out and Sign out everywhere (or Sign in for a visitor). My information explains DIDs and shows the member's;
 // Settings holds the light/dark switch (item 2). Keyboard and screen readers as the circles menu:
 // a menu button, arrow keys, Escape, a click outside, focus back on the button.
 import { useEffect, useId, useRef, useState } from "react";
@@ -10,7 +10,7 @@ import { initials } from "../lib/format";
 import { YouIcon } from "./Icons";
 import { InfoDialog } from "./InfoDialog";
 
-type Action = "info" | "settings" | "signout";
+type Action = "info" | "settings" | "signout" | "signout-everywhere";
 type Item = { key: string; label: string } & ({ href: string } | { action: Action });
 
 /** The light/dark switch (Settings). */
@@ -86,7 +86,8 @@ export function ProfileMenu({
   followingHref = "/following",
 }: {
   viewer: Viewer | null;
-  onSignOut: () => void;
+  /** `everywhere`: end every session of this account, on every device. */
+  onSignOut: (everywhere?: boolean) => void;
   /** The Following page, keeping the mode (ui-revisions-11 item 1: the bar's link moved here). */
   followingHref?: string;
 }) {
@@ -106,12 +107,17 @@ export function ProfileMenu({
         ]
       : []),
     { key: "settings", label: "Settings", action: "settings" },
-    viewer ? { key: "signout", label: "Sign out", action: "signout" } : { key: "signin", label: "Sign in", href: SIGN_IN_URL },
+    ...(viewer
+      ? [
+          { key: "signout", label: "Sign out", action: "signout" as const },
+          { key: "signout-everywhere", label: "Sign out everywhere", action: "signout-everywhere" as const },
+        ]
+      : [{ key: "signin", label: "Sign in", href: SIGN_IN_URL }]),
   ];
 
   const select = (action: Action) => {
-    if (action === "signout") {
-      onSignOut();
+    if (action === "signout" || action === "signout-everywhere") {
+      onSignOut(action === "signout-everywhere");
       return;
     }
     // A dialog opened from the menu returns focus to the menu button when it closes.

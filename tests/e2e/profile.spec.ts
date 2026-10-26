@@ -57,7 +57,7 @@ test.describe("item 1: the profile menu", () => {
     await button.click();
     await expect(button).toHaveAttribute("aria-expanded", "true");
     const menu = page.getByRole("menu", { name: "Your profile and settings" });
-    await expect(menu.getByRole("menuitem")).toHaveText(["My information", "Following", "Settings", "Sign out"]);
+    await expect(menu.getByRole("menuitem")).toHaveText(["My information", "Following", "Settings", "Sign out", "Sign out everywhere"]);
     // The bar itself has no Following link any more (ui-revisions-11 item 1): Follow and the menu go there.
     await expect(bar.getByRole("link", { name: "Following", exact: true })).toHaveCount(0);
     await expect(menu.getByRole("menuitem", { name: "My information" })).toBeFocused();
@@ -75,7 +75,7 @@ test.describe("item 1: the profile menu", () => {
 
     // Sign out is in the menu now.
     await button.click();
-    await page.getByRole("menuitem", { name: "Sign out" }).click();
+    await page.getByRole("menuitem", { name: "Sign out", exact: true }).click();
     await expect(bar.getByRole("link", { name: "Sign in" })).toBeVisible({ timeout: 30_000 });
   });
 
@@ -86,7 +86,7 @@ test.describe("item 1: the profile menu", () => {
     const button = page.locator(".topbar").getByRole("button", { name: "Your profile and settings" });
     await button.click();
     const menu = page.getByRole("menu", { name: "Your profile and settings" });
-    await expect(menu.getByRole("menuitem")).toHaveText(["My information", "Following", "Settings", "Sign out"]);
+    await expect(menu.getByRole("menuitem")).toHaveText(["My information", "Following", "Settings", "Sign out", "Sign out everywhere"]);
     await expect(menu.getByRole("menuitem", { name: "Following" })).toHaveAttribute("href", "/following?mode=civic");
     await menu.getByRole("menuitem", { name: "My information" }).click();
     await expect(page.getByTestId("my-did")).toHaveText(did);
@@ -96,7 +96,7 @@ test.describe("item 1: the profile menu", () => {
 
     // Sign out from the Following page goes back to the River (in its mode) as a visitor.
     await button.click();
-    await page.getByRole("menu", { name: "Your profile and settings" }).getByRole("menuitem", { name: "Sign out" }).click();
+    await page.getByRole("menu", { name: "Your profile and settings" }).getByRole("menuitem", { name: "Sign out", exact: true }).click();
     await expect(page).toHaveURL(/\/\?mode=civic$/);
     await expect(page.getByTestId("sample-banner")).toBeVisible({ timeout: 30_000 });
   });
