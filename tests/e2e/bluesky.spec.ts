@@ -58,6 +58,9 @@ test("follow @bsky.app by handle, then filter the River by Bluesky", async ({ pa
   // On the Following page, under "Bluesky", by its handle.
   const row = page.getByTestId("space-row").filter({ has: page.locator(".space-row-name", { hasText: "Bluesky" }) });
   await expect(row).toContainText("@bsky.app");
+  // Each row says where its follow came from: this one by hand, the sign-up copy's as seeds.
+  await expect(row.getByTestId("space-row-origin")).toHaveText("Added by you");
+  await expect(page.getByTestId("space-row-origin").filter({ hasText: /^Seed copy$/ }).first()).toBeAttached();
 
   // The River's Networks filter has Bluesky; it keeps only Bluesky cards.
   await page.getByRole("link", { name: "Back to your River" }).click();
@@ -128,8 +131,9 @@ test("Import from Bluesky: list who @eff.org follows, choose a circle, follow th
     timeout: 30_000,
   });
 
-  // They are under "Bluesky" on the Following page.
+  // They are under "Bluesky" on the Following page, each saying it came from this import.
   await expect(page.locator(".group-title", { hasText: /^Bluesky$/ })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("space-row-origin").filter({ hasText: /^Imported from @eff\.org$/ })).toHaveCount(count);
 });
 
 test("a Bluesky post's own address shows the post with its link card or quote (the reader)", async ({ page }) => {
@@ -192,7 +196,7 @@ test("Import from Bluesky offers what it added from the same account checked, an
     const { rows } = await client.query<{ id: string }>(
       `INSERT INTO river.spaces (adapter, canonical_url, name, network, category, manifest)
        VALUES ('atproto', 'at://did:plc:bbbbbbbbbbbbbbbbbbbbbbbb', 'Gone Account', 'bluesky', 'person', '{"actor":{"handle":"@gone.example"}}')
-       ON CONFLICT (canonical_url) DO UPDATE SET name = EXCLUDED.name RETURNING id`,
+       ON CONFLICT (canonical_url) DO UPDATE SET name = EXCLUDED.name, manifest = EXCLUDED.manifest RETURNING id`,
     );
     await client.query(
       `INSERT INTO river.follows (instance_id, account_id, space_id, origin, origin_ref, origin_label)

@@ -28,6 +28,7 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Proposed change: ui-revisions-3 item 2's check "loading /item/{id} for a refused or fediverse
   item shows that screen" becomes "for a refused item"; a fediverse or Bluesky item's address
   shows the reader.
+- Resolved (Adam, 2026-10-26): approved; `ui-revisions-3.md` item 2 now says so.
 - Thread / PR: link cards and quotes on an item's own page
 
 ### 2026-10-23 — Bluesky in v1 (Bluesky reading, step 1)
@@ -355,6 +356,17 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-26 — A Following row's origin line (Adam)
+- Decision: each Following row shows one muted line, from the whole-space follow (else the
+  space's first stream rule, which is the member's own): "Added by you" (`manual`), "Imported from
+  @handle" (`bluesky_import`, its stored handle; "Imported from Bluesky" when it had none),
+  "Seed copy" (`seed`). Nothing for `unknown`, nor for `linked` (nothing writes it yet, and Adam
+  named three lines). The API sends `origin: { origin, label } | null`, null on the old schema.
+- Why: Adam asked for exactly these lines with nothing for unknown, and no filters or sorting.
+- Alternatives: one line per rule (a hub space's stream rules would repeat "Added by you"); a
+  badge (louder than "muted").
+- Thread / PR: Following origin line
+
 ## 2026-10-25 — Where each follow came from, and the import offering only its own (Adam)
 - Decision: `river.follows` gains `origin` (`unknown` for rows from before, `manual` for the
   follow box and stream rules, `seed` for the sign-up seed copy and seeds that wait for their
@@ -369,6 +381,7 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Why: Adam approved recording origins (2026-10-25) so the import can offer, checked, only what
   it added. The import is keyed to the account's DID, not its handle: handles change (a handle
   move would otherwise orphan the import's follows), and the DID is what the River stores.
+  Confirmed by Adam 2026-10-26: keep matching by DID, store and show the handle.
 - Code before the migration: `src/river/following/origin.ts` reads information_schema once (and
   again a minute later while the column is missing); inserts name the origin columns only once
   it exists, and the preview marks nothing `fromThisImport` until then. Proven by dropping the

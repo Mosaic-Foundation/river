@@ -20,10 +20,34 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Each Following row says where its follow came from — 2026-10-26
+
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #53) → PR (merge when ci is green)
+- Migrations: none (reads #53's columns; works without them).
+
+**What it does.** Each row on the Following page has a muted line under its address: "Added by
+you", "Imported from @eff.org" (or "Imported from Bluesky" with no handle) or "Seed copy".
+Follows from before origins were kept (`unknown`) show nothing, and so does `linked` until linked
+accounts exist. No filters or sorting. `GET /api/following` gives each space `origin`
+(`{ origin, label }` or null): the whole-space follow's, else its first stream rule's. On the
+schema before #53 it is null everywhere. Also in this PR, Adam's answers of 2026-10-26: the
+ui-revisions-3 item 2 wording (a fediverse or Bluesky item's address shows the post), that spec
+question closed, and DID matching for imports confirmed in DECISIONS.md.
+
+**Keys.** None.
+
+**Tests.** Unit `ui/following` (`originLine`). API `blueskyImport` (the page's origins, null for
+unknown). e2e `bluesky.spec.ts` (Added by you, Seed copy, Imported from @eff.org on every imported
+row). `npm run check`: 51 files, 710 tests passed; UI built. API (fresh `db reset`): 17 files, 174
+passed. e2e (vite preview): 145 passed, check 37 needs the local recovery key.
+
+### Follow-ups
+- None.
+
 ## Where each follow came from; the import offers its own follows checked — 2026-10-25
 
-- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #52) → PR, **needs-adam**
-  (changes an existing table); Adam merges after review.
+- Branch / PR: claude/dreamy-ride-w3nd4z (restarted from main after #52) → #53 (merged by Adam;
+  `deploy-migrations` applied it to dev 2026-10-25).
 - Migrations: `20261025172932_follow_origin.sql` (additive: `origin` NOT NULL DEFAULT 'unknown',
   `origin_ref`, `origin_label` on `river.follows`, with CHECKs; policy and grants unchanged;
   idempotent).
@@ -52,8 +76,7 @@ through the same `follow()` as the sign-up copy). `npm run check`: 51 files, 707
 17 files, 172 passed. Full e2e: 146 passed.
 
 ### Follow-ups
-- Adam: after merge, `deploy-migrations` applies the migration to the dev project; check its run.
-- The Following page could say where each follow came from (not asked for).
+- Done: `deploy-migrations` applied it to dev; the Following page's origin line is the next entry.
 
 ## Import from Bluesky removes accounts it no longer follows (confirmed) — 2026-10-25
 

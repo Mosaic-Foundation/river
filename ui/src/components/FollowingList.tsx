@@ -3,10 +3,12 @@
 // process ends", or neither, with actions to mute, unmute, follow just that stream or stop. Quiet
 // lists followed spaces with no new item in 90 days (never samples) and offers "Unfollow all quiet
 // spaces"; Ended lists stream rules whose process ended, cleared after 90 days. Each followed row
-// has a circles menu (ui-revisions-7).
+// has a circles menu (ui-revisions-7) and a muted line saying where the follow came from (Adam,
+// 2026-10-26), none for one from before origins were kept.
 import { useId, useState } from "react";
 import {
   groupSpaces,
+  originLine,
   quietSentence,
   removeRule,
   setStreamRule,
@@ -107,6 +109,7 @@ function SpaceRow({ space, page, actions }: { space: SpaceView; page: FollowingP
   // Only a followed space can be in a circle (the API refuses the rest), as in the circle editor.
   const followed = space.following || space.streams.some((s) => s.rule === "follow");
   const ruled = space.streams.filter((s) => s.rule !== null).length;
+  const origin = originLine(space.origin);
   return (
     <li className="space-row" data-testid="space-row" data-space-id={space.id}>
       <div className="space-row-main">
@@ -116,6 +119,11 @@ function SpaceRow({ space, page, actions }: { space: SpaceView; page: FollowingP
           <p className="space-row-meta">
             {space.following ? "Whole space" : "Streams only"} · {space.address}
           </p>
+          {origin && (
+            <p className="space-row-meta" data-testid="space-row-origin">
+              {origin}
+            </p>
+          )}
           {space.lastError && <p className="space-row-error">{space.lastError}</p>}
         </div>
         {followed && <CirclesMenu space={space} circles={page.circles} run={actions.save} />}
