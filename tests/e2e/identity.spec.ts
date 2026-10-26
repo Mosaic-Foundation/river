@@ -620,6 +620,8 @@ test.describe("item 5: email reservation and recovery", () => {
     await page.goto(`${identityURL}/recover`);
     await page.getByLabel("Email address").fill(email);
     await page.getByRole("button", { name: "Send me a link" }).click();
+    // Polled: once recovery mail goes out after the answer (item 6), it may lag the page.
+    await expect.poll(async () => (await mailbox(request, email)).filter((m) => m.kind === "recover").length).toBe(1);
     const [recover] = (await mailbox(request, email)).filter((m) => m.kind === "recover");
     await page.goto(linkIn(recover));
     await page.getByRole("button", { name: "Create a new passkey" }).click();
