@@ -12,7 +12,9 @@
 //   7. The DID is resolved through the fetch guard (cached 10 minutes), its log verified, and the
 //      signature checked with the key the CURRENT document lists under authentication for kid.
 //      Any key in the header is ignored. If a cached document doesn't verify the note, the log is
-//      read once more, fresh (a DID re-keyed by recover-dids within the cache window).
+//      read once more, fresh (a DID re-keyed by recover-dids within the cache window), at most
+//      once per DID per minute (FRESH_INTERVAL_S), so notes with bad signatures can't make the
+//      River fetch a DID log on every callback.
 //
 // Every failure is a NoteError with a short reason code for the log line; the reader sees only
 // "401". The note itself is never logged or echoed.
@@ -29,6 +31,8 @@ import {
 
 export const LEEWAY_S = 60;
 export const MAX_LIFETIME_S = 600;
+/** Fresh DID log reads (step 7's second look) per DID: at most one in this many seconds. */
+export const FRESH_INTERVAL_S = 60;
 const MAX_NOTE_LENGTH = 8192;
 
 export type NoteFailure =
@@ -46,7 +50,8 @@ export type NoteFailure =
   | "resolve"
   | "deactivated"
   | "no_key"
-  | "signature";
+  | "signature"
+  | "fresh_limited";
 
 export class NoteError extends Error {
   constructor(readonly reason: NoteFailure) {
@@ -71,7 +76,27 @@ export interface VerifyDeps {
   trustedHosts: readonly string[];
   /** Seconds since the epoch. */
   now: () => number;
+  /** Who may read a DID's log fresh now (step 7); the process's own limiter by default. */
+  freshReads?: FreshReads;
 }
+
+/** Remembers when each DID was last read fresh, and allows one read per FRESH_INTERVAL_S. */
+export class FreshReads {
+  private readonly last = new Map<string, number>();
+
+  /** Counts a fresh read of `did` at `now` (seconds); false when one happened too recently. */
+  allow(did: string, now: number): boolean {
+    const previous = this.last.get(did);
+    if (previous !== undefined && now - previous < FRESH_INTERVAL_S) return false;
+    if (this.last.size >= 10_000) {
+      for (const [key, at] of this.last) if (now - at >= FRESH_INTERVAL_S) this.last.delete(key);
+    }
+    this.last.set(did, now);
+    return true;
+  }
+}
+
+const processFreshReads = new FreshReads();
 
 export interface VerifiedNote {
   did: string;
@@ -173,6 +198,7 @@ export async function verifySignInNote(input: VerifyInput, deps: VerifyDeps): Pr
     throw new NoteError("resolve");
   }
   if (!verifies(parsed, resolved, kid)) {
+    if (!(deps.freshReads ?? processFreshReads).allow(iss, now)) throw new NoteError("fresh_limited");
     try {
       resolved = await deps.resolver.resolve(did, { fresh: true });
     } catch {
