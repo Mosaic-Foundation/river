@@ -140,7 +140,8 @@ export interface Person {
   scid: string;
   display_name: string | null;
   webauthn_user_id: Buffer;
-  email: string;
+  /** Null once an address that was never verified is released (24 hours after sign-up). */
+  email: string | null;
   email_verified_at: Date | null;
 }
 
@@ -181,6 +182,36 @@ export async function insertPasskey(
      VALUES ($1, $2, $3, $4, $5, $6)`,
     [personId, credential.id, Buffer.from(credential.publicKey), credential.counter, credential.transports ?? [], now],
   );
+}
+
+/** A passkey as the person may see it: when it was added and last used. */
+export interface PasskeySummary {
+  id: string;
+  created_at: Date;
+  last_used_at: Date | null;
+}
+
+/** The person's passkeys, oldest first, except the one with this credential id. */
+export async function otherPasskeys(db: Db, personId: string, exceptCredentialId: string): Promise<PasskeySummary[]> {
+  const { rows } = await db.query<PasskeySummary>(
+    `SELECT id, created_at, last_used_at FROM identity.passkeys
+      WHERE person_id = $1 AND credential_id <> $2 ORDER BY created_at, id`,
+    [personId, exceptCredentialId],
+  );
+  return rows;
+}
+
+/**
+ * Removes one of the person's passkeys right after a recovery (identity.remove_other_passkey):
+ * only within 10 minutes of the recover request in this transaction's settings, and never the
+ * passkey that request added. False when it may not, or there is no such passkey.
+ */
+export async function removeOtherPasskey(db: Db, passkeyId: string, now: Date): Promise<boolean> {
+  const { rows } = await db.query<{ removed: boolean }>("SELECT identity.remove_other_passkey($1, $2) AS removed", [
+    passkeyId,
+    now,
+  ]);
+  return rows[0]?.removed === true;
 }
 
 export async function touchPasskey(db: Db, id: string, counter: number, now: Date): Promise<void> {

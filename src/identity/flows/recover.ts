@@ -5,7 +5,15 @@
 //   POST /recover                 always "If that address has an account, we sent a link"
 //   GET  /recover/link?token=     the link's page, or "expired or already used"
 //   POST /recover/options {token}             registration options for the person's user handle
-//   POST /recover/verify  {request, response}  new passkey → {redirect} or {done}
+//   POST /recover/verify  {request, response}  new passkey → {redirect} or {done}, and the
+//                                             person's other passkeys
+//   POST /recover/passkeys/remove {request, passkey}  removes one of those, within 10 minutes
+//
+// After a recovery the page says how many passkeys the Mosaic ID has and lets the person remove
+// the others (security review of 3a86e8f, item 5): someone who started a Mosaic ID with this
+// address and got its owner to confirm it would still hold their own passkey. Removal goes through
+// identity.remove_other_passkey, which allows it only for the recover request just used, for 10
+// minutes, and never for the passkey that request added.
 //
 // Rate limits: per IP and per address (in memory), and at most 3 links an hour per person (in
 // the database). An unknown or unverified address gets the same answer and no email. The token
@@ -35,7 +43,9 @@ import {
   liveAuthRequest,
   liveToken,
   lookups,
+  otherPasskeys,
   randomToken,
+  removeOtherPasskey,
   tokenParam,
   tokensSince,
   uuidParam,
@@ -47,6 +57,7 @@ import { MESSAGES, allow, fail, type Routes } from "./common.js";
 export const RECOVER_PER_PERSON_PER_HOUR = 3;
 
 const AGAIN = { href: "/recover", label: "Ask for a new link" };
+const REMOVE_GONE = "That passkey can't be removed from here any more. Ask for a new recovery link to try again.";
 
 export function recoverRoutes(router: Routes): void {
   router.get("/recover", (req, res) => {
@@ -120,8 +131,9 @@ export function recoverRoutes(router: Routes): void {
         rpId: config.rpId,
         challenge,
         userId: person.webauthn_user_id,
-        userName: person.email,
-        displayName: person.display_name ?? person.email,
+        // A link only goes to a verified address, so there is one; the code is a fallback.
+        userName: person.email ?? person.code,
+        displayName: person.display_name ?? person.email ?? person.code,
       }),
     });
   });
@@ -152,17 +164,54 @@ export function recoverRoutes(router: Routes): void {
       const person = await getPerson(db, personId, true);
       if (!person) return { error: "link_gone" } as const;
       await insertPasskey(db, personId, credential, now);
+      // What remove_other_passkey must keep.
+      await db.query("UPDATE identity.auth_requests SET pending = pending || jsonb_build_object('new_credential_id', $2::text) WHERE id = $1", [
+        id,
+        credential.id,
+      ]);
       await audit(db, personId, "passkey_added", { via: "recovery" }, now);
       await audit(db, personId, "recovered", { token: tokenId }, now);
+      const others = await otherPasskeys(db, personId, credential.id);
       const redirect = request.client_id ? await signInRedirect(db, person, request, now) : undefined;
-      return { email: person.email, redirect };
+      return { email: person.email, redirect, others };
     });
     if (result.error !== undefined) {
       // Nothing was written: the transaction committed no passkey.
       return fail(res, 410, result.error, result.error === "link_gone" ? LINK_GONE : MESSAGES.gone);
     }
-    await sendEmail(recoveryNoticeMessage(result.email));
-    res.json(result.redirect ? { redirect: result.redirect } : { done: true });
+    if (result.email) await sendEmail(recoveryNoticeMessage(result.email));
+    const passkeys = {
+      total: result.others.length + 1,
+      others: result.others.map((p) => ({
+        id: p.id,
+        added: p.created_at.toISOString().slice(0, 10),
+        lastUsed: p.last_used_at ? p.last_used_at.toISOString().slice(0, 10) : null,
+      })),
+    };
+    res.json(result.redirect ? { redirect: result.redirect, request: id, passkeys } : { done: true, request: id, passkeys });
+  });
+
+  router.post("/recover/passkeys/remove", async (req, res) => {
+    if (!allow(req, res, "links")) return;
+    const id = uuidParam(req.body?.request);
+    const passkeyId = uuidParam(req.body?.passkey);
+    if (!id || !passkeyId) return fail(res, 400, "bad_request", MESSAGES.gone);
+    const personId = await forIdentity({ authRequestId: id }, async (db) => {
+      const { rows } = await db.query<{ person_id: string | null }>(
+        "SELECT person_id FROM identity.auth_requests WHERE id = $1 AND purpose = 'recover' AND used_at IS NOT NULL",
+        [id],
+      );
+      return rows[0]?.person_id ?? undefined;
+    });
+    if (!personId) return fail(res, 410, "request_gone", REMOVE_GONE);
+    const now = identityNow();
+    const removed = await forIdentity({ personId, authRequestId: id }, async (db) => {
+      if (!(await removeOtherPasskey(db, passkeyId, now))) return false;
+      await audit(db, personId, "passkey_removed", { via: "recovery", passkey: passkeyId }, now);
+      return true;
+    });
+    if (!removed) return fail(res, 410, "request_gone", REMOVE_GONE);
+    res.json({ removed: true });
   });
 }
 

@@ -17,7 +17,11 @@ interface Answer {
   message?: string;
   redirect?: string;
   reminder?: string;
+  /** Signed in with a Mosaic ID that has no recovery address (it was released, never confirmed). */
+  noAddress?: boolean;
   done?: boolean;
+  /** After a recovery: how many passkeys the Mosaic ID has, and the others, to remove. */
+  passkeys?: { total: number; others: Array<{ id: string; added: string; lastUsed: string | null }> };
   request?: string;
   /** Options JSON from @simplewebauthn/server, passed straight to @simplewebauthn/browser. */
   options?: PublicKeyCredentialCreationOptionsJSON | PublicKeyCredentialRequestOptionsJSON;
@@ -63,7 +67,7 @@ function busy(form: HTMLFormElement, on: boolean): void {
 }
 
 /** After sign-up, or sign-in with an unconfirmed address: say so, then let the person continue. */
-function remind(masked: string, redirect: string | undefined, signedUp: boolean): void {
+function remind(masked: string, redirect: string | undefined, signedUp: boolean, keepText = false): void {
   const section = document.getElementById("reminder");
   const text = section?.querySelector<HTMLElement>("[data-reminder-text]");
   const link = section?.querySelector<HTMLAnchorElement>("[data-continue]");
@@ -71,9 +75,11 @@ function remind(masked: string, redirect: string | undefined, signedUp: boolean)
     if (redirect) window.location.assign(redirect);
     return;
   }
-  text.textContent = signedUp
-    ? `Your Mosaic ID is ready and works now. We sent a link to ${masked}; open it to confirm the address you'd use if you lose your passkey.`
-    : `We still need you to confirm ${masked}. Open the link we sent, so you can get back in if you lose your passkey.`;
+  if (!keepText) {
+    text.textContent = signedUp
+      ? `Your Mosaic ID is ready and works now. We sent a link to ${masked}; open it to confirm the address you'd use if you lose your passkey.`
+      : `We still need you to confirm ${masked}. Open the link we sent, so you can get back in if you lose your passkey.`;
+  }
   if (redirect) {
     link.href = redirect;
     link.textContent = "Continue to Mosaic River";
@@ -86,6 +92,23 @@ function remind(masked: string, redirect: string | undefined, signedUp: boolean)
   section.querySelector<HTMLElement>("h2")?.focus();
 }
 
+/** After sign-in with a Mosaic ID that has no recovery address: say so plainly, link to adding one. */
+function noAddress(redirect: string | undefined): void {
+  const section = document.getElementById("reminder");
+  const heading = section?.querySelector<HTMLElement>("h2");
+  const text = section?.querySelector<HTMLElement>("[data-reminder-text]");
+  const link = section?.querySelector<HTMLAnchorElement>("[data-address-link]");
+  if (!section || !heading || !text || !link) {
+    if (redirect) window.location.assign(redirect);
+    return;
+  }
+  heading.textContent = "Your Mosaic ID has no recovery address";
+  text.textContent =
+    "If you lose your passkey, there is no way back in. Add an email address you can confirm, so we can send you a link.";
+  link.textContent = "Add a recovery address";
+  remind("", redirect, false, true);
+}
+
 async function signIn(form: HTMLFormElement): Promise<void> {
   const request = form.dataset.request;
   const { options } = await post("/authorize/signin/options", { request });
@@ -93,6 +116,7 @@ async function signIn(form: HTMLFormElement): Promise<void> {
   say("Use your passkey…");
   const response = await startAuthentication({ optionsJSON: options as PublicKeyCredentialRequestOptionsJSON });
   const answer = await post("/authorize/signin/verify", { request, response });
+  if (answer.noAddress) return noAddress(answer.redirect);
   if (answer.reminder) return remind(answer.reminder, answer.redirect, false);
   if (answer.redirect) window.location.assign(answer.redirect);
 }
@@ -118,6 +142,10 @@ async function recover(form: HTMLFormElement): Promise<void> {
   say("Create your new passkey…");
   const response = await startRegistration({ optionsJSON: answer.options as PublicKeyCredentialCreationOptionsJSON });
   const result = await post("/recover/verify", { request: answer.request, response });
+  if (result.passkeys && result.passkeys.others.length > 0 && result.request) {
+    showPasskeys(form, result.request, result.passkeys, result.redirect);
+    return;
+  }
   if (result.redirect) {
     window.location.assign(result.redirect);
     return;
@@ -129,6 +157,69 @@ async function recover(form: HTMLFormElement): Promise<void> {
     done.hidden = false;
     done.querySelector<HTMLElement>("h2")?.focus();
   }
+}
+
+/** After a recovery: how many passkeys the Mosaic ID has, each other one with a Remove button. */
+function showPasskeys(
+  form: HTMLFormElement,
+  request: string,
+  passkeys: NonNullable<Answer["passkeys"]>,
+  redirect: string | undefined,
+): void {
+  const section = document.getElementById("passkeys");
+  const count = section?.querySelector<HTMLElement>("[data-passkey-count]");
+  const list = section?.querySelector<HTMLUListElement>("[data-passkey-list]");
+  const link = section?.querySelector<HTMLAnchorElement>("[data-continue]");
+  if (!section || !count || !list || !link) {
+    if (redirect) window.location.assign(redirect);
+    return;
+  }
+  let total = passkeys.total;
+  const describe = () => {
+    count.textContent =
+      total === 1
+        ? "Your Mosaic ID now has 1 passkey: the one you just made."
+        : `Your Mosaic ID now has ${total} passkeys: the one you just made and ${total - 1} other${total === 2 ? "" : "s"}.`;
+  };
+  describe();
+  list.replaceChildren();
+  for (const other of passkeys.others) {
+    const item = document.createElement("li");
+    const label = document.createElement("span");
+    label.textContent = `Passkey added ${other.added}, ${other.lastUsed ? `last used ${other.lastUsed}` : "never used"}`;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove";
+    remove.setAttribute("aria-label", `Remove the passkey added ${other.added}`);
+    remove.addEventListener("click", () => {
+      remove.disabled = true;
+      post("/recover/passkeys/remove", { request, passkey: other.id })
+        .then(() => {
+          item.remove();
+          total -= 1;
+          describe();
+          say("Passkey removed.");
+          count.focus();
+        })
+        .catch((err: unknown) => {
+          remove.disabled = false;
+          say(explain(err));
+        });
+    });
+    item.append(label, remove);
+    list.append(item);
+  }
+  if (redirect) {
+    link.href = redirect;
+    link.textContent = "Continue to Mosaic River";
+  } else {
+    link.textContent = "Done";
+    link.href = "/";
+  }
+  form.hidden = true;
+  say("");
+  section.hidden = false;
+  section.querySelector<HTMLElement>("h2")?.focus();
 }
 
 async function changeEmail(form: HTMLFormElement): Promise<void> {
