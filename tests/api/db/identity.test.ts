@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { forIdentity, forInstance, type Db } from "../../../src/db/context.js";
 import { IDENTITY_TABLES } from "../../../src/db/tables.js";
 import { parseJsonl, verifyLog } from "../../../src/identity/did/index.js";
-import { EmailInUseError, RequestGoneError, createPerson, newWebauthnUserId } from "../../../src/identity/people.js";
+import { RequestGoneError, createPerson, newWebauthnUserId } from "../../../src/identity/people.js";
 import { recoveryKeyFromPem, type RecoveryKey } from "../../../src/identity/recovery/key.js";
 import { recoverPerson } from "../../../src/identity/recovery/recoverDids.js";
 import { createToken, hashToken, insertAuthRequest, lookups, randomToken, readDidLog } from "../../../src/identity/store.js";
@@ -212,7 +212,7 @@ describe("row-level security as identity_app", () => {
       byCredential: await lookups.personByCredential(db, a.credentialId),
       byCode: await lookups.personByCode(db, a.person.code),
       unknownCode: await lookups.personByCode(db, "zzzzzzzz"),
-      // Not verified yet: no recovery for this address.
+      // Not verified yet: no recovery for this address, and nobody is kept from using it.
       forRecovery: await lookups.personForRecovery(db, a.person.email),
       inUse: await lookups.emailInUse(db, a.person.email.toUpperCase()),
       free: await lookups.emailInUse(db, "nobody@example.test"),
@@ -223,7 +223,7 @@ describe("row-level security as identity_app", () => {
       byCode: a.person.id,
       unknownCode: undefined,
       forRecovery: undefined,
-      inUse: true,
+      inUse: false,
       free: false,
       byToken: a.person.id,
     });
@@ -251,7 +251,7 @@ describe("creating a person", () => {
     expect(a.redirect).toMatch(/^http:\/\/localhost:5173\/api\/auth\/callback\?state=.+&note=.+\..+\..+$/);
   });
 
-  it("a used request can't create another person, and an address can't have two", async () => {
+  it("a used request can't create another person; an unverified address may be named twice", async () => {
     const requestId = await newRequest();
     const input = {
       origin: ORIGIN,
@@ -264,9 +264,10 @@ describe("creating a person", () => {
     };
     await createPerson(input, identity);
     await expect(createPerson({ ...input, credential: fakeCredential(), webauthnUserId: newWebauthnUserId() }, identity)).rejects.toBeInstanceOf(RequestGoneError);
+    // Only a verified address is held (security review item 5; db/emailReservation.test.ts).
     await expect(
       createPerson({ ...input, requestId: await newRequest(), credential: fakeCredential(), webauthnUserId: newWebauthnUserId() }, identity),
-    ).rejects.toBeInstanceOf(EmailInUseError);
+    ).resolves.toMatchObject({ person: { email: input.email } });
   });
 
   it("stores only the SHA-256 of an emailed token", async () => {

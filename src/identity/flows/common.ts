@@ -55,12 +55,16 @@ export function opaqueParam(value: unknown): string | undefined {
   return typeof value === "string" && /^[A-Za-z0-9._~-]{16,256}$/.test(value) ? value : undefined;
 }
 
-/** An optional display name: trimmed, 1 to 64 characters, no control characters. */
+/**
+ * An optional display name: trimmed, 1 to 64 characters, no control or invisible formatting
+ * characters (bidi overrides, zero-width marks, line separators). It is quoted in the confirm email
+ * and page, so it mustn't be able to reorder or hide the text around it.
+ */
 export function displayNameParam(value: unknown): string | undefined | null {
   if (value === undefined || value === null) return undefined;
   if (typeof value !== "string") return null;
   const name = value.trim();
   if (name === "") return undefined;
-  if (name.length > 64 || /[\u0000-\u001f\u007f]/.test(name)) return null;
+  if (name.length > 64 || /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(name)) return null;
   return name;
 }
