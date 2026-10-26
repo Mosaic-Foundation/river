@@ -20,9 +20,31 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Recovery: the same answer in the same time; per-address limit per IP too — 2026-10-26
+
+- Branch / PR: claude/recovery-timing → PR (needs-adam: recovery is authentication)
+- Migrations: none
+
+**What it does.** Security review of 3a86e8f, item 6. `POST /recover` answers before it looks the
+address up. The lookup, the token and the email run afterwards under `waitUntil`, so a known
+address takes as long as an unknown one. The in-memory per-address limit is keyed on IP plus
+address (`recoverAddressKey`). The test-only `POST /test/email-delay` slows the capture transport.
+DECISIONS.md has the entry, including the per-person database cap that stays.
+
+**Keys.** None.
+
+**Tests.** API db `recoveryTiming` (new): with the capture transport slowed to 1.5 s, a known
+address answers in under 0.75 s with the same body as an unknown one, and the link arrives
+afterwards. It failed before (1.66 s). Unit `identityHost` (the key differs by IP; a stranger's hits
+leave the owner's allowance). e2e check 36 waits for the recovery mail. `npm run check`: 52 files, 721 tests passed; UI built. API:
+19 files, 179 passed. e2e `identity.spec.ts` ×3: 27 passed.
+
+### Follow-ups
+- The per-person cap of 3 links an hour can still be used up from several addresses (see
+  DECISIONS).
 ## Mosaic ID: only verified addresses held; unverified ones released after 24 hours — 2026-10-26
 
-- Branch / PR: claude/email-reservation → PR (needs-adam: schema, auth, recovery). Merge after #58.
+- Branch / PR: claude/email-reservation → #59 (merged by Adam)
 - Migrations: `20261026163500_email_reservation.sql` (changes `identity.people`: email nullable,
   UNIQUE replaced by a unique index over verified addresses, CHECK verified ⇒ address;
   `identity.email_in_use` verified only; new `identity.remove_other_passkey`; `audit_log` gains

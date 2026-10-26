@@ -30,6 +30,8 @@ The refresh tests (`db/refresh.test.ts`) also call the feed modules directly, wi
 responses replayed through the real fetch guard and a MockAgent that counts requests, and
 `db/isolation.test.ts` signs members up through the callback's own `signInAccount()`.
 
+`db/recoveryTiming.test.ts` makes a person as identity_app, then times `POST /recover` against the
+identity dev server with its capture transport slowed (`POST /test/email-delay`, TEST_ROUTES).
 `db/emailReservation.test.ts` makes people as identity_app like the other identity tests, but
 posts their confirm links and sign-up options to the identity dev server (`npm run dev:identity`),
 because those answers are decided there.
