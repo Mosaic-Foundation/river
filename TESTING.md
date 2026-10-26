@@ -64,6 +64,10 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, follow caps (security review item 3): API db `followCap` (new: the 2,000 cap by
+  the follow box, a stream rule and an import; mutes allowed; an over-cap import stores nothing;
+  two concurrent imports can't both pass); API `blueskyImport` (preview 20 and import 10 per
+  account, then 429); unit `riverRateLimit` (new). Unit 711, API 178.
 - 2026-10-26, where a Following row's follow came from: unit `ui/following` (`originLine`: Added
   by you, Seed copy, Imported from @handle or Bluesky, nothing for unknown or linked); API
   `blueskyImport` (the page's `origin` for seed, manual and import rows, null for an admin-written
