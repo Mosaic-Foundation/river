@@ -376,6 +376,21 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Alternatives: no UPDATE on accounts at all (nothing writes it yet, but display names are planned);
   SECURITY DEFINER functions for every space write (more code for the same narrowing).
 - Merge order: after #58 and #59, whose migrations sort before this one.
+## 2026-10-26 — Sign-in rate limits, fresh DID reads, an hour of attempts (security review item 4)
+- Decision: `GET /api/auth/signin` and `GET /api/auth/callback` allow 60 each per address per 10
+  minutes, matching the identity host's `/authorize`. Over the limit is a 429 with a short page.
+  The address is `x-real-ip` on Vercel (then the first `x-forwarded-for`), as the identity host
+  reads it, and the socket address elsewhere. The limits live in memory per function instance
+  (`src/river/rateLimit.ts`). The step-7 second look at a DID's log (`note.ts`) happens at most once
+  per DID per minute (`FRESH_INTERVAL_S`); past that the callback is refused with
+  `fresh_limited`. The daily job deletes `river.auth_attempts` older than an hour, not a day
+  (`20261026161614_auth_attempts_hour.sql`). `POST /api/test/rate-limits/reset` (TEST_ROUTES
+  only) lets the API and e2e suites, which sign in many times from one address, start each file
+  or test clear, as the identity host's does.
+- Why: each sign-in start stores a row, each callback can fetch a DID log, and a note with a bad
+  signature forced a fresh fetch every time. None of this was bounded.
+- Alternatives: a durable per-address table would need a migration and a write per request. A
+  lower sign-in limit would trouble a shared address, such as a library or an office.
 - Thread / PR: security review of 3a86e8f
 
 ## 2026-10-26 — 2,000 follows per account; the Bluesky import rate-limited (security review item 3)

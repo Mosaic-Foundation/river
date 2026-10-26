@@ -67,6 +67,11 @@ Newest first: date, slice, tests added, counts.
 - 2026-10-26, row security (security review item 7): API db `rowSecurity` (new: accounts updates
   need an account in context; spaces and streams identity columns refused; written columns
   allowed; loadViewer by id). API 189.
+- 2026-10-26, sign-in limits (security review item 4): API `signin` (60 starts and 60 callbacks
+  per address, then 429); API db `dailyJob` (attempts older than an hour go); unit `riverSignIn`
+  (one fresh DID read per DID per minute). `POST /api/test/rate-limits/reset` (TEST_ROUTES) clears
+  the River's limits: `requireApi()`, `signin.test.ts` and the e2e `resetLimits` call it. Unit
+  721, API 179.
 - 2026-10-26, follow caps (security review item 3): API db `followCap` (new: the 2,000 cap by
   the follow box, a stream rule and an import; mutes allowed; an over-cap import stores nothing;
   two concurrent imports can't both pass); API `blueskyImport` (preview 20 and import 10 per
