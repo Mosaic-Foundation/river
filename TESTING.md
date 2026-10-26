@@ -64,6 +64,14 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, where a Following row's follow came from: unit `ui/following` (`originLine`: Added
+  by you, Seed copy, Imported from @handle or Bluesky, nothing for unknown or linked); API
+  `blueskyImport` (the page's `origin` for seed, manual and import rows, null for an admin-written
+  follow without one); e2e `bluesky.spec.ts` (a hand follow's line, a seed row's, every imported
+  row's). The import tests' stand-in DIDs are distinct (`aaaa…` API removals, `bbbb…` e2e,
+  `cccc…` API unknown), since API and e2e share one database. Old schema checked by dropping the
+  columns: the page loads with every origin null. Unit 710, API 174, e2e 146 (145 locally; check
+  37 needs `TEST_RECOVERY_KEY_FILE`).
 - 2026-10-25, follow origins: unit `followOrigin` (the column check and cache); API
   `blueskyImport` (origins recorded; an import over a hand-made follow keeps it manual; a stream
   rule is manual; the import's own removals marked; an admin-written stand-in

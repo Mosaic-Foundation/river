@@ -356,6 +356,17 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-26 — A Following row's origin line (Adam)
+- Decision: each Following row shows one muted line, from the whole-space follow (else the
+  space's first stream rule, which is the member's own): "Added by you" (`manual`), "Imported from
+  @handle" (`bluesky_import`, its stored handle; "Imported from Bluesky" when it had none),
+  "Seed copy" (`seed`). Nothing for `unknown`, nor for `linked` (nothing writes it yet, and Adam
+  named three lines). The API sends `origin: { origin, label } | null`, null on the old schema.
+- Why: Adam asked for exactly these lines with nothing for unknown, and no filters or sorting.
+- Alternatives: one line per rule (a hub space's stream rules would repeat "Added by you"); a
+  badge (louder than "muted").
+- Thread / PR: Following origin line
+
 ## 2026-10-25 — Where each follow came from, and the import offering only its own (Adam)
 - Decision: `river.follows` gains `origin` (`unknown` for rows from before, `manual` for the
   follow box and stream rules, `seed` for the sign-up seed copy and seeds that wait for their
