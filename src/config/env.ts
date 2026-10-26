@@ -36,11 +36,17 @@ export const TEST_ONLY_VARS = [
   "TEST_DID_LOOPBACK",
 ] as const;
 
-/** Reads a test-only variable, refusing when running on Vercel (which always sets VERCEL). */
+/**
+ * Reads a test-only variable, refusing when running on Vercel (which always sets VERCEL) or with
+ * NODE_ENV=production (a production build anywhere else).
+ */
 function testOnlyVar(name: (typeof TEST_ONLY_VARS)[number]): string | undefined {
   const value = envVar(name);
   if (value !== undefined && envVar("VERCEL") !== undefined) {
     throw new Error(`${name} is for local runs and CI only; it must not be set on Vercel`);
+  }
+  if (value !== undefined && envVar("NODE_ENV") === "production") {
+    throw new Error(`${name} is for local runs and CI only; it must not be set with NODE_ENV=production`);
   }
   return value;
 }
@@ -176,6 +182,10 @@ export const env = {
     if (!(EMAIL_TRANSPORTS as readonly string[]).includes(value)) {
       throw new Error(`EMAIL_TRANSPORT must be one of ${EMAIL_TRANSPORTS.join(", ")}, got "${value}"`);
     }
+    // Captured mail sits in memory and the TEST_ROUTES mailbox reads it: never in production.
+    if (value === "capture" && envVar("VERCEL_ENV") === "production") {
+      throw new Error("EMAIL_TRANSPORT=capture is for tests; it must not be set in production");
+    }
     return value as EmailTransport;
   },
   get resendApiKey(): string {
@@ -188,8 +198,8 @@ export const env = {
 };
 
 /**
- * Fails fast on settings that must never ship: an unknown APP, a bad EMAIL_TRANSPORT, or a
- * test-only variable on Vercel. createApp() calls it, so a misconfigured deployment fails its
+ * Fails fast on settings that must never ship: an unknown APP, a bad EMAIL_TRANSPORT (or capture
+ * in production), or a test-only variable on Vercel or with NODE_ENV=production. createApp() calls it, so a misconfigured deployment fails its
  * /health check instead of running with test behavior.
  */
 export function checkEnv(): void {

@@ -12,7 +12,7 @@ import { buildClients, findClient, parseClientOrigin } from "../../src/identity/
 import { maskEmail, normalizeEmail } from "../../src/identity/email/address.js";
 import { RESEND_ENDPOINT, redactedLine, sendEmail, sendWithResend } from "../../src/identity/email/index.js";
 import { recoverMessage, verifyEmailMessage } from "../../src/identity/email/messages.js";
-import { IDENTITY_CSP } from "../../src/identity/http.js";
+import { IDENTITY_CSP, PERMISSIONS_POLICY, securityHeaders } from "../../src/identity/http.js";
 import { esc } from "../../src/identity/pages.js";
 import { LIMITS, hit, resetRateLimits } from "../../src/identity/rateLimit.js";
 import { recoveryKeyFromFile, recoveryKeyFromPem, recoveryKeyFromPrompt } from "../../src/identity/recovery/key.js";
@@ -154,6 +154,25 @@ describe("pages and parameters", () => {
     };
     const csp = vercel.headers.flatMap((h) => h.headers).find((h) => h.key === "Content-Security-Policy");
     expect(csp?.value).toBe(IDENTITY_CSP);
+  });
+
+  // Security review of 3a86e8f, item 8.
+  it("both vercel.json files send Permissions-Policy, the identity host's also COOP, as its pages do", () => {
+    const sent = (file: string) => {
+      const vercel = JSON.parse(readFileSync(path.resolve(file), "utf8")) as {
+        headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }>;
+      };
+      return Object.fromEntries((vercel.headers.find((h) => h.source === "/(.*)")?.headers ?? []).map((h) => [h.key, h.value]));
+    };
+    expect(PERMISSIONS_POLICY).toBe("camera=(), microphone=(), geolocation=(), payment=()");
+    expect(sent("vercel.json")["Permissions-Policy"]).toBe(PERMISSIONS_POLICY);
+    expect(sent("identity/vercel.json")["Permissions-Policy"]).toBe(PERMISSIONS_POLICY);
+    expect(sent("identity/vercel.json")["Cross-Origin-Opener-Policy"]).toBe("same-origin");
+
+    const headers = new Map<string, string>();
+    securityHeaders({} as never, { setHeader: (k: string, v: string) => headers.set(k, v) } as never, () => {});
+    expect(headers.get("Permissions-Policy")).toBe(PERMISSIONS_POLICY);
+    expect(headers.get("Cross-Origin-Opener-Policy")).toBe("same-origin");
   });
 
   it("escapes markup", () => {
