@@ -40,7 +40,8 @@ page and options join check 28's no-private-key sweep). e2e `identity` (new desc
 then confirmed address, the passkey and its dates, DID and name; no address with its link, two
 passkeys with one never used; `/account` joins the CSP, axe and Tab test). The 5 new tests failed
 before. Against the old schema the button answers 503. `npm run check`: 53 files, 734 tests passed;
-UI built. API (fresh `db reset`): 21 files, 203 passed. e2e: 153 passed.
+UI built. API (fresh `db reset`): 21 files, 203 passed (201 after merging #64, which removed
+Mark all read's tests). e2e: 153 passed.
 
 ### Follow-ups
 - The no-address notice after sign-in still links to `/account/email` (adding is done there).
