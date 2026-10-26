@@ -6,7 +6,10 @@
 //   __Host-river-signin   the sign-in state, 10 minutes; ties the callback to the browser that
 //                         started the sign-in
 //   __Host-river-session  the member's session, 30 days: a signed, stateless token
-//                         {v, instance, account, iat, exp} (DECISIONS, M8)
+//                         {v, instance, account, epoch, iat, exp} (DECISIONS, M8). epoch is the
+//                         account's session epoch when it was issued; "Sign out everywhere" raises
+//                         the account's, which ends every older cookie (DECISIONS, 2026-10-26).
+//                         v1 tokens carried no epoch and are refused.
 //
 // Nothing here logs a cookie or a token.
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -64,9 +67,11 @@ export function cookieHeader(name: string, value: string, maxAgeSeconds: number)
 }
 
 export interface SessionToken {
-  v: 1;
+  v: 2;
   instance: string;
   account: string;
+  /** river.accounts.session_epoch when the cookie was issued. */
+  epoch: number;
   /** Seconds since the epoch. */
   iat: number;
   exp: number;
@@ -85,11 +90,13 @@ export function decodeSession(secret: string, raw: string | undefined, nowSecond
   try {
     const token = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as Partial<SessionToken>;
     if (
-      token.v === 1 &&
+      token.v === 2 &&
       typeof token.instance === "string" &&
       UUID.test(token.instance) &&
       typeof token.account === "string" &&
       UUID.test(token.account) &&
+      Number.isSafeInteger(token.epoch) &&
+      (token.epoch as number) >= 1 &&
       typeof token.iat === "number" &&
       typeof token.exp === "number" &&
       token.iat <= nowSeconds + 60 &&

@@ -24,6 +24,64 @@ export interface PendingSeed {
 export interface SignedInAccount {
   accountId: string;
   created: boolean;
+  /** The account's session epoch, for the new session cookie. */
+  sessionEpoch: number;
+}
+
+// Session revocation (migration 20261026201500_session_epoch, DECISIONS 2026-10-26): each account
+// has a session epoch, which every session cookie carries and "Sign out everywhere" raises. The
+// code may deploy before the migration lands (CLAUDE.md "Database"); until then every account reads
+// as epoch 1, the column's default, so sessions issued meanwhile stay good once it lands. The check
+// is one information_schema read per process once it answers yes, and at most once a minute before.
+const RECHECK_MS = 60_000;
+let epochKnown: boolean | undefined;
+let epochCheckedAt = 0;
+
+/** Whether river.accounts has session_epoch yet. */
+export async function hasSessionEpoch(db: Db, now: number = Date.now()): Promise<boolean> {
+  if (epochKnown === true) return true;
+  if (epochKnown === false && now - epochCheckedAt < RECHECK_MS) return false;
+  const { rows } = await db.query(
+    `SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'river' AND table_name = 'accounts' AND column_name = 'session_epoch'`,
+  );
+  epochKnown = rows.length > 0;
+  epochCheckedAt = now;
+  return epochKnown;
+}
+
+/** Forgets the answer (tests). */
+export function resetSessionEpochCheck(): void {
+  epochKnown = undefined;
+  epochCheckedAt = 0;
+}
+
+/** The account in context's session epoch (1 before the column exists). */
+async function sessionEpoch(db: Db, accountId: string): Promise<number> {
+  if (!(await hasSessionEpoch(db))) return 1;
+  const { rows } = await db.query<{ session_epoch: number }>("SELECT session_epoch FROM river.accounts WHERE id = $1", [accountId]);
+  if (!rows[0]) throw new Error("account vanished during sign-in");
+  return rows[0].session_epoch;
+}
+
+/**
+ * "Sign out everywhere": raises the account's session epoch, so every session cookie issued before
+ * now reads as a visitor. Returns the new epoch, or undefined before the column exists.
+ */
+export async function endAllSessions(instanceId: string, accountId: string, source?: ClientSource): Promise<number | undefined> {
+  return forAccount(
+    instanceId,
+    accountId,
+    async (db) => {
+      if (!(await hasSessionEpoch(db))) return undefined;
+      const { rows } = await db.query<{ session_epoch: number }>(
+        "UPDATE river.accounts SET session_epoch = session_epoch + 1 WHERE id = $1 RETURNING session_epoch",
+        [accountId],
+      );
+      return rows[0]?.session_epoch;
+    },
+    source,
+  );
 }
 
 /** The account holding this DID's login method on this instance, created on first sign-in. */
@@ -40,31 +98,34 @@ export async function signInAccount(
     );
     if (existing) {
       // The DID may have moved host since (same SCID); the stored DID follows it.
-      await forAccount(
+      const epoch = await forAccount(
         instance.id,
         existing,
-        (db) =>
-          db.query("UPDATE river.login_methods SET did = $1, last_used_at = now() WHERE kind = 'did' AND scid = $2", [
+        async (db) => {
+          await db.query("UPDATE river.login_methods SET did = $1, last_used_at = now() WHERE kind = 'did' AND scid = $2", [
             login.did,
             login.scid,
-          ]),
+          ]);
+          return sessionEpoch(db, existing);
+        },
         source,
       );
-      return { accountId: existing, created: false };
+      return { accountId: existing, created: false, sessionEpoch: epoch };
     }
     const accountId = randomUUID();
     try {
-      await forAccount(
+      const epoch = await forAccount(
         instance.id,
         accountId,
         async (db) => {
           await db.insert("accounts", { id: accountId });
           await db.insert("login_methods", { kind: "did", did: login.did, scid: login.scid });
           await copySeeds(db, instance);
+          return sessionEpoch(db, accountId);
         },
         source,
       );
-      return { accountId, created: true };
+      return { accountId, created: true, sessionEpoch: epoch };
     } catch (err) {
       // Two first sign-ins of one DID at once: the other made the account; use it.
       if ((err as { code?: string }).code === "23505" && attempt === 0) continue;
@@ -190,6 +251,8 @@ export interface Viewer {
   accountId: string;
   displayName: string | null;
   did: string | null;
+  /** The account's session epoch; a session cookie must carry this one (never sent to the UI). */
+  sessionEpoch: number;
 }
 
 /** The member's own account row, or undefined when it no longer exists. */
@@ -201,19 +264,21 @@ export async function loadViewer(
   const { rows } = await forAccount(
     instanceId,
     accountId,
-    (db) =>
-      db.query<{ id: string; display_name: string | null; did: string | null }>(
+    async (db) => {
+      const epoch = (await hasSessionEpoch(db)) ? "a.session_epoch" : "1";
+      return db.query<{ id: string; display_name: string | null; did: string | null; session_epoch: number }>(
         // Row security already limits this to the account in context; the WHERE says so too, so
         // a looser policy or another role could never hand back someone else's account.
-        `SELECT a.id, a.display_name,
+        `SELECT a.id, a.display_name, ${epoch} AS session_epoch,
                 (SELECT lm.did FROM river.login_methods lm WHERE lm.account_id = a.id
                   ORDER BY lm.last_used_at DESC LIMIT 1) AS did
            FROM river.accounts a
           WHERE a.id = $1`,
         [accountId],
-      ),
+      );
+    },
     source,
   );
   const row = rows[0];
-  return row ? { accountId: row.id, displayName: row.display_name, did: row.did } : undefined;
+  return row ? { accountId: row.id, displayName: row.display_name, did: row.did, sessionEpoch: row.session_epoch } : undefined;
 }

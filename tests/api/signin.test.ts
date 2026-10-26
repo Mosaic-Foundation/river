@@ -325,9 +325,9 @@ describe("check 11: the callback refuses, with 401 and no session", () => {
 });
 
 /** A signed-in member's cookie (alice). */
-async function member(): Promise<string> {
+async function member(who: TestDid = alice): Promise<string> {
   const s = await start();
-  const result = await callback(s.state, note(alice, s.nonce), s.cookie);
+  const result = await callback(s.state, note(who, s.nonce), s.cookie);
   return sessionFrom(result) ?? "";
 }
 
@@ -346,6 +346,7 @@ describe("sessions and Origin (Appendix B)", () => {
     for (const headers of attempts) {
       expect((await post("/read-state", { read: [] }, headers)).status).toBe(403);
       expect((await post("/auth/signout", {}, headers)).status).toBe(403);
+      expect((await post("/auth/signout-everywhere", {}, headers)).status).toBe(403);
     }
   });
 
@@ -362,6 +363,31 @@ describe("sessions and Origin (Appendix B)", () => {
     const res = await post("/auth/signout", {}, { cookie, origin });
     expect(res.status).toBe(204);
     expect(res.headers.getSetCookie()).toEqual([`${SESSION}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`]);
+  });
+});
+
+describe("Sign out everywhere (session revocation)", () => {
+  const viewerOf = async (cookie: string) =>
+    ((await (await fetch(`${API}/feed`, { headers: { cookie } })).json()) as { viewer: { did: string } | null }).viewer;
+
+  it("ends every session of the account, on every device, and clears this one", async () => {
+    const laptop = await member(bob);
+    const phone = await member(bob);
+    expect((await viewerOf(laptop))?.did).toBe(bob.did);
+    expect((await viewerOf(phone))?.did).toBe(bob.did);
+
+    const res = await post("/auth/signout-everywhere", {}, { cookie: laptop, origin });
+    expect(res.status).toBe(204);
+    expect(res.headers.getSetCookie()).toEqual([`${SESSION}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`]);
+    expect(await viewerOf(laptop)).toBeNull();
+    expect(await viewerOf(phone)).toBeNull();
+
+    // Signing in again starts a session that works.
+    expect((await viewerOf(await member(bob)))?.did).toBe(bob.did);
+  });
+
+  it("needs a signed-in member", async () => {
+    expect((await post("/auth/signout-everywhere", {}, { origin })).status).toBe(401);
   });
 });
 
