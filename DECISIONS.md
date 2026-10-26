@@ -16,6 +16,29 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-26 — Posting and hub changes in Phase 2 (acting for members)
+- Question: `river-v1.md` section 5 keeps "Posting, replying, liking or boosting from the River",
+  "A River ActivityPub actor…" and "any Civic Hub change" out of scope; Adam's Phase 2 design
+  (2026-10-26) brings posting (ADR-011, `fediverse-posting-1.md`), space actions (ADR-012,
+  `space-actions-1.md`) and hub changes (`docs/civic-hub-changes.md`) in.
+- Reading used: the new files win where they differ (they are newer and Adam asked for them).
+  The actor stays out (ADR-011 recommends linking existing accounts).
+- Proposed change: section 5 drops posting and hub changes once ADR-010 to 012 are accepted, and
+  keeps the actor out with a pointer to ADR-011.
+- Thread / PR: Phase 2 design: acting for members
+
+### 2026-10-26 — `civic:actions` in Civic Activity Spec v0.2 (space actions)
+- Question: the Activity spec has no way for a feed to say which actions an item accepts, and
+  the hub's process descriptor carries `actions` only per process, for its own form names.
+- Reading used: `space-actions-1.md` 2.2 adds `civic:actions` on feed activities and an
+  `actions` block in `civic.json`, both additive, and the Space spec's manifest section would
+  list the block.
+- Proposed change: Activity spec: an optional `civic:actions` property on activities (verb,
+  target, a few parameters, never anything about a person); Space spec: the manifest's
+  `actions` block; Identity spec: a DID's `assertionMethod` is what signs statements such as
+  actions, `authentication` only sign-in.
+- Thread / PR: Phase 2 design: acting for members
+
 ### 2026-10-26 — Should a Mosaic ID recovery sign out the River? (session revocation)
 - Question: a recovery replaces a lost passkey, which suggests the old sessions may be in the
   wrong hands. The River now has "Sign out everywhere" (a session epoch per account), but a
@@ -27,6 +50,9 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   carries a recovery counter from the DID log or the identity host, and the River raises the
   account's epoch when it sees a higher one at sign-in. That still leaves sessions open until the
   next sign-in, so it needs the design work.
+- Phase 2 design (2026-10-26): ADR-010 §6 has a recovery revoke the person's signing grants at
+  Mosaic ID, so a recovered account's signed actions stop. Signing out River sessions is listed
+  under "Later options for acting for members" in the log below; still open.
 - Thread / PR: session revocation
 
 ### 2026-10-25 — "Link cards and quotes on an item's own page" and ui-revisions-3 item 2
@@ -368,6 +394,42 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-10-26 — Later options for acting for members (Phase 2 design; not designed in depth)
+- **Bluesky posting through atproto OAuth, on ADR-010's model.** A member links a Bluesky (or
+  other atproto) account the way ADR-011 links a fediverse one: the River would be an atproto
+  OAuth client (a client metadata document at its `client_id` URL, PAR, PKCE, DPoP-bound tokens,
+  refresh tokens that rotate), find the account's PDS and authorization server from its DID, and
+  write records (`app.bsky.feed.post`, `like`, `repost`, `app.bsky.graph.follow`) with
+  `com.atproto.repo.createRecord` and `deleteRecord`. ADR-010 applies unchanged: consent on the
+  member's own authorization server, a preview, encrypted tokens, the activity list, undo by
+  deleting the record. New for the River: a DPoP key per link (the River's own key for the
+  token, not the member's identity key; constraint 7's wording, "the River never stores … private
+  keys", would need to say members' keys), token refresh inside requests, and new outbound hosts
+  (each member's PDS and authorization server, often `bsky.social`), all in their own ADR. The
+  same work is the atproto-style OAuth profile ADR-002 plans for Mosaic ID, seen from the client
+  side. Not checked against the atproto OAuth spec this session.
+- **Signing out River sessions after a Mosaic ID recovery.** Today nothing tells the River (spec
+  question above). Options, smallest first: (a) the signed note carries a per-person recovery
+  counter and the River raises the account's epoch when a sign-in shows a higher one (sessions
+  stay open until the member next signs in); (b) the River asks Mosaic ID, with its client secret
+  (ADR-012), for the counter of each account when it reads a session at most every few minutes
+  (a request per active member; ends sessions within minutes); (c) back-channel: Mosaic ID posts a
+  signed "recovered" event to each client's registered endpoint (OIDC Back-Channel Logout's
+  shape), and the River raises the epoch at once. (c) is the cleanest and needs Mosaic ID's first
+  outbound request to a client, an ADR. Recommend (c) when Mosaic ID has more than one client;
+  (a) in the meantime.
+- **Fediverse approaches not recommended (ADR-011).** (2) The River as its own ActivityPub server
+  with Fedify: revisit if every member should get a fediverse identity tied to their Mosaic ID,
+  once there is an always-on worker or a push queue on Vercel, a decision on constraint 7 for
+  actor keys, a username scheme, and someone to moderate. (3) Mosaic-hosted GoToSocial with OIDC
+  through Mosaic ID: revisit if Mosaic decides to host accounts but not to build a server; it
+  needs a paid server, an OIDC provider in Mosaic ID that hands GoToSocial an email (or a
+  stand-in) per person, and the same hosting duties. Either way, linking an existing account
+  stays offered. Two smaller pieces worth doing first if `blocked` spaces matter: an instance
+  actor that only signs GET requests (no inbox), and FEP-c390 identity proofs signed by Mosaic ID
+  for any actor a member controls.
+- Thread / PR: Phase 2 design: acting for members
 
 ## 2026-10-26 — The identity host's account page (Adam)
 - Decision:

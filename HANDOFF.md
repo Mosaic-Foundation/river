@@ -20,6 +20,61 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Phase 2 design: acting for members (fediverse posting and space actions) — 2026-10-26
+
+- Branch / PR: claude/admiring-lamport-esckd6 → PR (needs-adam: three ADRs, docs only, no code)
+- Migrations: none
+
+**What it does.** The design for the River acting on a member's behalf. ADR-010 is the shared
+model (consent once per channel plus a preview per act, tokens encrypted with Mosaic ID's
+envelope scheme, unlinking, per-account limits, the "Your activity" list, undo, failures, and how
+"Sign out everywhere" leaves a stolen session unable to act). ADR-011 compares three fediverse
+approaches and recommends linking an existing Mastodon or GoToSocial account through its client
+API (`docs/spec/fediverse-posting-1.md`). ADR-012 is a small open protocol, Mosaic Space Actions
+0.1, for comments, support, RSVPs and poll answers signed as the member's DID by Mosaic ID
+(`docs/spec/space-actions-1.md`), with the ADR-002 changes it needs. `docs/civic-hub-changes.md`
+lists the Civic Hub's side and recommends opening signed-in hub pages as full pages, not frames.
+DECISIONS.md has two spec questions and the later options (Bluesky posting, recovery sign-out,
+the fediverse approaches not chosen). API details were checked against Mastodon's and Fedify's
+sources and GoToSocial v0.20.3's code; what couldn't be checked is listed in each file.
+
+**Keys.** Proposed, not added: `RIVER_TOKEN_KEY` and `MOSAIC_ID_CLIENT_SECRET` (River),
+`IDENTITY_CLIENT_SECRET_HASHES` (identity host); test-only `TEST_STAND_IN_SPACE` and
+`TEST_STAND_IN_FEDIVERSE`.
+
+**Tests.** None (docs only). `npm run check`: 53 files, 735 tests passed; UI built.
+
+### Build plan
+
+Sessions are one PR each unless split; sizes are rough (S under 500 lines with tests, M 500 to
+1,500, L over 1,500) and could be half or double. Each starts only after Adam accepts the ADRs it
+builds on. Tracks A and B can run in parallel after A1; B3 needs B1 and B2.
+
+| # | Session and PR | needs-adam | Schema | Outbound | Size |
+| --- | --- | --- | --- | --- | --- |
+| A1 | **Acting core.** Move the envelope module to `src/shared/crypto/` (Mosaic ID imports it); `RIVER_TOKEN_KEY`; tables `member_actions`, `linked_accounts`, `oauth_clients`, `acting_attempts` with RLS; the daily job gains the purges (stale previews, day-old attempts, idle links, year-old rows); limits under an account row lock; Your activity (read-only list). | yes: `src/identity/keys/`, a replaced `pg_cron` function, permissions | new tables; `river.daily_job` replaced | none | L |
+| A2 | **Linking fediverse accounts.** NodeInfo, discovery and instance reads; app registration; OAuth with PKCE; callback; unlink and revoke; Settings → Linked accounts; the stand-in Mastodon and GoToSocial server for tests. | yes: outbound hosts (ADR-011), auth flow | none new | members' own servers (ADR-011 item 6) | L |
+| A3 | **Posts and replies.** `DELETE` in the fetch guard (its own small PR first); composer with the counter, content warning and visibility; preview rows; Send with `Idempotency-Key`; delete from Your activity; the failure table. | guard PR yes; the rest merges on green | none | as A2 | L |
+| A4 | **Boost, favourite, follow** and their undo, toggles on cards and Following rows, the first-use note. | no | none | as A2 | M |
+| A5 | **Real fixtures** from a test account Adam creates; check Akkoma's API and add it if it matches. | Akkoma: yes (supported servers) | none | as A2 | S |
+| B1 | **Protocol core.** `src/shared/spaceActions/` (types, `act` schema, JWS builder, verifier), test vectors, the conformance suite, the stand-in space. | no (after ADR-012 is accepted) | none | none | M |
+| B2 | **Mosaic ID grants and signing.** `/grant`, `/grant/token`, `/actions/sign`, `/actions/requests`, `/actions/confirm`, `/actions/token`, `/grant/revoke`; consent pages; grants and "Signed for apps" on the account page; recovery revokes grants; `assertionMethod` added on first grant and kept by `recover-dids`; client secret hashes. Possibly two PRs (grant and sign; step-up). | yes: auth, keys, recovery, ADR-002 | new `identity.grants`, `identity.action_requests`; `audit_log` action CHECK widened | none | L |
+| B3 | **River space actions.** The hub adapter reads `civic:actions` and the manifest block; `river.items.actions`; card buttons, composer, toggles, step-up, delivery, results, withdraw; messages. Possibly two PRs (reading and showing; sending). | yes: schema, outbound | `river.items.actions` (new column, UPDATE granted) | Mosaic ID's endpoints; spaces' action endpoints (ADR-012 item 8) | L |
+| B4 | **Civic Hub** (in the hub's own project, not here): H1 frame-ancestors, H2 Sign in with Mosaic ID, H3 the endpoint, H4 moderation (`docs/civic-hub-changes.md`). Mosaic ID registers each hub origin as a client. | Adam, in the hub project | hub schema | hub → `id.mosaic.social` | L (hub) |
+| B5 | **Live check** against Demosville once H3 is deployed: record fixtures, an `@live` test, the conformance suite against the hub. | no | none | as B3 | S |
+| C1 | **Spec cleanup:** `river-v1.md` section 5 and 4.1 after acceptance (DECISIONS.md spec questions). | no | none | none | S |
+
+Uncertain: Vercel's request limits for slow servers (every act runs inside a click's request, up
+to the guard's 6 s); GoToSocial releases after v0.20.3 weren't read; Akkoma wasn't reachable;
+whether Mastodon's `profile` scope returns `source` (default visibility and language) on every
+4.3+ server; the hub's timeline for B4; and Adam's answers to the PR's questions, which could
+replace track A (if Mosaic should host accounts) or merge B2's grants into an OAuth profile first.
+
+### Follow-ups
+- The PR's "Questions for Adam" decide the open choices; nothing is built until they're answered.
+- A real fediverse test account (A5) and a Demosville dev deployment with H3 (B5) are needed for
+  recorded fixtures; synthetic fixtures and stand-ins cover everything before then.
+
 ## Identity host: an account page with the address and passkeys — 2026-10-26
 
 - Branch / PR: claude/identity-account-page → PR (needs-adam: a passkey check, i.e.
