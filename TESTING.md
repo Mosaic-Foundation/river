@@ -64,6 +64,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-26, refresh budget (security review item 2): unit `blueskyRotation` caps every other
+  adapter per open (2,000 feeds, 2,000 fediverse accounts and 50 hubs give 12 each, in rotation
+  order, then the next 12), and skips spaces inside the claim's 120 s floor. Unit 711.
 - 2026-10-26, where a Following row's follow came from: unit `ui/following` (`originLine`: Added
   by you, Seed copy, Imported from @handle or Bluesky, nothing for unknown or linked); API
   `blueskyImport` (the page's `origin` for seed, manual and import rows, null for an admin-written
