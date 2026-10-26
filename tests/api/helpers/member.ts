@@ -108,4 +108,6 @@ export async function requireApi(): Promise<void> {
   } catch {
     throw new Error(`No API at ${API}. Start it with \`npm run dev\` (see tests/api/README.md).`);
   }
+  // Each file starts with the sign-in limits clear (TEST_ROUTES): the suite signs in from one address.
+  await fetch(`${API}/test/rate-limits/reset`, { method: "POST" });
 }

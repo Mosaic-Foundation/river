@@ -185,6 +185,8 @@ export async function setClock(request: APIRequestContext, offsetMs: number): Pr
 
 export async function resetLimits(request: APIRequestContext): Promise<void> {
   await request.post(`${identityURL}/test/rate-limits/reset`);
+  // The River's sign-in limits too (per address; every test signs in from this one).
+  await request.post(`${CLIENT}/api/test/rate-limits/reset`);
 }
 
 export function codeOf(did: string): string {

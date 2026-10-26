@@ -15,7 +15,7 @@ import {
   parseWebvhDid,
   type WebvhDid,
 } from "../../src/river/auth/did.js";
-import { NoteError, verifySignInNote, type VerifyDeps } from "../../src/river/auth/note.js";
+import { FRESH_INTERVAL_S, FreshReads, NoteError, verifySignInNote, type VerifyDeps } from "../../src/river/auth/note.js";
 import {
   cookieHeader,
   decodeSession,
@@ -94,6 +94,7 @@ let untrusted: TestDid;
 let server: LogServer;
 let resolver: DidResolver;
 let attempts: Map<string, { nonce: string; used: boolean }>;
+let freshReads: FreshReads;
 
 beforeAll(async () => {
   trusted = await testDid("http://localhost:3005");
@@ -106,6 +107,7 @@ function freshWorld(): void {
   server.logs.set(`http://localhost:3006/u/abcdefgh/did.jsonl`, untrusted.jsonl);
   resolver = new DidResolver({ allowLoopback: true, loopback: (url) => server.fetch(url) });
   attempts = new Map();
+  freshReads = new FreshReads();
 }
 
 function deps(overrides: Partial<VerifyDeps> = {}): VerifyDeps {
@@ -120,6 +122,7 @@ function deps(overrides: Partial<VerifyDeps> = {}): VerifyDeps {
     audience: AUD,
     trustedHosts: TRUSTED,
     now: () => NOW,
+    freshReads,
     ...overrides,
   };
 }
@@ -215,12 +218,39 @@ describe("verifySignInNote: a good note", () => {
     // The cached document didn't verify the note, so the log was read once more.
     expect(server.requests).toHaveLength(2);
 
-    // The old key no longer signs in.
+    // The old key no longer signs in (a minute on, when the DID may be read fresh again).
     const old = attempt();
-    expect(await refused(verifySignInNote({ state: old.state, note: old.note, cookieState: old.state }, deps()))).toBe(
+    const later = deps({ now: () => NOW + FRESH_INTERVAL_S });
+    expect(await refused(verifySignInNote({ state: old.state, note: old.note, cookieState: old.state }, later))).toBe(
       "signature",
     );
     server.logs.set(`http://localhost:3005/u/abcdefgh/did.jsonl`, trusted.jsonl);
+  });
+});
+
+describe("verifySignInNote: fresh DID reads (security review item 4)", () => {
+  it("reads a DID's log fresh at most once a minute, however many bad notes arrive", async () => {
+    freshWorld();
+    const good = attempt();
+    await verifySignInNote({ state: good.state, note: good.note, cookieState: good.state }, deps());
+    expect(server.requests).toHaveLength(1);
+
+    const stranger = key().privateKey;
+    const reasons: string[] = [];
+    for (let i = 0; i < 20; i++) {
+      const bad = attempt({ signer: stranger });
+      reasons.push(await refused(verifySignInNote({ state: bad.state, note: bad.note, cookieState: bad.state }, deps())));
+    }
+    // One fresh read for the first bad note; the rest are refused without a request.
+    expect(reasons[0]).toBe("signature");
+    expect(reasons.slice(1).every((r) => r === "fresh_limited")).toBe(true);
+    expect(server.requests).toHaveLength(2);
+
+    // A minute later the DID may be read fresh once more.
+    const bad = attempt({ signer: stranger });
+    const later = deps({ now: () => NOW + FRESH_INTERVAL_S });
+    expect(await refused(verifySignInNote({ state: bad.state, note: bad.note, cookieState: bad.state }, later))).toBe("signature");
+    expect(server.requests).toHaveLength(3);
   });
 });
 

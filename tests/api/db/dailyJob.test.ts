@@ -107,17 +107,18 @@ describe("river.daily_job", () => {
       ).rows[0]!.n;
       expect(stale).toBeGreaterThanOrEqual(1);
 
-      // river.auth_attempts (M8): every attempt made more than a day before `at` goes; one made at
-      // `at` stays.
+      // river.auth_attempts (M8; an hour since the security review of 3a86e8f): every attempt made
+      // more than an hour before `at` goes, two hours old included; one made at `at` stays.
       const keptState = randomUUID().replaceAll("-", "") + "k";
       await db.query(
-        `INSERT INTO river.auth_attempts (state, instance_id, nonce, created_at) VALUES ($1, $2, $3, $4), ($5, $2, $3, now())`,
-        [keptState, SEED_INSTANCE, "n".repeat(43), at, randomUUID().replaceAll("-", "") + "o"],
+        `INSERT INTO river.auth_attempts (state, instance_id, nonce, created_at)
+         VALUES ($1, $2, $3, $4), ($5, $2, $3, now()), ($6, $2, $3, $4::timestamptz - interval '2 hours')`,
+        [keptState, SEED_INSTANCE, "n".repeat(43), at, randomUUID().replaceAll("-", "") + "o", randomUUID().replaceAll("-", "") + "h"],
       );
       const staleAttempts = (
-        await db.query<{ n: number }>("SELECT count(*)::int AS n FROM river.auth_attempts WHERE created_at < $1::timestamptz - interval '1 day'", [at])
+        await db.query<{ n: number }>("SELECT count(*)::int AS n FROM river.auth_attempts WHERE created_at < $1::timestamptz - interval '1 hour'", [at])
       ).rows[0]!.n;
-      expect(staleAttempts).toBeGreaterThanOrEqual(1);
+      expect(staleAttempts).toBeGreaterThanOrEqual(2);
 
       const summary = (await db.query<{ r: Record<string, number> }>("SELECT river.daily_job($1) AS r", [at])).rows[0]!.r;
       expect(summary).toMatchObject({ ended_follows: 1, deleted_auth_attempts: staleAttempts, deleted_auth_requests: stale });
