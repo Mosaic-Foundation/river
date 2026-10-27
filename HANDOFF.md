@@ -20,6 +20,27 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A3 posts, part 4: the composer — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-composer → PR (UI only; stacked on part 2, #91, which
+  is needs-adam: merge after it)
+- Migrations: none
+
+**What it does.** Members with a linked account get "Post" in the top bar (and the phone's You
+tab) and "Reply" on live fediverse cards. Both open the composer (`ui/src/components/Composer.tsx`):
+choose the account, see the post being answered, add a content warning, write with a counter that
+follows the server's rules, choose the visibility, Preview (the post as followers see it, plus the
+exact request), then Send. The result step shows Posted with View ↗; a failure goes back to the
+text with the server's words; an unknown result shows Check on ↗ and, while it is safe, Try again.
+
+**Keys.** None.
+
+**Tests.** Unit `ui/compose` (new, 6). e2e `composer` (new, 4) and `linkedAccounts` (now using
+`fediverseHelpers.ts`). `npm run check`: 66 files, 1009 tests passed; UI built.
+
+### Follow-ups
+- Part 3: delete from Your activity, after #90 (the guard's DELETE).
+
 ## A3 posts, part 2: preview, Send and Try again for posts and replies — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5-posts → PR (needs-adam: new outbound requests with

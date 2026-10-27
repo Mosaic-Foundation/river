@@ -395,6 +395,24 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — The composer (A3)
+- Decision (`ui/src/components/Composer.tsx`, `ui/src/lib/compose.ts`):
+  - One modal dialog for posts and replies, in three steps: write, preview, result. "Post" sits in
+    the top bar beside Follow (and in the phone's You tab); "Reply" sits in the footer of live
+    fediverse cards beside Open ↗. Both show only to members with an active link, which the page
+    learns from `GET /api/linked-accounts` once per load.
+  - The reply starts with the author's `@user@domain` when the River knows it (the card's author
+    handle) and with the original's content warning. The counter counts the warning too, and on
+    Mastodon counts links as `characters_reserved_per_url` and mentions as `@user`. Over the limit
+    the counter turns red, reads "(too long)", and Preview is disabled.
+  - The language sent is the account's own default; there is no language picker in v1 (item 3.4
+    says "the account's source.language when present, else none").
+  - A failed Send goes back to the write step with the text kept and the error beside Preview
+    (ADR-010 §9). An unknown one shows "Check on {server} ↗" and, while it is safe, Try again.
+    Times (the River's limit, a server's wait) are shown in the member's own clock.
+  - Several linked accounts: "Post as" picks one, defaulting to the one used last (item 2.5).
+- Thread / PR: A3 composer PR
+
 ## 2026-10-27 — Posts and replies: preview, Send, Try again (A3)
 - Decision (`src/river/acting/fediverse/posts.ts`, `postRoutes.ts`, `instance.ts`; `claimRetry()` in
   `acts.ts`):
