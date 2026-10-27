@@ -1,7 +1,7 @@
 # ADR-011: Posting to the fediverse through a member's linked account
 
 - **Date:** 2026-10-26
-- **Status:** Proposed
+- **Status:** Accepted (Adam, 2026-10-27, #66; his answers are in `DECISIONS.md`)
 - **Scope:** posting, replying, boosting, favouriting, following and deleting on the fediverse from the River (`docs/spec/fediverse-posting-1.md`, `src/river/acting/fediverse/`), the linked-account screens, and the outbound requests they make. Not reading: the fediverse adapter (spec 4.3) is unchanged.
 - **Extends:** ADR-010 (acting for members), ADR-001 (fetch guard; amends its list of allowed requests and adds `DELETE` to the guard's methods).
 
@@ -84,7 +84,7 @@ Smallest build (five or six PRs: HANDOFF.md's A1 to A5, with the guard change as
 ## Consequences
 
 - Members with a Mastodon or GoToSocial account can reply, boost, favourite, follow and post from the River, as themselves.
-- Members without one can't post to the fediverse from the River; whether Mosaic should ever host accounts (approach 2 or 3) is Adam's call, recorded in `DECISIONS.md` under later options.
+- Members without one can't post to the fediverse from the River. Mosaic doesn't host fediverse accounts for now; approach 2 (the River as its own ActivityPub server) is recorded as the long-term option to revisit (Adam, 2026-10-27; `DECISIONS.md` later options).
 - New outbound requests to members' own servers (Decision 6), a guard method (`DELETE`), new tables (ADR-010) and the River secret `RIVER_TOKEN_KEY`: all `needs-adam`.
 - Fixtures: synthetic ones built from Mastodon's documented shapes and a stand-in server for tests; real recordings need a test account on a real server, which only Adam can create.
 - Revisit when Akkoma is checked, when media is wanted (an upload path within Vercel's request limits), and if Mosaic decides to host accounts.

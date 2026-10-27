@@ -1,6 +1,6 @@
 # Space actions 1: comment, support, RSVP and poll answers, signed as the member's DID
 
-2026-10-26 · Phase 2 design session (Proposed; for Adam)
+2026-10-26 · Phase 2 design session · Accepted by Adam on 2026-10-27 (#66; answers in `DECISIONS.md`)
 
 The River shows the actions a Mosaic space accepts on its items, and sends each one to the space
 signed as the member's DID by Mosaic ID. This file is the protocol, **Mosaic Space Actions 0.1**,
@@ -318,7 +318,8 @@ Mosaic ID: authenticates the client; finds the grant by the token's hash (`grant
 missing, revoked or lapsed); checks `act` against 3.4 and that the grant's scope covers its verb
 (for `withdraw`, the scope of the verb named in `withdraws`); checks `htu` is `https:` and `aud`
 is a `did:web` or an `https:` origin that is **not** a registered client's origin (so an action
-is never aimed at a sign-in verifier); applies the person's limits (200 signatures an hour,
+is never aimed at a sign-in verifier), and whose `aud` and `htu` hosts are in
+`IDENTITY_SPACE_ACTION_HOSTS` (`scope` otherwise; ADR-012 item 9); applies the person's limits (200 signatures an hour,
 1,000 a day: above the River's own limits, so they bind only a River that ignores its own) and
 the client's
 (5,000 an hour across all people); signs with `assurance: "grant"` (this endpoint never signs
@@ -393,7 +394,9 @@ A conforming space:
    on it). Each entry is re-checked when read: known verb, listed in the manifest, `target` on the
    space's host, values within the limits of 2.2, labels as plain text. Until the column exists the
    adapter stores nothing and no actions show.
-2. **What shows.** On a live card from a space whose manifest has a valid `actions` block: a
+2. **What shows.** Only on spaces whose host is in `SPACE_ACTION_HOSTS` (default `civic.social`
+   and its subdomains; the stand-in's host in tests), until the OAuth profile ADR-002 plans exists
+   (ADR-012 item 9). On a live card from such a space whose manifest has a valid `actions` block: a
    button per known verb its item lists that isn't past `closes_at` and whose stream hasn't ended:
    "Comment", "Support", "RSVP", "Answer the poll". Visitors see them too; a click asks them to
    sign up. The buttons sit in the card's footer beside Open ↗ and don't open the card.
@@ -524,6 +527,10 @@ stand-in space locally against local Supabase; e2e uses Playwright's virtual aut
     response, log line or error contains a grant token, a JWS, or a client secret.
 21. axe finds no serious issue on a card with actions, the composer, the preview and Your
     activity; each is reachable and usable from the keyboard.
+22. A space outside `SPACE_ACTION_HOSTS` with a valid `actions` block shows no actions; Mosaic ID
+    refuses to sign for an `aud` or `htu` outside `IDENTITY_SPACE_ACTION_HOSTS` (`scope`), even
+    for a River request that skips its own check; Mosaic ID refuses to start with a `signin`-only
+    client outside `civic.social`.
 
 ## 10. Out of scope in 0.1
 

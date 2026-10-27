@@ -1,7 +1,7 @@
 # ADR-012: Space actions, signed as the member's DID
 
 - **Date:** 2026-10-26
-- **Status:** Proposed
+- **Status:** Accepted (Adam, 2026-10-27, #66; his answers are in `DECISIONS.md`)
 - **Scope:** the Mosaic Space Actions protocol (`docs/spec/space-actions-1.md`): how a space advertises actions, what Mosaic ID signs, how a space verifies it; Mosaic ID's grant and signing endpoints; the River's action buttons, composer and delivery (`src/river/acting/spaces/`); the shared reference code (`src/shared/spaceActions/`); the outbound requests all of these make.
 - **Extends:** ADR-010 (acting for members), ADR-001 (fetch guard; amends its list of allowed requests), ADR-003 (item model). **Changes ADR-002** (identity host and sign-in) as listed in Decision 6.
 
@@ -36,7 +36,8 @@ Today the River and Mosaic ID meet only through the sign-in redirect and the sig
    - **River → a space:** `POST` of a signed action to the `actions.endpoint` of a space the member follows (or whose item is in their River), only when that endpoint is https on the same host as the space's manifest, body at most 16 KB, no cookies, no `Authorization` header. A manifest that names another host is ignored (no actions shown).
    - **Mosaic ID:** none.
    - **Spaces** resolve members' DID logs at `id.mosaic.social`; that is the space's own outbound request, under its own rules (the Civic Hub's are in `docs/civic-hub-changes.md`).
-9. **Testing without real hubs.** The protocol's reference verifier lives in `src/shared/spaceActions/` (pure, with an injected DID resolver), and a stand-in space built on it serves a manifest, a feed and an endpoint. Unit and API tests reach it through the guard's injected dispatcher, never the network; signed test vectors (a fixed test DID log and key, a valid request and one per refusal) make the conformance suite any space can run.
+9. **Foundation only until the OAuth profile** (Adam, 2026-10-27). Grants and signing serve only Foundation clients (the River), and actions go only to Foundation-run spaces, until the DPoP-bound OAuth profile ADR-002 plans exists. The River offers actions only on spaces whose host is in `SPACE_ACTION_HOSTS` (default `civic.social`: that host or any subdomain), and Mosaic ID refuses to sign an action whose `aud` or `htu` names a host outside its own copy, `IDENTITY_SPACE_ACTION_HOSTS`, so a River bug can't widen it. Hubs that sign people in with Mosaic ID are the Foundation's hubs on `civic.social`, each registered with `signin` only; Mosaic ID refuses at startup a `signin`-only client outside `civic.social`. Any space or client run by someone else waits for the OAuth profile. The protocol itself stays open: anyone may implement and test it with the conformance suite.
+10. **Testing without real hubs.** The protocol's reference verifier lives in `src/shared/spaceActions/` (pure, with an injected DID resolver), and a stand-in space built on it serves a manifest, a feed and an endpoint. Unit and API tests reach it through the guard's injected dispatcher, never the network; signed test vectors (a fixed test DID log and key, a valid request and one per refusal) make the conformance suite any space can run.
 
 ## Alternatives considered
 

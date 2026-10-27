@@ -1,6 +1,6 @@
 # Civic Hub changes for acting from the River
 
-2026-10-26 · Phase 2 design session (Proposed; for Adam)
+2026-10-26 · Phase 2 design session · Accepted by Adam on 2026-10-27 (#66)
 
 What the Civic Hub (`Mosaic-Foundation/civic-hub`) would need so that River members can sign in
 to a hub with Mosaic ID, act on hub items from the River (`docs/spec/space-actions-1.md`,
@@ -49,9 +49,10 @@ learns their DID, so actions signed by that DID count as that member.
    `MOSAIC_ID_CLIENT_ORIGINS` would be a Mosaic ID change, `needs-adam` here) with the `signin`
    capability only, so a hub can sign people in but can't ask Mosaic ID for signing grants
    (space-actions-1 5.5). ADR-002 says the
-   signed note must become an OAuth profile "before any third-party site relies on it": the hubs
-   are the Foundation's own sites, so this reads them as first-party, which is a question for
-   Adam (PR questions).
+   signed note must become an OAuth profile "before any third-party site relies on it". Adam's
+   answer (2026-10-27): hubs the Foundation runs on `civic.social` count as first-party and may
+   use the v1 note, each registered for sign-in only; a hub run by anyone else waits for the
+   OAuth profile. Mosaic ID refuses to start with a `signin`-only client outside `civic.social`.
 2. **The flow is the River's** (spec 4.6): the hub sets a short-lived `HttpOnly`, `Secure`,
    `SameSite=Lax` state cookie (its first cookie outside the console), redirects to
    `https://id.mosaic.social/authorize?client_id=https://{hub}&redirect_uri=https://{hub}/auth/mosaic-id/callback&state&nonce`,
