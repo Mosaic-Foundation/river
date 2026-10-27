@@ -1,0 +1,37 @@
+name: keep-alive
+
+# Once a day, requests one River endpoint and one Mosaic ID endpoint that each read the database,
+# so the free Supabase project (river-dev, which both apps share for now) isn't paused for
+# inactivity. Plain /health answers without the database, so it wouldn't count.
+#
+# The origins are repository variables (not secrets; they are public addresses), set by Adam:
+#   vars.KEEPALIVE_RIVER_ORIGIN     e.g. https://river.mosaic.social  (requests /api/health/db)
+#   vars.KEEPALIVE_IDENTITY_ORIGIN  e.g. https://id.mosaic.social     (requests /health/db)
+# Until both are set the job is skipped. A 503 (the database didn't answer) fails the run, and
+# GitHub emails the failure. The job needs no checkout, token or secret.
+#
+# GitHub runs schedules on the default branch only, and turns them off in a repository with no
+# activity for 60 days; a failed or skipped run doesn't count as activity for Supabase either.
+
+on:
+  schedule:
+    - cron: "41 10 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: ${{ vars.KEEPALIVE_RIVER_ORIGIN != '' && vars.KEEPALIVE_IDENTITY_ORIGIN != '' }}
+    steps:
+      - name: River reads the database
+        env:
+          ORIGIN: ${{ vars.KEEPALIVE_RIVER_ORIGIN }}
+        run: curl -fsS --max-time 30 --retry 3 --retry-delay 20 --retry-all-errors "$ORIGIN/api/health/db"
+
+      - name: Mosaic ID reads the database
+        env:
+          ORIGIN: ${{ vars.KEEPALIVE_IDENTITY_ORIGIN }}
+        run: curl -fsS --max-time 30 --retry 3 --retry-delay 20 --retry-all-errors "$ORIGIN/health/db"
