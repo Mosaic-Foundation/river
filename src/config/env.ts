@@ -149,6 +149,15 @@ export const env = {
   get onVercel(): boolean {
     return envVar("VERCEL") !== undefined;
   },
+  /**
+   * 32 random bytes, base64. Wraps the data keys of the credentials the River holds to act for
+   * members (ADR-010 §5; src/river/acting/crypto/). River project only, Production; never in the
+   * identity project, the database or a log. Read only when a credential is sealed or opened, so
+   * the River runs without it until acting is used.
+   */
+  get riverTokenKey(): string {
+    return requireEnv("RIVER_TOKEN_KEY");
+  },
 
   // --- Identity host (spec Appendix D) ---
 
