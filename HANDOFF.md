@@ -20,9 +20,31 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
-## Space actions B1.1: host lists match a host or its subdomains on a dot boundary — 2026-10-27
+## Space actions B1.2: types, the `act` schema, the manifest reader and the JWS builder — 2026-10-27
 
 - Branch / PR: claude/practical-curie-3emib5 → PR (merged)
+- Migrations: none
+
+**What it does.** Second PR of B1. `src/shared/spaceActions/` gains the protocol's names and
+shapes (`types.ts`: verbs, claims, the 21 refusal codes with their statuses, which refusals are
+final under 3.6), `checkAct()` (3.4 exactly: each verb's fields and nothing else), the client's
+reading of a manifest's `actions` block (2.1: another protocol, an endpoint off the manifest's
+host or the wrong audience ignores the block) and the JWS builder Mosaic ID will use in B2
+(`actionClaims()` and `signAction()`, signing handed in as for the sign-in note). Nothing calls
+it yet. The calls 3.4 left open are in DECISIONS.md ("The `act` schema's details").
+
+**Keys.** None.
+
+**Tests.** Unit `spaceActionsCore` (new, 47: every verb accepted, 24 refusals, character counts,
+the manifest block's cases, the claims' order and lifetime, a JWS that verifies with
+node:crypto, kid under the DID). `npm run check`: 55 files, 834 tests passed; UI built.
+
+### Follow-ups
+- B1.3 adds the verifier; B1.4 the vectors and suite; B1.5 the stand-in space.
+
+## Space actions B1.1: host lists match a host or its subdomains on a dot boundary — 2026-10-27
+
+- Branch / PR: claude/practical-curie-3emib5 → #69 (merged)
 - Migrations: none
 
 **What it does.** First PR of build plan B1 (Mosaic Space Actions 0.1 core). `src/shared/hosts/`
