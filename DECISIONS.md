@@ -395,6 +395,22 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — Mosaic ID's upkeep is its own job, identity-daily at 04:23 UTC (identity move, part 1)
+- Decision: `identity.daily_job(at)` (migration `20261027170000_identity_daily_job.sql`) purges
+  `auth_requests` a day after expiry and releases addresses still unverified 24 hours after
+  sign-up, exactly as `river.daily_job` did; pg_cron runs it as `identity-daily` at 04:23 UTC.
+  `river.daily_job` loses both steps and their two summary keys (`20261027170100_...`). Each
+  migration names one schema; `tests/unit/schemaBoundaries.test.ts` fails on a new migration that
+  names both, or on River code naming `identity.` (or identity code naming `river.`). The five
+  merged migrations that mix schemas are listed in the test by name, since merged migrations are
+  never edited.
+- Why: Mosaic ID will leave this repo and later this database; a function in one schema writing
+  another schema's tables can't survive the split. Six minutes after `river-daily` keeps the two
+  jobs apart by schedule; nothing depends on their order.
+- Alternatives: one migration for both changes (simpler, but it would name both schemas and need
+  its own exception); a SECURITY DEFINER function the River's job calls (still cross-schema).
+- Thread / PR: claude/trusting-carson-y03109 (identity move, part 1)
+
 ## 2026-10-27 — revoke-links: a dry run first, redirects refused per request, app registrations deleted (A1)
 - Decision (`npm run revoke-links`, `src/river/acting/revoke.ts`; runbook in `docs/deploy.md`):
   - It is a dry run unless given `--apply`. The dry run opens each credential with the

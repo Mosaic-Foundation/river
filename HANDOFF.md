@@ -20,6 +20,30 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Identity move, part 1: Mosaic ID's daily job is its own — 2026-10-27
+
+- Branch / PR: claude/trusting-carson-y03109 → PR (needs-adam: a migration that replaces
+  `river.daily_job`, and a new pg_cron job)
+- Migrations: `20261027170000_identity_daily_job.sql`, `20261027170100_river_daily_job_river_only.sql`
+
+**What it does.** First of five slices preparing Mosaic ID to leave this repo and later this
+database. `identity.daily_job()` and its pg_cron job `identity-daily` (04:23 UTC) now purge
+`identity.auth_requests` and release unverified addresses; `river.daily_job` (from its #72
+version) does neither, and its summary drops `deleted_auth_requests` and `released_addresses`.
+A new unit test fails if a new migration names both schemas, River code names `identity.` or
+`identity_app`, or identity code names `river.` or `river_app`.
+
+**Keys.** None.
+
+**Tests.** Unit `schemaBoundaries` (new; checked to fail on a copied mixed migration and on a River
+file naming `identity.people`). API db `identityDailyJob` (new: schedule, identity_app can't run it,
+the purge), `dailyJob` (the identity steps moved out; no river function or job names identity,
+and no identity function or job names river), `emailReservation` (calls `identity.daily_job`).
+`npm run test:api`: 27 files, 252 tests passed. `npm run check`: see the PR.
+
+### Follow-ups
+- Part 2 (separate migration histories) waits on Adam's review of its plan.
+
 ## A1 acting core, part 6: npm run revoke-links and its runbook — 2026-10-27
 
 - Branch / PR: claude/tender-keller-7s064x-revoke → PR, stacked on the tables PR (#72)
@@ -159,7 +183,7 @@ which can merge without this one. The build plan's A1 row
 
 ## Space actions B1.5: the stand-in space — 2026-10-27
 
-- Branch / PR: claude/practical-curie-3emib5 → PR (merged)
+- Branch / PR: claude/practical-curie-3emib5 → #78 (merged)
 - Migrations: none
 
 **What it does.** Last PR of B1 (spec section 8). `tests/support/standInSpace/` is a small Mosaic

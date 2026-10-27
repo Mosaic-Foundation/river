@@ -64,6 +64,12 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, identity move part 1: unit `schemaBoundaries` (new; no migration after the split
+  names both schemas, no River code names `identity.`, no identity code names `river.`); API db
+  `identityDailyJob` (new; as postgres, rolled back: the `identity-daily` cron entry, identity_app
+  refused, the auth_requests purge); `dailyJob` (identity steps moved out; live check that no
+  function or cron job crosses schemas); `emailReservation` (calls `identity.daily_job`).
+
 - 2026-10-27, A1 revoke-links: unit `fetchGuard` (`redirect: "error"`); API db `revokeLinks` (new;
   as river_app on the second instance, servers stood in by MockAgent behind the real guard).
 
