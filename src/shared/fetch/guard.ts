@@ -7,7 +7,8 @@
 //   2. The address checked is the address connected to. The default Agent's `connect.lookup`
 //      resolves, checks and hands the socket the one address it checked, so a DNS answer that
 //      changes between the pre-check and the connection (rebinding) can't reach anything else.
-//   3. Redirects by hand, at most 3, each one re-checked; `http:` refused at every hop.
+//   3. Redirects by hand, at most 3, each one re-checked; `http:` refused at every hop. A request
+//      that carries a credential refuses every redirect instead (`redirect: "error"`).
 //   4. Limits: 2 MB body, 6 s for the whole request including redirects and queueing, at most 2
 //      requests in flight per host, and a host's Retry-After (on 429 or 503) honored by refusing
 //      that host until then. No retries: the caller decides.
@@ -59,6 +60,12 @@ export interface GuardedRequest {
   headers?: Record<string, string>;
   body?: string;
   signal?: AbortSignal;
+  /**
+   * `error`: any 3xx is a failure (`redirect_refused`) and nothing is sent to its target. For
+   * requests that carry a credential (ADR-010 §5): a 307 or 308 would re-send it elsewhere.
+   * Default `follow`.
+   */
+  redirect?: "follow" | "error";
 }
 
 export interface FetchGuard {
@@ -252,6 +259,9 @@ export function createFetchGuard(options: FetchGuardOptions = {}): FetchGuard {
       }
 
       const location = headers.get("location");
+      if (status >= 300 && status < 400 && init.redirect === "error") {
+        throw new FetchError("redirect_refused", "A redirect was refused for a request that carries a credential");
+      }
       if (status >= 300 && status < 400 && location !== null) {
         if (hop >= maxRedirects) throw new FetchError("too_many_redirects", "Too many redirects");
         let next: URL;

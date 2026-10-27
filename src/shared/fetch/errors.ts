@@ -14,6 +14,8 @@ export type FetchErrorCode =
   | "unresolvable_host"
   /** More than three redirects. */
   | "too_many_redirects"
+  /** A redirect answered a request made with `redirect: "error"`; nothing went to its target. */
+  | "redirect_refused"
   /** The body is larger than 2 MB. */
   | "too_large"
   /** The 6 s budget ran out. */
