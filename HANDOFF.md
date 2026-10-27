@@ -125,6 +125,7 @@ identity files need the identity dev server and weren't run.
 
 ### Follow-ups
 - Part 3 registers the app and sends the member to the server's authorize page.
+
 ## Identity move, part 3: what Mosaic ID shares with the River — 2026-10-27
 
 - Branch / PR: claude/trusting-carson-y03109-shared → PR
