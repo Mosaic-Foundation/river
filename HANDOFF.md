@@ -28,7 +28,8 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 **What it does.** Records Adam's change to A1: the River keeps its own copy of the envelope
 encryption (`src/river/acting/crypto/envelope.ts`, built in the next A1 PR) and Mosaic ID's
 `src/identity/keys/envelope.ts` stays untouched, since Mosaic ID is moving to its own repository.
-ADR-010 §5 and its Consequences say so; DECISIONS.md has the entry. The build plan's A1 row
+ADR-010 §5 and its Consequences say so. The DECISIONS.md entry rides with the envelope PR,
+which can merge without this one. The build plan's A1 row
 (2026-10-26 entry below) still says "move"; read it as "copy".
 
 **Keys.** None.

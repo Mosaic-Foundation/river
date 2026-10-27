@@ -395,22 +395,6 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
-## 2026-10-27 — The River copies the envelope module instead of sharing it with Mosaic ID (Adam; A1)
-- Decision (Adam, 2026-10-27, starting A1): the River gets its own envelope encryption at
-  `src/river/acting/crypto/envelope.ts`, copied from Mosaic ID's `src/identity/keys/envelope.ts`
-  and generalised to take any additional authenticated data (ADR-010 §5's
-  `river-token:v1|…` and `river-client:v1|…` strings) rather than only a DID. Mosaic ID's module
-  stays where it is, untouched. Nothing moves to `src/shared/crypto/`. ADR-010 §5 and its
-  Consequences now say so, and the A1 row of the build plan (HANDOFF, 2026-10-26) is read that way.
-- Why: Mosaic ID is moving to its own repository, so the River and Mosaic ID shouldn't share code.
-  A copy also keeps A1 out of `src/identity/keys/`, so that part of A1 no longer needs Adam. The
-  scheme is the same (AES-256-GCM data key per value, wrapped by a master key, both bound to the
-  row by additional data), so a review of one reads on the other.
-- Alternatives: the move ADR-010 first proposed (`src/shared/crypto/`, Mosaic ID importing it),
-  which would tie the two codebases together just before they part; a package both depend on (a
-  release process for about 80 lines).
-- Thread / PR: A1, the first PR (docs)
-
 ## 2026-10-27 — Acting for members: Adam's answers to the Phase 2 design (#66)
 - Decision (Adam, 2026-10-27, answering the questions on #66, which he merged):
   1. **Fediverse:** link existing accounts (ADR-011 approach 1). Mosaic doesn't host fediverse
