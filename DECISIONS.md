@@ -424,7 +424,9 @@ Places where the spec looked contradictory or wrong, and the reading that was us
     deletes a credential unused for 180 days and marks it so, so the member's message can say why
     ("unused for six months") rather than "stopped working". Only an active link holds a credential,
     and `revoked_at` is when it was deleted for any reason (CHECK constraints). Ended links go a year
-    after that.
+    after that. Linking the same actor again reuses its row (its Your activity rows keep pointing at
+    it) and sets `linked_at`; the idle clock is `coalesce(last_used_at, linked_at)`, so a link made
+    again after a long break isn't lapsed the next night.
   - `acting_attempts` has its own `id` (the credential's additional data needs a row id; `state`
     stays UNIQUE), `requested` (the handle typed, checked at the callback, fediverse-posting-1 1.6)
     and `return_to` (a River path only; a CHECK refuses `//host` and `/\host`). It is a member's
@@ -437,6 +439,9 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   - River_app may delete its own unsent previews (a RESTRICTIVE policy) and its own linked accounts
     (a sign-in DID change deletes grants, ADR-010 §6); sent acts are deleted only by the daily job.
     UPDATE is granted on outcome columns only: never whose row, what verb, where, when or the epoch.
+    A trigger keeps a sent act sent: once a row leaves `previewed` it can't return, and its
+    `sent_at` can't change (a CHECK ties `previewed` to an empty `sent_at`), so the preview delete
+    can't be used to remove a sent act.
   - Foreign keys to a member's own link and own undone act are on `(account_id, id)` with
     `ON DELETE SET NULL (column)`, so an act can't point at another member's rows and outlives what
     it pointed at.

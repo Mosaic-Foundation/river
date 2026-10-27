@@ -66,8 +66,10 @@ DECISIONS.md has the details the spec left open. No code reads the tables yet.
 
 **Tests.** API db `actingTables` (new: isolation between members and instances, foreign keys to
 another member's rows refused, no update of identity columns, credential CHECKs, verb and limit
-kind, preview discard but no deleting a sent act, attempts consumed once and `return_to` kept on
-the River); API db `dailyJob` (new test: the acting purges). `npm run check`: 53 files, 735 tests
+kind, preview discard but no deleting a sent act, no sent act turned back into a preview, a
+re-link restarting its clock, attempts consumed once and `return_to` kept on the River); API db
+`dailyJob` (new test: the acting purges); API db `catalog` (the trigger function, not executable
+by river_app). `npm run check`: 53 files, 735 tests
 passed; UI built. API db (local Supabase after `db reset`): `actingTables` 24, `dailyJob` and
 `catalog` pass; `emailReservation` and `recoveryTiming` need the identity dev server and weren't run.
 
