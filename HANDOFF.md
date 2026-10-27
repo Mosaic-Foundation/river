@@ -40,6 +40,52 @@ which can merge without this one. The build plan's A1 row
 - The rest of A1 follows as separate PRs (envelope and `RIVER_TOKEN_KEY`; tables and the daily
   job; limits; Your activity; `npm run revoke-links`).
 
+## A1 acting core, part 2: the River's envelope encryption and RIVER_TOKEN_KEY — 2026-10-27
+
+- Branch / PR: claude/tender-keller-7s064x-envelope → PR (merges on green: no needs-adam trigger)
+- Migrations: none
+
+**What it does.** `src/river/acting/crypto/envelope.ts` is the River's own copy of Mosaic ID's
+envelope scheme (AES-256-GCM data key per value, wrapped by a master key, both bound by additional
+data), taking any additional data; Mosaic ID's module is untouched (DECISIONS, 2026-10-27).
+`credentials.ts` seals and opens a member's credential bound to
+`river-token:v1|{instance}|{account}|{row}|{purpose}` and a server's client secret bound to
+`river-client:v1|{instance}|{host}` (ADR-010 §5), with a key version per value. Nothing calls it
+yet; the tables and linking come in later PRs.
+
+**Keys.** `RIVER_TOKEN_KEY` (read lazily; River project, Production only; Adam creates it).
+
+**Tests.** Unit `riverCredentials` (new). `npm run check`: 54 files, 745 tests passed; UI built.
+
+### Follow-ups
+- Adam: create `RIVER_TOKEN_KEY` before the first PR that stores a credential (A2) deploys.
+
+## Space actions B1.1: host lists match a host or its subdomains on a dot boundary — 2026-10-27
+
+- Branch / PR: claude/practical-curie-3emib5 → PR (merged)
+- Migrations: none
+
+**What it does.** First PR of build plan B1 (Mosaic Space Actions 0.1 core). `src/shared/hosts/`
+is the one host-list check for everything B1 to B3 compares against a list: a space's
+`did_hosts`, the River's `SPACE_ACTION_HOSTS` and Mosaic ID's `IDENTITY_SPACE_ACTION_HOSTS`. An
+entry matches its own host and its subdomains on a dot boundary only (`civic.social` covers
+`civic.social` and `floyd.civic.social`, never `evilcivic.social` or `civic.social.example.com`),
+ports must agree, and wildcards, leading or trailing dots, non-ASCII text and IPv6 literals match
+nothing. `parseHostList()`, for the env getters B2 and B3 add, also throws on `:443` and on a
+single label other than `localhost`. `space-actions-1.md` 2.1 and 4 step 4 now say how
+`did_hosts` matches. Nothing calls the module yet.
+
+**Keys.** None.
+
+**Tests.** Unit `hostList` (new, 52 cases: the four `civic.social` cases, ports, case, dots,
+wildcards, non-ASCII, IPv4, https URLs with userinfo). `npm run check`: 54 files, 787 tests
+passed; UI built.
+
+### Follow-ups
+- The River's sign-in check (`isTrustedHost`, TRUSTED_DID_HOSTS) stays exact-match: see
+  DECISIONS.md, "Host lists match subdomains on a dot boundary; sign-in's TRUSTED_DID_HOSTS stays
+  exact (B1)".
+
 ## Phase 2 design: Adam's answers recorded — 2026-10-27
 
 - Branch / PR: claude/admiring-lamport-esckd6 (restarted from `main` after #66 merged) → PR

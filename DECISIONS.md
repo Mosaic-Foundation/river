@@ -395,6 +395,62 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — The River copies the envelope module instead of sharing it with Mosaic ID (Adam; A1)
+- Decision (Adam, 2026-10-27, starting A1): the River gets its own envelope encryption at
+  `src/river/acting/crypto/envelope.ts`, copied from Mosaic ID's `src/identity/keys/envelope.ts`
+  and generalised to take any additional authenticated data (ADR-010 §5's
+  `river-token:v1|…` and `river-client:v1|…` strings) rather than only a DID. Mosaic ID's module
+  stays where it is, untouched. Nothing moves to `src/shared/crypto/`. #68 rewords ADR-010 §5
+  and its Consequences to match (needs-adam, as an ADR change); until it merges, read the ADR's
+  "moves" as "is copied". The A1 row of the build plan (HANDOFF, 2026-10-26) is read the same way.
+- Why: Mosaic ID is moving to its own repository, so the River and Mosaic ID shouldn't share code.
+  A copy also keeps A1 out of `src/identity/keys/`, so that part of A1 no longer needs Adam. The
+  scheme is the same (AES-256-GCM data key per value, wrapped by a master key, both bound to the
+  row by additional data), so a review of one reads on the other.
+- Alternatives: the move ADR-010 first proposed (`src/shared/crypto/`, Mosaic ID importing it),
+  which would tie the two codebases together just before they part; a package both depend on (a
+  release process for about 80 lines).
+- Thread / PR: A1 envelope PR; the ADR-010 wording in #68 (needs-adam)
+
+## 2026-10-27 — RIVER_TOKEN_KEY: lazy, Production only, version 1 (A1)
+- Decision: `RIVER_TOKEN_KEY` (32 random bytes, base64) is read through `env.riverTokenKey` only
+  when a credential is sealed or opened, so the River starts and runs without it until acting is
+  used; it is not in `checkEnv()`. It goes in the `river` Vercel project for Production only
+  (Adam, 2026-10-27), so preview deployments can't open production's credentials and can't act.
+  Every sealed value stores `key_version` (1 today). A rotation, when needed, adds the next key
+  beside it (a second variable read only for the old version) and a script that re-wraps each
+  row's data key, then drops the old one; nothing re-encrypts the values themselves. The purposes
+  bound into a member's credential are `fediverse_token`, `grant_token` and `pkce_verifier`.
+- Why: ADR-010 §5 asks for a version per row so the key can rotate, but says nothing of how the
+  versions are named; one key today keeps the variable simple. Lazy reading follows `env.ts`'s
+  rule that both apps start with no variables set.
+- Alternatives: a list of `version:key` pairs in one variable now (no rotation is planned); a
+  fingerprint of the key as its version (works, but less readable in the database).
+- Thread / PR: A1, envelope PR
+
+## 2026-10-27 — Host lists match subdomains on a dot boundary; sign-in's TRUSTED_DID_HOSTS stays exact (B1)
+- Decision: every host list in Space Actions (`did_hosts`, `SPACE_ACTION_HOSTS`,
+  `IDENTITY_SPACE_ACTION_HOSTS`) is checked by `src/shared/hosts/`: an entry covers its own host
+  and any subdomain, on whole labels (`civic.social` covers `floyd.civic.social`, never
+  `evilcivic.social` or `civic.social.example.com`). Ports follow the TRUSTED_DID_HOSTS rule
+  (an entry with a port matches only that port; one without matches only hosts without one). An
+  IPv4 entry matches only itself. Entries that aren't plain hosts (wildcards, leading or trailing
+  dots, schemes, paths, IPv6, non-ASCII) match nothing, and the env getters will refuse them at
+  startup, along with `:443` and single labels other than `localhost`. `space-actions-1.md` 2.1
+  and 4 step 4 now say this for `did_hosts`, so other spaces implement the same rule.
+- Why: Adam asked for exact-or-subdomain matching on a dot boundary for every host check
+  (2026-10-27), and ADR-012 item 9 already says "that host or any subdomain" for
+  `SPACE_ACTION_HOSTS`. One function for all three lists keeps the River, Mosaic ID and the
+  reference verifier in agreement; the vectors (B1.4) carry the four cases for other spaces.
+- Not changed: the River's sign-in check of TRUSTED_DID_HOSTS (`src/river/auth/did.ts`
+  `isTrustedHost`) stays exact. It is stricter than this rule (it already refuses
+  `evilcivic.social`), and widening it to subdomains would change authentication, a needs-adam
+  change outside B1. Moving it onto `hostInList` is a one-line change if Adam wants subdomain DID
+  hosts at sign-in.
+- Alternatives: a plain `endsWith` (matches `evilcivic.social`); exact hosts only (every new hub
+  on `civic.social` would need a configuration change, which item 9 set out to avoid).
+- Thread / PR: B1.1 (claude/practical-curie-3emib5)
+
 ## 2026-10-27 — Acting for members: Adam's answers to the Phase 2 design (#66)
 - Decision (Adam, 2026-10-27, answering the questions on #66, which he merged):
   1. **Fediverse:** link existing accounts (ADR-011 approach 1). Mosaic doesn't host fediverse
