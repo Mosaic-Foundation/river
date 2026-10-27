@@ -64,6 +64,10 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A2 stand-in fediverse server: unit `standInMastodon` (new: the SYNTHETIC
+  Mastodon and GoToSocial stand-in in `tests/support/standInMastodon/`, through `handle()` and
+  behind the real fetch guard; discovery per host, apps, PKCE, tokens, scopes, revocation, rules,
+  a refused redirect reaching nothing). Unit 979.
 - 2026-10-27, A1 revoke-links: unit `fetchGuard` (`redirect: "error"`); API db `revokeLinks` (new;
   as river_app on the second instance, servers stood in by MockAgent behind the real guard).
 
