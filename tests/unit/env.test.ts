@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { checkEnv, env } from "../../src/config/env.js";
 
 const NAMES = [
-  "APP", "PORT", "VERCEL", "VERCEL_ENV", "FETCH_FIXTURES_DIR", "TEST_ROUTES", "TEST_CLOCK_NOW", "TEST_DID_LOOPBACK", "EMAIL_TRANSPORT",
+  "APP", "PORT", "VERCEL", "VERCEL_ENV", "FETCH_FIXTURES_DIR", "TEST_ROUTES", "TEST_CLOCK_NOW", "TEST_DID_LOOPBACK", "TEST_STAND_IN_FEDIVERSE", "EMAIL_TRANSPORT",
   "TRUSTED_DID_HOSTS", "INSTANCE_HOST_ALIASES", "NODE_ENV",
 ];
 const saved = Object.fromEntries(NAMES.map((name) => [name, process.env[name]]));
@@ -84,6 +84,7 @@ describe("env", () => {
     TEST_ROUTES: "1",
     TEST_CLOCK_NOW: "2026-10-21T00:00:00.000Z",
     TEST_DID_LOOPBACK: "1",
+    TEST_STAND_IN_FEDIVERSE: "1",
   };
   it.each(Object.keys(TEST_VALUES))("refuses %s when VERCEL is set", (name) => {
     set({ VERCEL: "1", [name]: TEST_VALUES[name] });
@@ -113,6 +114,7 @@ describe("env", () => {
     expect(env.testRoutes).toBe(false);
     expect(env.testClockNow).toBeUndefined();
     expect(env.testDidLoopback).toBe(false);
+    expect(env.testStandInFediverse).toBe(false);
     expect(() => checkEnv()).not.toThrow();
   });
 });

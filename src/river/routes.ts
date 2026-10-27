@@ -9,6 +9,7 @@ import { Router, type NextFunction, type Request, type Response } from "express"
 import { env } from "../config/env.js";
 import { forAccount } from "../db/context.js";
 import type { Viewer } from "./accounts.js";
+import { standInFediverseRoutes } from "./acting/fediverse/testRoutes.js";
 import { actingRoutes } from "./acting/routes.js";
 import { authRoutes } from "./auth/routes.js";
 import { checkOrigin, readSession, requireMember } from "./auth/session.js";
@@ -80,6 +81,8 @@ export function riverRoutes(): Router {
       resetRateLimits();
       res.status(204).end();
     });
+    // The stand-in fediverse server, when this process uses it (TEST_STAND_IN_FEDIVERSE=1).
+    if (env.testStandInFediverse) router.use(standInFediverseRoutes());
   }
 
   router.use(checkOrigin());
@@ -94,7 +97,7 @@ export function riverRoutes(): Router {
   // The follow box, the Following page and circles (spec F6, F7, F8): members only.
   router.use(followingRoutes());
 
-  // Acting for members (ADR-010): Your activity.
+  // Acting for members (ADR-010): Your activity, linking fediverse accounts.
   router.use(actingRoutes());
 
   // The feed (spec 4.5): a visitor's (seed follows; writes nothing but the refresh's source data,

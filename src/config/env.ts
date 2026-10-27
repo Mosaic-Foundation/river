@@ -34,6 +34,7 @@ export const TEST_ONLY_VARS = [
   "TEST_ROUTES",
   "TEST_CLOCK_NOW",
   "TEST_DID_LOOPBACK",
+  "TEST_STAND_IN_FEDIVERSE",
 ] as const;
 
 /**
@@ -118,6 +119,15 @@ export const env = {
    */
   get testDidLoopback(): boolean {
     return testOnlyVar("TEST_DID_LOOPBACK") === "1";
+  },
+
+  /**
+   * `1` sends the River's acting requests for fediverse accounts to the stand-in server
+   * (tests/support/standInMastodon/, fediverse-posting-1 item 9) instead of the network, and, with
+   * TEST_ROUTES, mounts the routes that drive it. Local runs and CI only.
+   */
+  get testStandInFediverse(): boolean {
+    return testOnlyVar("TEST_STAND_IN_FEDIVERSE") === "1";
   },
 
   // --- River (spec Appendix D) ---
@@ -218,4 +228,5 @@ export function checkEnv(): void {
   void env.testRoutes;
   void env.testClockNow;
   void env.testDidLoopback;
+  void env.testStandInFediverse;
 }
