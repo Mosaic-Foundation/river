@@ -20,6 +20,27 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A2 linking, part 3: app registration and the authorize URL — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-start → PR (needs-adam: an auth flow, a new cookie,
+  and `POST /api/v1/apps` to members' servers). Stacked on part 2.
+- Migrations: none (uses `river.oauth_clients` and `river.acting_attempts` from A1)
+
+**What it does.** `POST /api/linked-accounts/fediverse/start` (members, Origin-checked, the
+linking limit) finds and checks the server again, reuses or registers the instance's app there
+(`src/river/acting/fediverse/apps.ts`; secret sealed per instance and host), stores an attempt
+with the PKCE verifier sealed to its row (`link.ts`), sets the 10-minute `__Host-river-link`
+state cookie and answers the server's `/oauth/authorize` URL with `state`, S256 and exactly item
+1.4's scopes. A fourth account is refused. Nothing yet receives the callback (part 4).
+
+**Keys.** None new (`RIVER_TOKEN_KEY` is now used when a member links).
+
+**Tests.** API db `fediverseLink` (moved into `db/`; 13). `npm run check`: 64 files, 994 tests passed; UI built.
+
+### Follow-ups
+- Part 4: the callback.
+- Adam: `RIVER_TOKEN_KEY` must be set in Production before this deploys (it is, per Adam).
+
 ## A2 linking, part 2: finding the server, and the stand-in in the dev server — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5-discovery → PR (needs-adam: new outbound requests to
