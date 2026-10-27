@@ -16,6 +16,11 @@ export const LIMITS = {
   blueskyPreview: { max: 20, windowMs: 10 * 60_000 },
   /** "Import from Bluesky" import: the same pages again, then up to 1,000 follows stored. */
   blueskyImport: { max: 10, windowMs: 60 * 60_000 },
+  /**
+   * Linking a fediverse account, per account: each check or start reads up to five documents from
+   * the member's server, and a start may register an app there (fediverse-posting-1 item 1).
+   */
+  fediverseLink: { max: 30, windowMs: 10 * 60_000 },
   /** GET /auth/signin per address: each one stores an auth_attempts row. */
   signin: { max: 60, windowMs: 10 * 60_000 },
   /** GET /auth/callback per address: each one can resolve a DID. */
