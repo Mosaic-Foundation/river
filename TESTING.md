@@ -66,6 +66,11 @@ Newest first: date, slice, tests added, counts.
 
 - 2026-10-27, space actions B1.2: unit `spaceActionsCore` (new: the `act` schema per verb, the
   manifest's `actions` block, the JWS builder and its signature, the refusal table). Unit 836.
+- 2026-10-27, A1 envelope: unit `riverCredentials` (new: the River's envelope copy round-trips
+  and refuses other keys, rows and flipped bytes; credentials bound to instance, account, row and
+  purpose, client secrets to instance and host; no plaintext in the stored bytes; key version and
+  input checks; `RIVER_TOKEN_KEY` read only on use). Unit 745.
+
 - 2026-10-27, space actions B1.1: unit `hostList` (new: host-list matching on a dot boundary,
   ports, wildcards, dots and non-ASCII refused, https URLs). Unit 787.
 - 2026-10-26, identity account page: API `identity` (the page, `/account/options`, refused
