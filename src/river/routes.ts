@@ -9,6 +9,7 @@ import { Router, type NextFunction, type Request, type Response } from "express"
 import { env } from "../config/env.js";
 import { forAccount } from "../db/context.js";
 import type { Viewer } from "./accounts.js";
+import { actingRoutes } from "./acting/routes.js";
 import { authRoutes } from "./auth/routes.js";
 import { checkOrigin, readSession, requireMember } from "./auth/session.js";
 import { memberExport } from "./export/index.js";
@@ -92,6 +93,9 @@ export function riverRoutes(): Router {
 
   // The follow box, the Following page and circles (spec F6, F7, F8): members only.
   router.use(followingRoutes());
+
+  // Acting for members (ADR-010): Your activity.
+  router.use(actingRoutes());
 
   // The feed (spec 4.5): a visitor's (seed follows; writes nothing but the refresh's source data,
   // check 23) or a signed-in member's (their own follows, circles and read state).
