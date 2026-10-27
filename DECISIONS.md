@@ -395,6 +395,44 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — Acting for members: Adam's answers to the Phase 2 design (#66)
+- Decision (Adam, 2026-10-27, answering the questions on #66, which he merged):
+  1. **Fediverse:** link existing accounts (ADR-011 approach 1). Mosaic doesn't host fediverse
+     accounts for now. Approach 2, the River as its own ActivityPub server, stays recorded as the
+     long-term option to revisit (later options below).
+  2. **Space-action consent:** one Mosaic ID grant for all spaces, a preview before each action,
+     and a passkey for each action only where a space asks for it.
+  3. **Tokens:** `RIVER_TOKEN_KEY`; links lapse after 180 days unused; Your activity is kept a
+     year.
+  4. **Mosaic ID grants and signing now**, with a client secret, shaped like OAuth 2.1. **The
+     DPoP-bound OAuth profile ADR-002 plans must exist before any client or space outside the
+     Foundation uses grants, signing or the sign-in note.** Until then grants and signing serve
+     only the River, and actions go only to Foundation-run spaces (ADR-012 item 9:
+     `SPACE_ACTION_HOSTS` in the River and `IDENTITY_SPACE_ACTION_HOSTS` in Mosaic ID, both
+     `civic.social` by default).
+  5. **`assertionMethod`** is added to a DID on its first grant, and `recover-dids` keeps it.
+  6. **Hubs signing in with Mosaic ID:** only hubs the Foundation runs on `civic.social`, each
+     registered for sign-in only (`signin` capability). A hub run by anyone else waits for the
+     OAuth profile. Mosaic ID refuses to start with a `signin`-only client outside `civic.social`.
+  7. **Out of v1:** media, direct messages, polls, quote posts and edits.
+  8. **Servers:** Mastodon 4.3+ and GoToSocial 0.19+; Akkoma after a fixture check.
+  9. **Hub pages:** signed-in hub pages open as full pages; public pages are framed once a hub
+     allows it.
+  10. **Fixtures:** Adam creates a dedicated test account on `mastodon.social` and records the
+      GET fixtures on his own machine, with the token in his shell for that one command, then
+      sends them in a PR (procedure in `fediverse-posting-1.md` item 9; no thread holds the
+      password or token).
+- Why: ADR-010 to 012 and the two specs asked these as Adam's calls. ADR-010 to 012 are now
+  Accepted; the specs say so in their headers.
+- How the limit to the Foundation is enforced: a host list on both sides rather than a list of
+  hubs, so a new Foundation hub on `civic.social` needs no configuration change, and Mosaic ID's
+  own list means a mistake in the River can't send signed actions anywhere else. The variable
+  names are proposals for B2 and B3; each goes in `src/config/env.ts` and `.env.example` when
+  that session adds it.
+- Alternatives: an exact list of hub hosts (a change for every new hub); the River's check alone
+  (one bug from signing for any host).
+- Thread / PR: #66 (design), and this follow-up
+
 ## 2026-10-26 — Later options for acting for members (Phase 2 design; not designed in depth)
 - **Bluesky posting through atproto OAuth, on ADR-010's model.** A member links a Bluesky (or
   other atproto) account the way ADR-011 links a fediverse one: the River would be an atproto
@@ -420,7 +458,7 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   outbound request to a client, an ADR. Recommend (c) when Mosaic ID has more than one client;
   (a) in the meantime.
 - **Fediverse approaches not recommended (ADR-011).** (2) The River as its own ActivityPub server
-  with Fedify: revisit if every member should get a fediverse identity tied to their Mosaic ID,
+  with Fedify, the long-term option (Adam, 2026-10-27): revisit if every member should get a fediverse identity tied to their Mosaic ID,
   once there is an always-on worker or a push queue on Vercel, a decision on constraint 7 for
   actor keys, a username scheme, and someone to moderate. (3) Mosaic-hosted GoToSocial with OIDC
   through Mosaic ID: revisit if Mosaic decides to host accounts but not to build a server; it

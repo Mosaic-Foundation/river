@@ -1,6 +1,6 @@
 # Fediverse posting 1: acting through a member's linked account
 
-2026-10-26 · Phase 2 design session (Proposed; for Adam)
+2026-10-26 · Phase 2 design session · Accepted by Adam on 2026-10-27 (#66; answers in `DECISIONS.md`)
 
 A member links their Mastodon or GoToSocial account to the River, then replies to, boosts,
 favourites and follows what they read, and writes posts, from the River, as that account. The
@@ -167,10 +167,39 @@ New variable: `RIVER_TOKEN_KEY` (River only).
   `https://gts.stand-in.example`, enabled by the test-only `TEST_STAND_IN_FEDIVERSE=1` (refused on
   Vercel). It records what it receives, checks the token and scopes, and has switches for revoked
   tokens, missing scopes, 422, 429 with `Retry-After`, slow answers and a redirect.
-- **Recorded fixtures** of the GET requests (NodeInfo, instance, discovery, search, relationships)
-  from a real test account, when Adam provides one: `npm run record-fixtures -- --fediverse-post
-  {handle}`, reading the token from a file outside the repo. The recorder never writes a token,
-  secret or `Authorization` header into a fixture.
+- **Recorded fixtures** (A5) of GET requests only, from a dedicated test account on
+  `mastodon.social` that Adam creates (Adam, 2026-10-27). Nothing is posted, favourited or
+  followed by the recorder; writes stay on the stand-in server. No thread ever holds the
+  account's password or token: Adam runs the recorder on his own machine and sends the fixtures
+  in a PR.
+  1. **The account:** a display name, a bio saying it is a Mosaic River test account, the bot
+     flag on, one post of its own (so `search` can resolve a local status), and a follow of
+     `@w3c@w3c.social` (a seed account, so `relationships` has a followed account to report). Its
+     default post visibility set to Quiet public, so the fixture shows `source.privacy` that
+     isn't the default.
+  2. **The token:** Preferences → Development (`/settings/applications`) → New application, named
+     "Mosaic River fixtures", with only `profile`, `read:search` and `read:follows` ticked (the
+     form starts with `profile` alone in Mastodon's current source). The application page then
+     shows "Your access token".
+  3. **Recording:** on Adam's machine, from a checkout of `main`:
+     `RECORD_MASTODON_TOKEN=… npm run record-fixtures -- --fediverse-post @{handle}@mastodon.social`
+     (the variable in the shell for that one command, never in `.env` or a file in the repo).
+     The variable is read through `src/config/env.ts` like every other, and refused when `CI` or
+     `VERCEL` is set. The recorder fetches NodeInfo, `/.well-known/oauth-authorization-server`,
+     `/api/v2/instance` (no token), then `verify_credentials`, `search` for its own post and for
+     a seed post with `resolve=true`, and `relationships` for the followed account (with the
+     token), through the fetch guard like every recorder.
+  4. **What it writes:** `tests/fixtures/http/` files in the existing format. It never writes the
+     `Authorization` header (only `if-none-match` is ever kept as a request header), and before
+     writing anything it checks every body and header for the token's value and for
+     `access_token`, `client_secret` and `Bearer `; if any appears, it writes nothing and stops.
+     The account's `source` fields stay (they are its public defaults); its email address isn't
+     in any of these answers.
+  5. **Afterwards:** Adam deletes the "Mosaic River fixtures" application on mastodon.social, which
+     destroys the token, then opens a PR with the new fixture files (a branch from `main`,
+     `Fixtures: record Mastodon posting GETs`). A thread reviews it: a unit test in that PR scans
+     every fixture for those strings and for an `authorization` request header, and the API tests
+     replay the recorded answers next to the stand-in's.
 
 ## 10. Acceptance checks
 

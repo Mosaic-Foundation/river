@@ -20,6 +20,31 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Phase 2 design: Adam's answers recorded — 2026-10-27
+
+- Branch / PR: claude/admiring-lamport-esckd6 (restarted from `main` after #66 merged) → PR
+  (needs-adam: changes ADR status and adds a decision to ADR-012)
+- Migrations: none
+
+**What it does.** Records Adam's answers to #66's ten questions. ADR-010 to 012 are Accepted, and
+the two specs and the hub doc say so in their headers. DECISIONS.md has the answers, with the rule
+that the DPoP-bound OAuth profile must exist before any client or space outside the Foundation
+uses grants, signing or the sign-in note. ADR-012 item 9, space-actions-1 (7.2, 5.2 and check 22)
+and civic-hub-changes item 1 enforce that with host lists on both sides (`SPACE_ACTION_HOSTS`,
+`IDENTITY_SPACE_ACTION_HOSTS`, `civic.social` by default) and sign-in-only hubs on
+`civic.social`. `fediverse-posting-1.md` item 9 now has the recording procedure for Adam's
+`mastodon.social` test account (his machine, the token in his shell, GET requests only, a
+token scan before writing, the app deleted afterwards, fixtures sent in a PR). The build plan's
+A5, B1, B2 and B3 rows are updated to match.
+
+**Keys.** Proposed for later sessions: `SPACE_ACTION_HOSTS` (River), `IDENTITY_SPACE_ACTION_HOSTS`
+(identity host), `RECORD_MASTODON_TOKEN` (the recorder on Adam's machine only).
+
+**Tests.** None (docs only). `npm run check`: 53 files, 735 tests passed; UI built.
+
+### Follow-ups
+- The build starts with A1 and B1; A5's recorder must land before Adam records.
+
 ## Phase 2 design: acting for members (fediverse posting and space actions) — 2026-10-26
 
 - Branch / PR: claude/admiring-lamport-esckd6 → #66 (needs-adam: three ADRs, docs only, no code)
@@ -56,10 +81,10 @@ builds on. Tracks A and B can run in parallel after A1; B3 needs B1 and B2.
 | A2 | **Linking fediverse accounts.** NodeInfo, discovery and instance reads; app registration; OAuth with PKCE; callback; unlink and revoke; Settings → Linked accounts; the stand-in Mastodon and GoToSocial server for tests. | yes: outbound hosts (ADR-011), auth flow | none new | members' own servers (ADR-011 item 6) | L |
 | A3 | **Posts and replies.** `DELETE` in the fetch guard (its own small PR first); composer with the counter, content warning and visibility; preview rows; Send with `Idempotency-Key`; delete from Your activity; the failure table. | yes: the guard PR, and the composer PR for its new outbound calls (CLAUDE.md) | none | as A2 | L |
 | A4 | **Boost, favourite, follow** and their undo, toggles on cards and Following rows, the first-use note. | yes: new outbound calls (CLAUDE.md) | none | as A2 | M |
-| A5 | **Real fixtures** from a test account Adam creates; check Akkoma's API and add it if it matches. | Akkoma: yes (supported servers) | none | as A2 | S |
-| B1 | **Protocol core.** `src/shared/spaceActions/` (types, `act` schema, JWS builder, verifier), test vectors, the conformance suite, the stand-in space. | no (after ADR-012 is accepted) | none | none | M |
-| B2 | **Mosaic ID grants and signing.** `/grant`, `/grant/token`, `/actions/sign`, `/actions/requests`, `/actions/confirm`, `/actions/token`, `/grant/revoke`; consent pages; grants and "Signed for apps" on the account page; recovery revokes grants; `assertionMethod` added on first grant and kept by `recover-dids`; client secret hashes and client capabilities (`signin`, `space-actions`); `typ: mosaic-signin+jwt` on sign-in notes and the River's callback refusing `mosaic-action+jwt`; the daily job purges old action requests and grants; Mosaic ID's revoke-every-grant step. Possibly two PRs (grant and sign; step-up). | yes: auth, keys, recovery, ADR-002 | new `identity.grants`, `identity.action_requests`; `audit_log` action CHECK widened; `river.daily_job` replaced again | none | L |
-| B3 | **River space actions.** The hub adapter reads `civic:actions` and the manifest block; `river.items.actions`; card buttons, composer, toggles, step-up, delivery, results, withdraw; messages. Possibly two PRs (reading and showing; sending). | yes: schema, outbound | `river.items.actions` (new column, UPDATE granted) | Mosaic ID's endpoints; spaces' action endpoints (ADR-012 item 8) | L |
+| A5 | **Real fixtures.** The `--fediverse-post` recorder (`RECORD_MASTODON_TOKEN` through env.ts, refused under `CI` or `VERCEL`; the token and secret scan) and the fixture-scan unit test land first; then Adam records from his `mastodon.social` test account and sends the fixtures in a PR (`fediverse-posting-1.md` item 9). Check Akkoma's API and add it if it matches. | recorder: no; Akkoma: yes (supported servers) | none | as A2 | S |
+| B1 | **Protocol core.** `src/shared/spaceActions/` (types, `act` schema, JWS builder, verifier), test vectors, the conformance suite, the stand-in space. | no | none | none | M |
+| B2 | **Mosaic ID grants and signing.** `/grant`, `/grant/token`, `/actions/sign`, `/actions/requests`, `/actions/confirm`, `/actions/token`, `/grant/revoke`; consent pages; grants and "Signed for apps" on the account page; recovery revokes grants; `assertionMethod` added on first grant and kept by `recover-dids`; client secret hashes and client capabilities (`signin`, `space-actions`); `typ: mosaic-signin+jwt` on sign-in notes and the River's callback refusing `mosaic-action+jwt`; the daily job purges old action requests and grants; Mosaic ID's revoke-every-grant step; `IDENTITY_SPACE_ACTION_HOSTS` (signing only for `civic.social` spaces) and the startup refusal of a `signin`-only client outside `civic.social`. Possibly two PRs (grant and sign; step-up). | yes: auth, keys, recovery, ADR-002 | new `identity.grants`, `identity.action_requests`; `audit_log` action CHECK widened; `river.daily_job` replaced again | none | L |
+| B3 | **River space actions.** The hub adapter reads `civic:actions` and the manifest block; `river.items.actions`; `SPACE_ACTION_HOSTS` (actions only on `civic.social` spaces until the OAuth profile); card buttons, composer, toggles, step-up, delivery, results, withdraw; messages. Possibly two PRs (reading and showing; sending). | yes: schema, outbound | `river.items.actions` (new column, UPDATE granted) | Mosaic ID's endpoints; spaces' action endpoints (ADR-012 item 8) | L |
 | B4 | **Civic Hub** (in the hub's own project, not here): H1 frame-ancestors, H2 Sign in with Mosaic ID, H3 the endpoint, H4 moderation (`docs/civic-hub-changes.md`). Mosaic ID registers each hub origin as a client. | Adam, in the hub project | hub schema | hub → `id.mosaic.social` | L (hub) |
 | B5 | **Live check** against Demosville once H3 is deployed: record fixtures, an `@live` test, the conformance suite against the hub. | no | none | as B3 | S |
 | C1 | **Spec cleanup:** `river-v1.md` section 5 and 4.1 after acceptance (DECISIONS.md spec questions). | no | none | none | S |

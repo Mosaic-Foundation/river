@@ -1,7 +1,7 @@
 # ADR-010: Acting for members
 
 - **Date:** 2026-10-26
-- **Status:** Proposed
+- **Status:** Accepted (Adam, 2026-10-27, #66; his answers are in `DECISIONS.md`)
 - **Scope:** every request the River makes that changes something outside the River in a member's name: fediverse posting (ADR-011, `docs/spec/fediverse-posting-1.md`) and space actions (ADR-012, `docs/spec/space-actions-1.md`). Covers consent, previews, stored credentials, unlinking, limits, the member's activity list, undo, failures and sessions. Code in `src/river/acting/`.
 - **Extends:** ADR-002 (identity host and sign-in), ADR-004 (roles and RLS), the session epoch (`DECISIONS.md`, 2026-10-26, "Session revocation"). Changes ADR-002 as described in ADR-012.
 
