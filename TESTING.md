@@ -64,6 +64,10 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, space actions B1.3: unit `spaceActionsVerify` (new: section 4's steps 1 to 9 with
+  test DIDs from `tests/support/spaceActions/testDid.ts`, which wraps the River's own DID
+  resolver around a map of logs and counts requests; a concurrent retry with a held promise).
+  Unit 919.
 - 2026-10-27, space actions B1.2: unit `spaceActionsCore` (new: the `act` schema per verb, the
   manifest's `actions` block, the JWS builder and its signature, the refusal table). Unit 836.
 - 2026-10-27, A1 envelope: unit `riverCredentials` (new: the River's envelope copy round-trips
