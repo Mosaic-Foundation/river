@@ -65,7 +65,7 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 Newest first: date, slice, tests added, counts.
 
 - 2026-10-27, space actions B1.2: unit `spaceActionsCore` (new: the `act` schema per verb, the
-  manifest's `actions` block, the JWS builder and its signature). Unit 834.
+  manifest's `actions` block, the JWS builder and its signature, the refusal table). Unit 836.
 - 2026-10-27, space actions B1.1: unit `hostList` (new: host-list matching on a dot boundary,
   ports, wildcards, dots and non-ASCII refused, https URLs). Unit 787.
 - 2026-10-26, identity account page: API `identity` (the page, `/account/options`, refused

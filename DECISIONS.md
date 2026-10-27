@@ -400,7 +400,8 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   before it signs and for spaces at step 8:
   - `ref` is a UUID in lowercase canonical form, so one action has one spelling of its key.
   - `target` (and a withdraw's target) is an absolute `https:` IRI of at most 2,048 characters,
-    with no credentials and no fragment. Whether it is on the space's host is step 11's check.
+    with no credentials; a fragment is allowed, since a space's ids may carry one. Whether it is
+    on the space's host is step 11's check. The manifest's `endpoint` carries no fragment.
   - A comment's `content` counts characters as code points (as `max_length` will), must not be
     blank, and is refused as HTML when it contains `<` followed by a letter, `/`, `!` or `?`
     (`x < y` stays plain text). Control characters other than tab, line feed and carriage
@@ -413,7 +414,8 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   none) or the block is ignored, and `did_hosts` entries that aren't plain hosts are dropped
   (they would match nothing anyway).
 - Why: 3.4 says "plain text, no HTML" and "a client-chosen UUID" without saying how to tell;
-  these are the narrowest readings that still take ordinary text.
+  these are the narrowest readings that still take ordinary text. `space-actions-1.md` 3.4 now
+  lists these formats, so a space porting from the spec agrees with the reference schema.
 - Alternatives: refusing any `<` (refuses "x < y"); sanitizing instead of refusing (a signature
   must cover exactly what the space keeps); accepting any UUID case (two spellings of one `ref`).
 - Thread / PR: B1.2 (claude/practical-curie-3emib5)

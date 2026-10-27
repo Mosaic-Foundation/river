@@ -189,6 +189,14 @@ Every `act` also carries `ref`: a client-chosen UUID, the same on every retry of
 and new for each new action. No other fields are allowed in 0.1; a space MUST refuse unknown
 fields (`invalid_action`), so that a signature never covers something the space ignored.
 
+Field formats (the reference schema, `src/shared/spaceActions/act.ts`, checks exactly these):
+`ref` is a UUID in lowercase canonical form; `target` is an absolute `https:` IRI of at most
+2,048 characters with no credentials (a fragment is allowed); `content` counts characters as
+code points, isn't blank, has no control characters other than tab, line feed and carriage
+return, and is refused as HTML when it has `<` followed by a letter, `/`, `!` or `?` (`x < y` is
+plain text); `lang` has a BCP 47 tag's shape, at most 35 characters; choice ids are 1 to 64 of
+`A-Z a-z 0-9 _ -`, at most 20, none repeated.
+
 ### 3.5 The answer
 
 **Accepted** (201) or **held for review** (202):

@@ -22,7 +22,7 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 ## Space actions B1.2: types, the `act` schema, the manifest reader and the JWS builder — 2026-10-27
 
-- Branch / PR: claude/practical-curie-3emib5 → PR (merged)
+- Branch / PR: claude/practical-curie-3emib5 → #71 (merged)
 - Migrations: none
 
 **What it does.** Second PR of B1. `src/shared/spaceActions/` gains the protocol's names and
@@ -31,16 +31,20 @@ final under 3.6), `checkAct()` (3.4 exactly: each verb's fields and nothing else
 reading of a manifest's `actions` block (2.1: another protocol, an endpoint off the manifest's
 host or the wrong audience ignores the block) and the JWS builder Mosaic ID will use in B2
 (`actionClaims()` and `signAction()`, signing handed in as for the sign-in note). Nothing calls
-it yet. The calls 3.4 left open are in DECISIONS.md ("The `act` schema's details").
+it yet. The calls 3.4 left open are in DECISIONS.md ("The `act` schema's details"), and
+`space-actions-1.md` 3.4 now lists the field formats.
 
 **Keys.** None.
 
-**Tests.** Unit `spaceActionsCore` (new, 47: every verb accepted, 24 refusals, character counts,
+**Tests.** Unit `spaceActionsCore` (new, 49: every verb accepted, 23 refusals, character counts,
 the manifest block's cases, the claims' order and lifetime, a JWS that verifies with
-node:crypto, kid under the DID). `npm run check`: 55 files, 834 tests passed; UI built.
+node:crypto, kid under the DID, the full refusal table and final list). `npm run check`: 55
+files, 836 tests passed; UI built.
 
 ### Follow-ups
 - B1.3 adds the verifier; B1.4 the vectors and suite; B1.5 the stand-in space.
+- B3: `ActionProblem` is the shape a space writes (`type: about:blank`); the River should read
+  answers more loosely (RFC 9457 allows other `type` values).
 
 ## Space actions B1.1: host lists match a host or its subdomains on a dot boundary — 2026-10-27
 
