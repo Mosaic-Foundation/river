@@ -395,29 +395,6 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
-## 2026-10-27 — Host lists match subdomains on a dot boundary; sign-in's TRUSTED_DID_HOSTS stays exact (B1)
-- Decision: every host list in Space Actions (`did_hosts`, `SPACE_ACTION_HOSTS`,
-  `IDENTITY_SPACE_ACTION_HOSTS`) is checked by `src/shared/hosts/`: an entry covers its own host
-  and any subdomain, on whole labels (`civic.social` covers `floyd.civic.social`, never
-  `evilcivic.social` or `civic.social.example.com`). Ports follow the TRUSTED_DID_HOSTS rule
-  (an entry with a port matches only that port; one without matches only hosts without one). An
-  IPv4 entry matches only itself. Entries that aren't plain hosts (wildcards, leading or trailing
-  dots, schemes, paths, IPv6, non-ASCII) match nothing, and the env getters will refuse them at
-  startup, along with `:443` and single labels other than `localhost`. `space-actions-1.md` 2.1
-  and 4 step 4 now say this for `did_hosts`, so other spaces implement the same rule.
-- Why: Adam asked for exact-or-subdomain matching on a dot boundary for every host check
-  (2026-10-27), and ADR-012 item 9 already says "that host or any subdomain" for
-  `SPACE_ACTION_HOSTS`. One function for all three lists keeps the River, Mosaic ID and the
-  reference verifier in agreement; the vectors (B1.4) carry the four cases for other spaces.
-- Not changed: the River's sign-in check of TRUSTED_DID_HOSTS (`src/river/auth/did.ts`
-  `isTrustedHost`) stays exact. It is stricter than this rule (it already refuses
-  `evilcivic.social`), and widening it to subdomains would change authentication, a needs-adam
-  change outside B1. Moving it onto `hostInList` is a one-line change if Adam wants subdomain DID
-  hosts at sign-in.
-- Alternatives: a plain `endsWith` (matches `evilcivic.social`); exact hosts only (every new hub
-  on `civic.social` would need a configuration change, which item 9 set out to avoid).
-- Thread / PR: B1.1 (claude/practical-curie-3emib5)
-
 ## 2026-10-27 — The acting tables' details (A1)
 - Decision (migration `20261027120000_acting_tables.sql`):
   - `linked_accounts.status` gains `lapsed` beside `active`, `revoked` and `unlinked`: the daily job
@@ -449,6 +426,29 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Alternatives: computing the limit kind from the verb in every query; deleting idle links outright
   (the member would lose the row Your activity names); one `status` for every way a link ends.
 - Thread / PR: A1 tables PR
+
+## 2026-10-27 — Host lists match subdomains on a dot boundary; sign-in's TRUSTED_DID_HOSTS stays exact (B1)
+- Decision: every host list in Space Actions (`did_hosts`, `SPACE_ACTION_HOSTS`,
+  `IDENTITY_SPACE_ACTION_HOSTS`) is checked by `src/shared/hosts/`: an entry covers its own host
+  and any subdomain, on whole labels (`civic.social` covers `floyd.civic.social`, never
+  `evilcivic.social` or `civic.social.example.com`). Ports follow the TRUSTED_DID_HOSTS rule
+  (an entry with a port matches only that port; one without matches only hosts without one). An
+  IPv4 entry matches only itself. Entries that aren't plain hosts (wildcards, leading or trailing
+  dots, schemes, paths, IPv6, non-ASCII) match nothing, and the env getters will refuse them at
+  startup, along with `:443` and single labels other than `localhost`. `space-actions-1.md` 2.1
+  and 4 step 4 now say this for `did_hosts`, so other spaces implement the same rule.
+- Why: Adam asked for exact-or-subdomain matching on a dot boundary for every host check
+  (2026-10-27), and ADR-012 item 9 already says "that host or any subdomain" for
+  `SPACE_ACTION_HOSTS`. One function for all three lists keeps the River, Mosaic ID and the
+  reference verifier in agreement; the vectors (B1.4) carry the four cases for other spaces.
+- Not changed: the River's sign-in check of TRUSTED_DID_HOSTS (`src/river/auth/did.ts`
+  `isTrustedHost`) stays exact. It is stricter than this rule (it already refuses
+  `evilcivic.social`), and widening it to subdomains would change authentication, a needs-adam
+  change outside B1. Moving it onto `hostInList` is a one-line change if Adam wants subdomain DID
+  hosts at sign-in.
+- Alternatives: a plain `endsWith` (matches `evilcivic.social`); exact hosts only (every new hub
+  on `civic.social` would need a configuration change, which item 9 set out to avoid).
+- Thread / PR: B1.1 (claude/practical-curie-3emib5)
 
 ## 2026-10-27 — Acting for members: Adam's answers to the Phase 2 design (#66)
 - Decision (Adam, 2026-10-27, answering the questions on #66, which he merged):
