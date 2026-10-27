@@ -129,3 +129,38 @@ test.describe("The composer", () => {
     await expect(page.getByTestId("card-reply")).toHaveCount(0);
   });
 });
+
+test.describe("Delete from Your activity", () => {
+  test("deletes a post made from the River, with the copies note, by keyboard (checks 10 and 18)", async ({ page, request }) => {
+    await signUp(page, "composer-delete");
+    await linkFromPage(page, request, "@ana@mastodon.stand-in.example", "ana");
+    await page.goto("/");
+    await page.getByTestId("post-button").click();
+    const composer = page.getByTestId("composer");
+    await composer.getByLabel("Your post").fill("A post I will delete");
+    await composer.getByRole("button", { name: "Preview" }).click();
+    await composer.getByRole("button", { name: "Send" }).click();
+    await expect(composer.getByTestId("composer-done")).toContainText("Posted on mastodon.stand-in.example");
+
+    await page.goto("/activity");
+    const entry = page.getByTestId("activity-entry").first();
+    await expect(entry).toContainText("Posted as @ana@mastodon.stand-in.example");
+    const remove = entry.getByRole("button", { name: "Delete this post" });
+    await remove.focus();
+    await page.keyboard.press("Enter");
+    const confirm = page.getByRole("group", { name: "Delete this post on mastodon.stand-in.example?" });
+    await expect(confirm).toContainText("Other servers are asked to delete their copies; some may keep them.");
+    expect(await seriousAxe(page)).toEqual([]);
+    await confirm.getByRole("button", { name: "Delete" }).focus();
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByTestId("activity-notice")).toHaveText(
+      "Deleted on mastodon.stand-in.example. Other servers are asked to delete their copies; some may keep them.",
+    );
+    const entries = page.getByTestId("activity-entry");
+    await expect(entries.nth(0)).toContainText("Deleted a post as @ana@mastodon.stand-in.example");
+    await expect(entries.nth(1)).toContainText("Undone");
+    await expect(page.getByRole("button", { name: /^Delete this/ })).toHaveCount(0);
+    expect((await (await request.get("/api/test/stand-in-fediverse/statuses")).json()) as unknown[]).toHaveLength(0);
+  });
+});
