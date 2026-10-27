@@ -64,6 +64,11 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, identity move part 1: unit `schemaBoundaries` (new; no migration after the split
+  names both schemas, no River code names `identity.`, no identity code names `river.`); API db
+  `identityDailyJob` (new; as postgres, rolled back: the `identity-daily` cron entry, identity_app
+  refused, the auth_requests purge); `dailyJob` (identity steps moved out; live check that no
+  function or cron job crosses schemas); `emailReservation` (calls `identity.daily_job`).
 - 2026-10-27, A2 stand-in fediverse server: unit `standInMastodon` (new: the SYNTHETIC
   Mastodon and GoToSocial stand-in in `tests/support/standInMastodon/`, through `handle()` and
   behind the real fetch guard; discovery per host, apps, PKCE, tokens, scopes, revocation, rules,
