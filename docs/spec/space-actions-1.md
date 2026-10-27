@@ -175,6 +175,9 @@ The body is one compact JWS, at most 16 KB. No cookies and no `Authorization` he
 | `assurance` | `grant` (signed under a standing grant) or `passkey` (a passkey check for this action). |
 | `act` | The action (3.4). |
 
+No other claims are allowed in 0.1: a space MUST refuse a JWS carrying any (`invalid_action`,
+4 step 8), for the same reason as unknown `act` fields (3.4).
+
 ### 3.4 `act`
 
 | Verb | Fields |
@@ -279,7 +282,7 @@ In this order, stopping at the first failure. Each step is a conformance case (s
    `assertionMethod` for `kid` (any key in the header is ignored). If a cached document fails,
    the log is read once more, fresh, at most once per DID per minute (`bad_signature`,
    `did_unavailable`).
-8. `act` matches 3.4 exactly (`invalid_action`).
+8. `act` matches 3.4 exactly, and the claims are exactly 3.3's (`invalid_action`).
 9. Idempotency and replay, as 3.6.
 10. `client` is not blocked and the DID is not blocked (`blocked`).
 11. The target exists, is visible, is on this space, currently accepts this verb, is not past
