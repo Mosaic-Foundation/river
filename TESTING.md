@@ -69,6 +69,11 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A2 UI: unit `ui/linkedAccounts` (new: the explainer, every callback result, the
+  unlink sentences); e2e `linkedAccounts` (new: link and unlink by keyboard with axe at each step,
+  GoToSocial, another account than the one named, a server's name as text, Akkoma refused, a
+  visitor, the phone's You tab). The e2e test answers the browser's visit to the stand-in's
+  authorize page with `page.route`, approving through the stand-in's test route.
 - 2026-10-27, A2 unlink: API db `fediverseLink` (new: the list without credentials and per member,
   unlink revoking with the token and app credentials, the server down, a refused redirect,
   another member's id, a link already revoked). 29 tests.
