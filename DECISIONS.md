@@ -468,6 +468,19 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   (the member would lose the row Your activity names); one `status` for every way a link ends.
 - Thread / PR: A1 tables PR
 
+## 2026-10-27 — A second answer where an entry isn't changeable is `not_accepted` (B1)
+- Decision: in the stand-in space (and as the reading for spaces), 2.2's `changeable` works so:
+  where it is true (RSVPs by default), a later `rsvp` or `poll_answer` from the same DID on the
+  same target replaces the earlier one, which can no longer be withdrawn (`unknown_target`);
+  where it is false (polls by default), a second answer is refused `not_accepted` ("the answer
+  isn't one of its options"), a final refusal, so it is stored against its `ref`.
+- Why: 3.5 has no code for "already answered"; `not_accepted` is the nearest, and it is final, so
+  the River shows the space's message and doesn't retry.
+- Alternatives: a new code `already_answered` (a protocol change for 0.2); `ref_conflict` (that
+  is about one `ref`, not two actions).
+- Proposed change: 3.5 says `not_accepted` covers a second answer where `changeable` is false.
+- Thread / PR: B1.5 (claude/practical-curie-3emib5)
+
 ## 2026-10-27 — The test vectors' shape, and the endpoint runner deferred to B5 (B1)
 - Decision: the vectors are signed for the stand-in space (`stand-in.example`) at a fixed clock,
   with test DIDs at `id.test.example` and its look-alikes, and carry a `hosts` section that every
