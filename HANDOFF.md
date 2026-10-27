@@ -20,6 +20,30 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A2 linking, part 2: finding the server, and the stand-in in the dev server — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-discovery → PR (needs-adam: new outbound requests to
+  members' servers (ADR-011 item 6) and `.github/workflows/ci.yml`). Stacked on part 1.
+- Migrations: none
+
+**What it does.** `POST /api/linked-accounts/fediverse/check` (members, Origin-checked, 30 per
+account in 10 minutes) takes a handle or profile URL, runs WebFinger, then reads NodeInfo, Mastodon's
+discovery document and `/api/v2/instance` on the actor's host (`src/river/acting/fediverse/server.ts`),
+and answers the handle, server, software and character limit, or the refusal sentence (old
+Mastodon, no S256, Akkoma and others, unknown account, busy, unreachable). `fediverseGuard()`
+is the process's guard, or with the test-only `TEST_STAND_IN_FEDIVERSE=1` one that sends the
+stand-in hosts to the stand-in server; `TEST_ROUTES` adds `/api/test/stand-in-fediverse/*`. CI's
+`.env` gets both new values. DECISIONS.md has the readings.
+
+**Keys.** `TEST_STAND_IN_FEDIVERSE` (test-only, refused on Vercel and with NODE_ENV=production).
+
+**Tests.** Unit `fediverseLinkServer` (new, 16), `env`. API `fediverseLink` (new, 5).
+`npm run check`: 64 files, 994 tests passed; UI built. API (local Supabase, River dev server): all River files pass; the
+identity files need the identity dev server and weren't run.
+
+### Follow-ups
+- Part 3 registers the app and sends the member to the server's authorize page.
+
 ## Identity move, part 3: what Mosaic ID shares with the River — 2026-10-27
 
 - Branch / PR: claude/trusting-carson-y03109-shared → PR

@@ -26,6 +26,11 @@ The dev server for API and e2e runs needs, in `.env`, `FETCH_FIXTURES_DIR=tests/
 and `TEST_CLOCK_NOW=2026-10-21T00:00:00.000Z` (the hub recordings' clock), as CI writes them. The
 first `GET /api/feed` resolves and fetches every seed follow from the recordings.
 
+Linking fediverse accounts (A2) needs, in `.env`, `TEST_STAND_IN_FEDIVERSE=1` (the dev server
+talks to the SYNTHETIC stand-in server in `tests/support/standInMastodon/` instead of members'
+servers; with `TEST_ROUTES=1` its routes under `/api/test/stand-in-fediverse/` drive it) and a
+`RIVER_TOKEN_KEY` (`openssl rand -base64 32`), as CI writes them.
+
 Sign-in (M8) also needs, in `.env`: `RIVER_PUBLIC_ORIGIN` equal to the UI's origin
 (`http://localhost:5173` for `npm run test:e2e`, `http://localhost:4173` against `vite preview`,
 as CI runs it), `TRUSTED_DID_HOSTS=localhost:3001,localhost:3005` (the identity dev server, and
@@ -64,6 +69,10 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A2 discovery: unit `fediverseLinkServer` (new: handles and profile URLs, WebFinger,
+  NodeInfo, discovery, instance, the refusals), `env` (`TEST_STAND_IN_FEDIVERSE` refused on Vercel
+  and in production); API `fediverseLink` (new: `POST /api/linked-accounts/fediverse/check`
+  against the stand-in through the dev server).
 - 2026-10-27, A2 stand-in fediverse server: unit `standInMastodon` (new: the SYNTHETIC
   Mastodon and GoToSocial stand-in in `tests/support/standInMastodon/`, through `handle()` and
   behind the real fetch guard; discovery per host, apps, PKCE, tokens, scopes, revocation, rules,
