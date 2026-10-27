@@ -395,6 +395,23 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — The River copies the envelope module instead of sharing it with Mosaic ID (Adam; A1)
+- Decision (Adam, 2026-10-27, starting A1): the River gets its own envelope encryption at
+  `src/river/acting/crypto/envelope.ts`, copied from Mosaic ID's `src/identity/keys/envelope.ts`
+  and generalised to take any additional authenticated data (ADR-010 §5's
+  `river-token:v1|…` and `river-client:v1|…` strings) rather than only a DID. Mosaic ID's module
+  stays where it is, untouched. Nothing moves to `src/shared/crypto/`. #68 rewords ADR-010 §5
+  and its Consequences to match (needs-adam, as an ADR change); until it merges, read the ADR's
+  "moves" as "is copied". The A1 row of the build plan (HANDOFF, 2026-10-26) is read the same way.
+- Why: Mosaic ID is moving to its own repository, so the River and Mosaic ID shouldn't share code.
+  A copy also keeps A1 out of `src/identity/keys/`, so that part of A1 no longer needs Adam. The
+  scheme is the same (AES-256-GCM data key per value, wrapped by a master key, both bound to the
+  row by additional data), so a review of one reads on the other.
+- Alternatives: the move ADR-010 first proposed (`src/shared/crypto/`, Mosaic ID importing it),
+  which would tie the two codebases together just before they part; a package both depend on (a
+  release process for about 80 lines).
+- Thread / PR: A1 envelope PR; the ADR-010 wording in #68 (needs-adam)
+
 ## 2026-10-27 — RIVER_TOKEN_KEY: lazy, Production only, version 1 (A1)
 - Decision: `RIVER_TOKEN_KEY` (32 random bytes, base64) is read through `env.riverTokenKey` only
   when a credential is sealed or opened, so the River starts and runs without it until acting is
