@@ -90,14 +90,18 @@ jobs:
       # Local values only, written fresh for each run. Both apps connect as their own role on the
       # local stack (supabase/seed.sql sets the local-only passwords). The River trusts the identity
       # host's DIDs (localhost:3001) and the API tests' own DID logs (localhost:3005), and reads
-      # their logs over loopback http only because TEST_DID_LOOPBACK=1 (refused on Vercel).
+      # their logs over loopback http only because TEST_DID_LOOPBACK=1 (refused on Vercel). Linking
+      # fediverse accounts talks only to the stand-in server (TEST_STAND_IN_FEDIVERSE=1, also
+      # refused on Vercel), and seals what it stores with a RIVER_TOKEN_KEY made for this run.
       # Secrets are generated per run and masked. The UI is served on 4173 below.
       - name: Write .env and .env.identity
         run: |
           river_session=$(openssl rand -hex 32)
           identity_session=$(openssl rand -hex 32)
           master_key=$(openssl rand -base64 32)
+          river_token_key=$(openssl rand -base64 32)
           echo "::add-mask::$river_session"
+          echo "::add-mask::$river_token_key"
           echo "::add-mask::$identity_session"
           echo "::add-mask::$master_key"
           # A throwaway recovery key pair for this run only (check 37), outside the checkout. The
@@ -119,6 +123,8 @@ jobs:
           TEST_ROUTES=1
           TEST_CLOCK_NOW=2026-10-21T00:00:00.000Z
           TEST_DID_LOOPBACK=1
+          RIVER_TOKEN_KEY=$river_token_key
+          TEST_STAND_IN_FEDIVERSE=1
           EOF
           cat > .env.identity <<EOF
           APP=identity
