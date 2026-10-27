@@ -20,6 +20,26 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A1 acting core, part 2: the River's envelope encryption and RIVER_TOKEN_KEY — 2026-10-27
+
+- Branch / PR: claude/tender-keller-7s064x-envelope → PR (merges on green: no needs-adam trigger)
+- Migrations: none
+
+**What it does.** `src/river/acting/crypto/envelope.ts` is the River's own copy of Mosaic ID's
+envelope scheme (AES-256-GCM data key per value, wrapped by a master key, both bound by additional
+data), taking any additional data; Mosaic ID's module is untouched (DECISIONS, 2026-10-27).
+`credentials.ts` seals and opens a member's credential bound to
+`river-token:v1|{instance}|{account}|{row}|{purpose}` and a server's client secret bound to
+`river-client:v1|{instance}|{host}` (ADR-010 §5), with a key version per value. Nothing calls it
+yet; the tables and linking come in later PRs.
+
+**Keys.** `RIVER_TOKEN_KEY` (read lazily; River project, Production only; Adam creates it).
+
+**Tests.** Unit `riverCredentials` (new). `npm run check`: 54 files, 745 tests passed; UI built.
+
+### Follow-ups
+- Adam: create `RIVER_TOKEN_KEY` before the first PR that stores a credential (A2) deploys.
+
 ## Phase 2 design: Adam's answers recorded — 2026-10-27
 
 - Branch / PR: claude/admiring-lamport-esckd6 (restarted from `main` after #66 merged) → PR

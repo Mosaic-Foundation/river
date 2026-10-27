@@ -395,6 +395,22 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — RIVER_TOKEN_KEY: lazy, Production only, version 1 (A1)
+- Decision: `RIVER_TOKEN_KEY` (32 random bytes, base64) is read through `env.riverTokenKey` only
+  when a credential is sealed or opened, so the River starts and runs without it until acting is
+  used; it is not in `checkEnv()`. It goes in the `river` Vercel project for Production only
+  (Adam, 2026-10-27), so preview deployments can't open production's credentials and can't act.
+  Every sealed value stores `key_version` (1 today). A rotation, when needed, adds the next key
+  beside it (a second variable read only for the old version) and a script that re-wraps each
+  row's data key, then drops the old one; nothing re-encrypts the values themselves. The purposes
+  bound into a member's credential are `fediverse_token`, `grant_token` and `pkce_verifier`.
+- Why: ADR-010 §5 asks for a version per row so the key can rotate, but says nothing of how the
+  versions are named; one key today keeps the variable simple. Lazy reading follows `env.ts`'s
+  rule that both apps start with no variables set.
+- Alternatives: a list of `version:key` pairs in one variable now (no rotation is planned); a
+  fingerprint of the key as its version (works, but less readable in the database).
+- Thread / PR: A1, envelope PR
+
 ## 2026-10-27 — Acting for members: Adam's answers to the Phase 2 design (#66)
 - Decision (Adam, 2026-10-27, answering the questions on #66, which he merged):
   1. **Fediverse:** link existing accounts (ADR-011 approach 1). Mosaic doesn't host fediverse
