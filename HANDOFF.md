@@ -20,6 +20,23 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A3 posts, part 1: DELETE in the fetch guard — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-guard-delete → PR (needs-adam: a fetch guard change,
+  ADR-011 item 7)
+- Migrations: none
+
+**What it does.** The fetch guard accepts `DELETE`, for deleting a post made from the River (A3).
+A `DELETE` never follows a redirect: any 3xx is `redirect_refused` even without
+`redirect: "error"`, so a member's token can't be re-sent elsewhere. Nothing calls it yet.
+
+**Keys.** None.
+
+**Tests.** Unit `fetchGuard` (new case). `npm run check`: 65 files, 999 tests passed; UI built.
+
+### Follow-ups
+- A3 part 2: the composer, previews and Send (posts and replies), on the stand-in.
+
 ## A2 linking, part 6: Settings → Linked accounts — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5-ui → PR (UI only, but stacked on parts 2 to 5, which
