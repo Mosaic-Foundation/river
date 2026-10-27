@@ -93,6 +93,8 @@ test.describe("Your activity", () => {
     await page.locator(".topbar").getByRole("button", { name: "Your profile and settings" }).click();
     const item = page.getByRole("menu", { name: "Your profile and settings" }).getByRole("menuitem", { name: "Your activity" });
     await expect(item).toHaveAttribute("href", "/activity?mode=civic");
+    // ADR-010 §10: the menu reminds the member to check it after Sign out everywhere.
+    await expect(page.getByTestId("profile-menu")).toContainText("After Sign out everywhere, check Your activity");
     await item.click();
 
     await expect(page.getByRole("heading", { level: 1, name: "Your activity" })).toBeVisible({ timeout: 30_000 });

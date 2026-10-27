@@ -84,6 +84,8 @@ export function statusText(entry: ActivityEntry): string {
     case "unknown":
       return `We couldn't tell whether ${entry.targetHost} got it`;
     case "failed":
-      return entry.errorMessage ? `Didn't go. ${entry.targetHost} says: ${entry.errorMessage}` : "Didn't go. Nothing was sent.";
+      // The sending code (A3, A4, B3) stores the spec's message for each code; this names the side.
+      if (entry.errorMessage) return `Didn't go. ${entry.targetHost} says: ${entry.errorMessage}`;
+      return `Didn't go to ${entry.targetHost}${entry.errorCode ? ` (${entry.errorCode})` : ""}`;
   }
 }

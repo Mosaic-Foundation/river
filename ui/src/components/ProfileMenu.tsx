@@ -241,6 +241,9 @@ export function ProfileMenu({
               </li>
             ))}
           </ul>
+          {viewer && (
+            <p className="profile-note">After Sign out everywhere, check Your activity for anything you didn't send.</p>
+          )}
         </div>
       )}
       {/* Rendered only while open, so the DID is in the page only while it's shown. */}

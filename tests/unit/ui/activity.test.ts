@@ -44,7 +44,8 @@ describe("Your activity", () => {
       "demosville.civic.social will show it after review",
     );
     expect(statusText(entry({ status: "unknown" }))).toBe("We couldn't tell whether example.social got it");
-    expect(statusText(entry({ status: "failed" }))).toBe("Didn't go. Nothing was sent.");
+    expect(statusText(entry({ status: "failed" }))).toBe("Didn't go to example.social");
+    expect(statusText(entry({ status: "failed", errorCode: "403" }))).toBe("Didn't go to example.social (403)");
     expect(statusText(entry({ status: "failed", errorMessage: "<b>Too long</b>" }))).toBe(
       "Didn't go. example.social says: <b>Too long</b>",
     );
