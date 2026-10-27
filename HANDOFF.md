@@ -20,6 +20,40 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Space actions B1.3: the reference verifier — 2026-10-27
+
+- Branch / PR: claude/practical-curie-3emib5 → PR (merged)
+- Migrations: none
+
+**What it does.** Third PR of B1. `src/shared/spaceActions/verify.ts` is section 4 as a pure
+function: `handleAction(request, deps, decide)` runs steps 1 to 9 in the spec's order, stopping
+at the first refusal, hands a verified action to the space's own `decide` (steps 10 to 13), and
+stores the answer against `(iss, ref)` for 24 hours when it is final. The DID resolver, clock and
+stores are injected. Step 4 uses `src/shared/hosts/` (dot boundary) before any request; step 7
+reads only `assertionMethod` from the current document, with one fresh log read per DID per
+minute; step 9 claims `(iss, ref)` atomically, so a retry that arrives while the first request is
+still being answered gets `unavailable` (Retry-After 5) instead of being recorded twice.
+`did.ts` parses a did:webvh in its canonical spelling only and finds the `assertionMethod` key;
+`MemoryActionStores` serves tests and the stand-in. The calls the spec left open are in
+DECISIONS.md ("The reference verifier's readings").
+
+**Keys.** None.
+
+**Tests.** Unit `spaceActionsVerify` (new, 73: every verb; every refusal of steps 1 to 9; the DID
+host refused at `evilid.test.example` and `id.test.example.evil.example` and accepted at
+`floyd.id.test.example`, with no request for the refused ones; checks 1 to 5; a concurrent retry
+recorded once; a `decide` that throws releases the ref; host-case spellings refused before any
+request; a deactivated DID; 503 and network failures as `did_unavailable`; the fresh-read
+allowance a minute later). Test DIDs come from `tests/support/spaceActions/testDid.ts`
+(didwebvh-ts, seeded keys, `assertionMethod` added as Mosaic ID's first grant will). `npm run
+check`: 57 files, 919 tests passed; UI built.
+
+### Follow-ups
+- B3: a space records the `jti` before its own rules run, so the River must sign again for every
+  retry (it does: 7.6 re-signs with the same `ref`).
+- B2/B3: a real space's resolver maps a log it couldn't read just now (timeout, 429, 5xx) to
+  `DidUnavailableError`; the test resolver shows how.
+
 ## Space actions B1.2: types, the `act` schema, the manifest reader and the JWS builder — 2026-10-27
 
 - Branch / PR: claude/practical-curie-3emib5 → #71 (merged)

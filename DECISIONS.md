@@ -395,6 +395,33 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — The reference verifier's readings (B1)
+- Decision: where section 4 and 3.6 are silent, `src/shared/spaceActions/verify.ts` reads them so:
+  - Step 1: the media type is compared without parameters (`application/jwt; charset=utf-8` is
+    fine); the body must be exactly the compact JWS (a trailing line feed is `malformed`).
+  - Step 2: a `crit` header is `bad_type` (0.1 defines no extensions).
+  - Step 3: a did:webvh is accepted only in its canonical spelling (lowercase host, a port as
+    `%3A`). Another spelling of a real DID would miss every cache keyed on the DID and earn a
+    fresh log read per request.
+  - Step 6: `iat` and `exp` must be whole numbers, with `exp` not before `iat`; otherwise
+    `expired`.
+  - Step 7: a resolver failure other than "couldn't read it just now" (no such DID, a log that
+    doesn't verify) is `bad_signature`, with no fresh read; a deactivated DID is `bad_signature`.
+  - Step 8: claims other than 3.3's eleven, a `jti` that isn't 16 bytes in base64url, a `client`
+    that isn't an https origin, or another `assurance` are `invalid_action`, as an unknown `act`
+    field is (so a signature never covers something the space ignored).
+  - Step 9: `(iss, ref)` is claimed atomically before the `jti` is recorded. A second request
+    with the same `ref` and act while the first is being answered gets `unavailable` with
+    Retry-After 5 (retryable, never stored); with another act, `ref_conflict`. A retryable answer,
+    or a space's rules throwing, releases the claim. The stored key is the act as signed,
+    computed before the space's rules see it.
+- Why: 3.6 requires one recorded action per `ref`, which a lookup-then-store can't guarantee
+  when the River's "Try again" (7.6) reaches a space still answering the first request; the
+  other calls are the narrowest readings that refuse nothing a conforming signer sends.
+- Alternatives: waiting for the first request's answer (holds a connection on the space);
+  `replayed` for a pending duplicate (final-sounding, though the retry is legitimate).
+- Thread / PR: B1.3 (claude/practical-curie-3emib5)
+
 ## 2026-10-27 — The `act` schema's details, and reading the manifest block (B1)
 - Decision: `checkAct()` (`src/shared/spaceActions/act.ts`) reads 3.4 this way, for Mosaic ID
   before it signs and for spaces at step 8:
