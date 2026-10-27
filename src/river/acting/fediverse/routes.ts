@@ -7,6 +7,9 @@
 //   POST /linked-accounts/fediverse/start  { input }  → { authorizeUrl }
 //        "Continue to {server}": registers the River there if needed (item 1.4), stores an attempt
 //        and sets the 10-minute state cookie; the page then sends the browser to authorizeUrl.
+//   GET  /linked-accounts                  → { viewer, accounts }   (unlinked ones aren't listed)
+//   POST /linked-accounts/:id/unlink       → { handle, server, revokedThere }
+//        Revokes at the server, then deletes the token whatever it answered (item 1.7).
 //   GET  /auth/fediverse/callback?state=&code=   (or &error=)
 //        The server sends the browser back here (item 1.6). Always a 303 to
 //        /linked-accounts?link={result}, at once, with Referrer-Policy: no-referrer, so the code
@@ -22,8 +25,11 @@ import { readSession, requireMember } from "../../auth/session.js";
 import { requireInstance, type Instance } from "../../instances.js";
 import { limitBy, limitByIp } from "../../rateLimit.js";
 import { fediverseGuard } from "./guard.js";
+import { listLinkedAccounts, unlinkAccount } from "./accounts.js";
 import { finishLink, LINKED_ACCOUNTS_PATH, startLink, type LinkResult } from "./link.js";
 import { BAD_INPUT_MESSAGE, checkServer, findAccount, LinkError, softwareLabel } from "./server.js";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /** HTTP status per refusal. */
 const STATUS: Record<LinkError["code"], number> = {
@@ -102,6 +108,33 @@ export function fediverseLinkRoutes(): Router {
       }
     },
   );
+
+  router.get("/linked-accounts", requireInstance(), readSession(), requireMember(), async (_req, res, next) => {
+    try {
+      const viewer = res.locals.viewer as Viewer;
+      const accounts = await listLinkedAccounts((res.locals.instance as Instance).id, viewer.accountId);
+      res.set("Cache-Control", "no-store").json({ viewer: { did: viewer.did, displayName: viewer.displayName }, accounts });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.post("/linked-accounts/:id/unlink", requireInstance(), readSession(), requireMember(), async (req, res, next) => {
+    try {
+      const id = req.params.id ?? "";
+      const viewer = res.locals.viewer as Viewer;
+      const result = UUID.test(id)
+        ? await unlinkAccount(await fediverseGuard(), (res.locals.instance as Instance).id, viewer.accountId, id)
+        : undefined;
+      if (!result) {
+        res.status(404).set("Cache-Control", "no-store").json({ error: "not_found", message: "That account isn't linked." });
+        return;
+      }
+      res.set("Cache-Control", "no-store").json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
 
   router.get("/auth/fediverse/callback", limitByIp("callback"), requireInstance(), readSession(), async (req, res) => {
     const done = (result: LinkResult | "signed_out", clearState: boolean) => {
