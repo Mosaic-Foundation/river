@@ -20,6 +20,25 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A2 linking, part 5: the list and unlinking — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-unlink → PR (needs-adam: `POST /oauth/revoke` to
+  members' servers when they unlink, and the handling of their tokens). Stacked on part 4.
+- Migrations: none
+
+**What it does.** `GET /api/linked-accounts` lists a member's fediverse links (active, revoked or
+lapsed) without any credential. `POST /api/linked-accounts/:id/unlink` revokes the token at the
+server (redirects refused), then deletes it whatever the answer and marks the row `unlinked`
+(kept for Your activity). It answers `revokedThere`, so the page can show "also remove it there"
+(`src/river/acting/fediverse/accounts.ts`).
+
+**Keys.** None.
+
+**Tests.** API db `fediverseLink` (29). `npm run check`: 64 files, 994 tests passed; UI built.
+
+### Follow-ups
+- Part 6: the Linked accounts page.
+
 ## A2 linking, part 4: the callback stores the link — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5-callback → PR (needs-adam: an auth flow that stores

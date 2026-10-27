@@ -69,6 +69,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A2 unlink: API db `fediverseLink` (new: the list without credentials and per member,
+  unlink revoking with the token and app credentials, the server down, a refused redirect,
+  another member's id, a link already revoked). 29 tests.
 - 2026-10-27, A2 callback: API db `fediverseLink` (new: the callback: Mastodon and GoToSocial
   links with their stored fields and the token absent from the stored bytes, state cookie
   refusals that spend nothing, used and other members' attempts, another account revoked,
