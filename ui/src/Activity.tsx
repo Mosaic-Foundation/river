@@ -1,10 +1,11 @@
 // Your activity at /activity (ADR-010 §7): everything the River sent in the member's name, newest
-// first, with how it went and a link to it. Read only for now: Undo comes with the acts that can be
-// undone (A3, A4, B3). Members only; a visitor gets the sign-up prompt. Every value from the other
+// first, with how it went and a link to it. A post or reply sent from the River can be deleted
+// here (fediverse-posting-1 item 2.4); the other undos come with their acts (A4, B3). Members only; a visitor gets the sign-up prompt. Every value from the other
 // side is shown as text; links are https only (the API drops the rest).
 import { useCallback, useEffect, useState } from "react";
+import { DeleteControl } from "./components/DeleteControl";
 import { signOut, type Viewer } from "./lib/api";
-import { loadActivity, statusText, targetText, verbLabel, type ActivityEntry } from "./lib/activity";
+import { canDelete, deletePost, loadActivity, statusText, targetText, verbLabel, type ActivityEntry } from "./lib/activity";
 import { fullDateTime, relativeTime } from "./lib/format";
 import { modeFromSearch, themeForMode, withMode } from "./lib/modes";
 import { Brand } from "./components/Chrome";
@@ -17,7 +18,7 @@ type State =
   | { status: "error" }
   | { status: "ok"; viewer: Viewer; entries: ActivityEntry[]; nextCursor: string | null; more: "idle" | "loading" | "error" };
 
-function Entry({ entry }: { entry: ActivityEntry }) {
+function Entry({ entry, onDeleted }: { entry: ActivityEntry; onDeleted: (message: string) => void }) {
   return (
     <li className={`activity-entry activity-${entry.status}`} data-testid="activity-entry">
       <p className="activity-what">
@@ -49,12 +50,14 @@ function Entry({ entry }: { entry: ActivityEntry }) {
           </>
         )}
       </p>
+      {canDelete(entry) && <DeleteControl entry={entry} remove={deletePost} onDeleted={onDeleted} />}
     </li>
   );
 }
 
 export function ActivityPage() {
   const [state, setState] = useState<State>({ status: "loading" });
+  const [notice, setNotice] = useState<string | null>(null);
   const mode = modeFromSearch(window.location.search);
 
   useEffect(() => {
@@ -122,6 +125,11 @@ export function ActivityPage() {
           Everything the River has sent in your name, newest first, for a year. If you see something you didn't send,
           use Sign out everywhere in the profile menu.
         </p>
+        {notice && (
+          <p className="panel-note link-notice" role="status" data-testid="activity-notice">
+            {notice}
+          </p>
+        )}
         {state.status === "loading" && (
           <p className="feed-status" role="status">
             Loading your activity…
@@ -147,7 +155,14 @@ export function ActivityPage() {
             <>
               <ol className="activity-list" aria-label="Your activity, newest first">
                 {state.entries.map((entry) => (
-                  <Entry key={entry.id} entry={entry} />
+                  <Entry
+                    key={entry.id}
+                    entry={entry}
+                    onDeleted={(message) => {
+                      setNotice(message);
+                      fetchFirst();
+                    }}
+                  />
                 ))}
               </ol>
               {state.nextCursor && (

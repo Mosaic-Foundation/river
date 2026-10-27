@@ -21,7 +21,8 @@
 // For posts and replies (A3, item 3): `GET /api/v2/search` (resolving any https URI to a local
 // status, except one whose path contains `/missing`) and `POST /api/v1/statuses`, which keeps
 // each `Idempotency-Key` for an hour per account on Mastodon (and ignores it on GoToSocial, whose
-// support isn't checked), counts characters as the server's limit does, and records each post.
+// support isn't checked), counts characters as the server's limit does, and records each post;
+// and `DELETE /api/v1/statuses/:id` for the member's own posts.
 // A4 adds the toggles.
 //
 // It records every request it receives (headers and bodies included: tests look for tokens in
@@ -122,7 +123,7 @@ export interface StandInRule {
    * arrives and is handled as usual, but the answer comes after SLOW_MS (longer than the guard's
    * 6 s), so the River times out not knowing whether it worked.
    */
-  answer: 401 | 403 | 422 | 429 | 500 | 502 | 503 | 504 | "redirect" | "down" | "slow";
+  answer: 401 | 403 | 404 | 422 | 429 | 500 | 502 | 503 | 504 | "redirect" | "down" | "slow";
   /** The error text for 422 (and any status). */
   message?: string;
   /** Seconds, for 429 and 503. */
@@ -180,6 +181,7 @@ export interface StandInToken {
 const ERRORS: Record<number, string> = {
   401: "The access token is invalid",
   403: "This action is outside the authorized scopes",
+  404: "Record not found",
   422: "Validation failed: Text can't be blank",
   429: "Too many requests",
   500: "We're sorry, but something went wrong on our end.",
@@ -197,6 +199,8 @@ export class StandInFediverse {
   readonly tokens = new Map<string, StandInToken>();
   /** Statuses by id: posted here or resolved by search. */
   readonly statuses = new Map<string, StandInStatus>();
+  /** Statuses deleted through `DELETE /api/v1/statuses/:id`, in order. */
+  readonly deleted: StandInStatus[] = [];
   /** The clock for idempotency keys, in ms (tests may move it). */
   now: () => number = Date.now;
   private nextStatusId = 110_000_000_000_000_000n;
@@ -210,6 +214,7 @@ export class StandInFediverse {
     this.tokens.clear();
     this.codes.clear();
     this.statuses.clear();
+    this.deleted.length = 0;
     this.now = Date.now;
   }
 
@@ -325,6 +330,9 @@ export class StandInFediverse {
       case "POST /api/v1/statuses":
         return this.postStatus(host, server, request);
       default:
+        if (method === "DELETE" && /^\/api\/v1\/statuses\/[^/]+$/.test(url.pathname)) {
+          return this.deleteStatus(host, url.pathname.split("/").pop() ?? "", request);
+        }
         return json(404, { error: "Record not found" });
     }
   }
@@ -543,6 +551,17 @@ export class StandInFediverse {
     };
     this.statuses.set(id, status);
     return json(200, statusJson(status, host));
+  }
+
+  /** `DELETE /api/v1/statuses/:id`: the member's own status; Mastodon answers with its text. */
+  private deleteStatus(host: string, id: string, request: StandInRequest): StandInAnswer {
+    const token = this.bearer(host, request, ["write:statuses", "write"]);
+    if ("status" in token) return token;
+    const status = this.statuses.get(id);
+    if (!status || status.host !== host || status.account !== token.account.username) return json(404, { error: "Record not found" });
+    this.statuses.delete(id);
+    this.deleted.push(status);
+    return json(200, { ...statusJson(status, host), text: status.content.replace(/<[^>]+>/g, "") });
   }
 
   /**

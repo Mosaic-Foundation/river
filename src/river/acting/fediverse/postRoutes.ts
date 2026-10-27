@@ -6,6 +6,7 @@
 //                                                  → the preview (its id, the exact request)
 //   POST /acts/:id/send                            → SendResult (sent, failed or unknown)
 //   POST /acts/:id/retry                           → SendResult (Try again on an unknown post)
+//   POST /acts/:id/delete                          → DeleteResult (delete a post made from the River)
 //
 // Send and Try again answer 200 with what happened, since the act was attempted and recorded;
 // refusals before anything was sent answer 4xx or 5xx with { error, message, retryAt? }.
@@ -15,6 +16,7 @@ import { readSession, requireMember } from "../../auth/session.js";
 import { requireInstance, type Instance } from "../../instances.js";
 import { limitBy } from "../../rateLimit.js";
 import type { Actor } from "../acts.js";
+import { deletePost } from "./deletes.js";
 import { fediverseGuard } from "./guard.js";
 import { composeInfo, PostError, previewPost, retryPost, sendPost, type PostInput } from "./posts.js";
 
@@ -95,6 +97,12 @@ export function postRoutes(): Router {
     "/acts/:id/retry",
     ...member,
     handle(async (req, res) => retryPost(await fediverseGuard(), actor(res), req.params.id ?? "")),
+  );
+
+  router.post(
+    "/acts/:id/delete",
+    ...member,
+    handle(async (req, res) => deletePost(await fediverseGuard(), actor(res), req.params.id ?? "")),
   );
 
   return router;
