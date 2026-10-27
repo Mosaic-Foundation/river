@@ -56,6 +56,14 @@ export const lookups = {
   },
 };
 
+/**
+ * For the keep-alive (GET /health/db), inside forIdentity({}): one read of identity.people, which
+ * row-level security answers with a count of 0, so the database sees activity and nothing is read.
+ */
+export async function touchDatabase(db: Db): Promise<void> {
+  await db.query("SELECT count(*) FROM identity.people");
+}
+
 // ---------------------------------------------------------------------------------------------
 // auth_requests (inside forIdentity({ authRequestId }))
 
