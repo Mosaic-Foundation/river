@@ -87,6 +87,9 @@ CREATE TABLE river.linked_accounts (
   -- lapsed: unused for 180 days (the daily job). Only an active link holds a credential.
   status             text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'revoked', 'unlinked', 'lapsed')),
   created_at         timestamptz NOT NULL DEFAULT now(),
+  -- When the current credential was stored: the first link, or the last time it was linked again
+  -- (the same actor reuses its row, so its Your activity rows keep pointing at it).
+  linked_at          timestamptz NOT NULL DEFAULT now(),
   last_used_at       timestamptz,
   -- When the credential was deleted, for whatever reason.
   revoked_at         timestamptz,
@@ -101,7 +104,7 @@ CREATE TABLE river.linked_accounts (
   ),
   CONSTRAINT linked_accounts_ended_when CHECK ((status = 'active') = (revoked_at IS NULL))
 );
-CREATE INDEX linked_accounts_idle_idx ON river.linked_accounts (coalesce(last_used_at, created_at)) WHERE status = 'active';
+CREATE INDEX linked_accounts_idle_idx ON river.linked_accounts (coalesce(last_used_at, linked_at)) WHERE status = 'active';
 
 ALTER TABLE river.linked_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE river.linked_accounts FORCE ROW LEVEL SECURITY;
@@ -114,7 +117,7 @@ GRANT SELECT, INSERT, DELETE ON river.linked_accounts TO river_app;
 -- Everything but the row's identity (id, instance, account, kind, server, actor).
 GRANT UPDATE (acct, remote_account_id, display_name, avatar_url, software, scopes, token_ciphertext,
               token_dek, token_key_version, default_visibility, default_language, status,
-              last_used_at, revoked_at)
+              linked_at, last_used_at, revoked_at)
   ON river.linked_accounts TO river_app;
 
 -- ---------------------------------------------------------------------------------------------
@@ -204,6 +207,7 @@ CREATE TABLE river.member_actions (
     ON DELETE SET NULL (linked_account_id),
   FOREIGN KEY (account_id, undoes_id) REFERENCES river.member_actions (account_id, id)
     ON DELETE SET NULL (undoes_id),
+  CONSTRAINT member_actions_sent_when CHECK ((status = 'previewed') = (sent_at IS NULL)),
   CONSTRAINT member_actions_limit_kind CHECK (
     limit_kind = CASE
       WHEN verb IN ('post', 'reply', 'comment', 'poll_answer') THEN 'text'
@@ -230,8 +234,28 @@ GRANT UPDATE (status, request, subject_title, remote_id, remote_url, error_code,
   ON river.member_actions TO river_app;
 -- A member's own unsent preview may be discarded; sent rows stay for the year.
 CREATE POLICY member_actions_discard_preview ON river.member_actions AS RESTRICTIVE FOR DELETE TO river_app
-  USING (status = 'previewed');
+  USING (status = 'previewed' AND sent_at IS NULL);
 GRANT DELETE ON river.member_actions TO river_app;
+
+-- Once an act has left 'previewed' it never goes back, and its sent_at stays set, so a sent act
+-- can't be turned back into a preview and deleted. A preview is never marked sent without a time.
+CREATE FUNCTION river.member_actions_keep_sent() RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path = ''
+AS $$
+BEGIN
+  IF OLD.status <> 'previewed' AND NEW.status = 'previewed' THEN
+    RAISE EXCEPTION 'a sent act can''t become a preview again' USING ERRCODE = 'check_violation';
+  END IF;
+  IF OLD.sent_at IS NOT NULL AND NEW.sent_at IS DISTINCT FROM OLD.sent_at THEN
+    RAISE EXCEPTION 'an act''s sent_at can''t change once set' USING ERRCODE = 'check_violation';
+  END IF;
+  RETURN NEW;
+END
+$$;
+REVOKE ALL ON FUNCTION river.member_actions_keep_sent() FROM PUBLIC;
+CREATE TRIGGER member_actions_keep_sent BEFORE UPDATE ON river.member_actions
+  FOR EACH ROW EXECUTE FUNCTION river.member_actions_keep_sent();
 
 -- ---------------------------------------------------------------------------------------------
 -- The daily job, with the acting purges
@@ -332,7 +356,7 @@ BEGIN
      SET token_ciphertext = NULL, token_dek = NULL, token_key_version = NULL,
          status = 'lapsed', revoked_at = p_at
    WHERE status = 'active'
-     AND coalesce(last_used_at, created_at) < p_at - interval '180 days';
+     AND coalesce(last_used_at, linked_at) < p_at - interval '180 days';
   GET DIAGNOSTICS lapsed_links = ROW_COUNT;
 
   -- Your activity is kept a year (ADR-010 §7), and so is a link a year after it ended (its rows in

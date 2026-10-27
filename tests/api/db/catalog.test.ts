@@ -159,6 +159,7 @@ describe("river schema", () => {
       { name: "current_instance_id", can: true },
       { name: "daily_job", can: false },
       { name: "mark_stream_follows_ended", can: true },
+      { name: "member_actions_keep_sent", can: false },
       { name: "restamp_samples", can: false },
     ]);
   });

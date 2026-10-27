@@ -295,6 +295,58 @@ describe("acting tables: what can change", () => {
     });
   });
 
+  it("a sent act can't be turned back into a preview, unsent, or deleted that way", async () => {
+    const results = await rolledBack(member, async (db) => {
+      const sent = await act(db);
+      await db.query("UPDATE river.member_actions SET status = 'unknown', sent_at = now() WHERE id = $1", [sent.id]);
+      const attempt = async (sql: string) => {
+        await db.query("SAVEPOINT s");
+        try {
+          await db.query(sql, [sent.id]);
+          await db.query("RELEASE SAVEPOINT s");
+          return "ok";
+        } catch (err) {
+          await db.query("ROLLBACK TO SAVEPOINT s");
+          return (err as { code?: string }).code;
+        }
+      };
+      return {
+        backToPreview: await attempt("UPDATE river.member_actions SET status = 'previewed', sent_at = NULL WHERE id = $1"),
+        backToPreviewKeepingTime: await attempt("UPDATE river.member_actions SET status = 'previewed' WHERE id = $1"),
+        moveSentAt: await attempt("UPDATE river.member_actions SET sent_at = now() - interval '2 days' WHERE id = $1"),
+        sentWithoutTime: await attempt("UPDATE river.member_actions SET status = 'sent', sent_at = NULL WHERE id = $1"),
+        outcome: await attempt("UPDATE river.member_actions SET status = 'sent', remote_id = '1' WHERE id = $1"),
+        deleted: (await db.query("DELETE FROM river.member_actions WHERE id = $1", [sent.id])).rowCount,
+      };
+    });
+    expect(results).toEqual({
+      backToPreview: "23514",
+      backToPreviewKeepingTime: "23514",
+      moveSentAt: "23514",
+      sentWithoutTime: "23514",
+      outcome: "ok",
+      deleted: 0,
+    });
+  });
+
+  it("linking the same account again reuses its row and restarts its clock", async () => {
+    const row = await rolledBack(member, async (db) => {
+      const { id } = await link(db, { linked_at: new Date("2026-01-01T00:00:00Z") });
+      await db.query(
+        `UPDATE river.linked_accounts SET status = 'revoked', token_ciphertext = NULL, token_dek = NULL,
+                token_key_version = NULL, revoked_at = now() WHERE id = $1`,
+        [id],
+      );
+      await db.query(
+        `UPDATE river.linked_accounts SET status = 'active', token_ciphertext = $2, token_dek = $3, token_key_version = 1,
+                revoked_at = NULL, linked_at = now() WHERE id = $1`,
+        [id, randomBytes(48), randomBytes(60)],
+      );
+      return (await db.query("SELECT status, linked_at > now() - interval '1 minute' AS fresh FROM river.linked_accounts WHERE id = $1", [id])).rows[0];
+    });
+    expect(row).toEqual({ status: "active", fresh: true });
+  });
+
   it("an attempt is consumed once; its return path stays on the River", async () => {
     const results = await rolledBack(member, async (db) => {
       const state = randomBytes(24).toString("base64url");

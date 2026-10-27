@@ -169,14 +169,26 @@ describe("river.daily_job", () => {
         db
           .query<{ id: string }>(
             `INSERT INTO river.linked_accounts (instance_id, account_id, kind, server_host, actor_uri,
-                                                token_ciphertext, token_dek, token_key_version, created_at, last_used_at)
-             VALUES ($1, $2, 'fediverse', 'example.social', $3, ${sealed}, $4::timestamptz - interval '400 days', $4::timestamptz - ${used})
+                                                token_ciphertext, token_dek, token_key_version, created_at, linked_at, last_used_at)
+             VALUES ($1, $2, 'fediverse', 'example.social', $3, ${sealed}, $4::timestamptz - interval '400 days',
+                     $4::timestamptz - interval '400 days', $4::timestamptz - ${used})
              RETURNING id`,
             [SEED_INSTANCE, account, actor, at],
           )
           .then((r) => r.rows[0]!.id);
       const idle = await link("interval '181 days'", "https://example.social/users/idle");
       const recent = await link("interval '179 days'", "https://example.social/users/recent");
+      // Linked again 10 days ago after a long break: the clock starts from the new link.
+      const relinked = (
+        await db.query<{ id: string }>(
+          `INSERT INTO river.linked_accounts (instance_id, account_id, kind, server_host, actor_uri,
+                                              token_ciphertext, token_dek, token_key_version, created_at, linked_at)
+           VALUES ($1, $2, 'fediverse', 'example.social', 'https://example.social/users/relinked', ${sealed},
+                   $3::timestamptz - interval '400 days', $3::timestamptz - interval '10 days')
+           RETURNING id`,
+          [SEED_INSTANCE, account, at],
+        )
+      ).rows[0]!.id;
       const ended = (
         await db.query<{ id: string }>(
           `INSERT INTO river.linked_accounts (instance_id, account_id, kind, server_host, actor_uri, status, revoked_at)
@@ -190,8 +202,9 @@ describe("river.daily_job", () => {
         db
           .query<{ id: string }>(
             `INSERT INTO river.member_actions (instance_id, account_id, channel, linked_account_id, target_host, verb, limit_kind,
-                                               status, session_epoch, created_at)
-             VALUES ($1, $2, 'fediverse', $3, 'example.social', $4, $5, $6, 1, $7::timestamptz - ${age}) RETURNING id`,
+                                               status, session_epoch, created_at, sent_at)
+             VALUES ($1, $2, 'fediverse', $3, 'example.social', $4, $5, $6, 1, $7::timestamptz - ${age},
+                     CASE WHEN $6 = 'previewed' THEN NULL ELSE $7::timestamptz - ${age} END) RETURNING id`,
             [SEED_INSTANCE, account, recent, verb, kind, status, at],
           )
           .then((r) => r.rows[0]!.id);
@@ -242,6 +255,7 @@ describe("river.daily_job", () => {
       expect(links).toEqual([
         { id: idle, status: "lapsed", has_token: false, revoked_at: at },
         { id: recent, status: "active", has_token: true, revoked_at: null },
+        { id: relinked, status: "active", has_token: true, revoked_at: null },
       ]);
       expect(links.map((l) => l.id)).not.toContain(ended);
     });
