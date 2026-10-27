@@ -37,6 +37,23 @@ describe("river.daily_job", () => {
     ]);
   });
 
+  // No cross-schema code (docs/identity-database-move.md): what is in the database now, after every
+  // migration. tests/unit/schemaBoundaries.test.ts checks the files.
+  it("no river function or job names the identity schema, and no identity function or job names river", async () => {
+    const { rows } = await admin.query<{ schema: string; name: string; body: string }>(
+      `SELECT n.nspname AS schema, p.proname AS name, p.prosrc AS body
+         FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname IN ('river', 'identity')
+       UNION ALL
+       SELECT CASE WHEN jobname LIKE 'identity-%' THEN 'identity' ELSE 'river' END, jobname, command FROM cron.job`,
+    );
+    expect(rows.map((r) => r.name)).toEqual(expect.arrayContaining(["daily_job", "river-daily", "identity-daily"]));
+    const crossing = rows
+      .filter((r) => (r.schema === "river" ? /\bidentity[._]/ : /\briver[._]/).test(r.body.replace(/--[^\n]*/g, "")))
+      .map((r) => `${r.schema}: ${r.name}`);
+    expect(crossing).toEqual([]);
+  });
+
   it("120 days on: keeps followed final results and samples, deletes the rest (check 18's retention part)", async () => {
     await rolledBack(async (db) => {
       const at = (await db.query<{ at: Date }>("SELECT now() + interval '120 days' AS at")).rows[0]!.at;
@@ -88,25 +105,6 @@ describe("river.daily_job", () => {
         ).rows[0]!;
       const samplesBefore = await sampleCounts();
 
-      // identity.auth_requests (M7): every request that expired more than a day before `at` goes; a
-      // request still open at `at` stays.
-      const keptRequest = (
-        await db.query<{ id: string }>(
-          `INSERT INTO identity.auth_requests (id, purpose, client_id, redirect_uri, state, nonce, webauthn_challenge, created_at, expires_at)
-           VALUES ($1, 'authorize', 'c', 'r', 's', 'n', $2, $3, $3::timestamptz + interval '10 minutes') RETURNING id`,
-          [randomUUID(), "a".repeat(43), at],
-        )
-      ).rows[0]!.id;
-      await db.query(
-        `INSERT INTO identity.auth_requests (id, purpose, client_id, redirect_uri, state, nonce, webauthn_challenge, expires_at)
-         VALUES ($1, 'authorize', 'c', 'r', 's', 'n', $2, now() + interval '10 minutes')`,
-        [randomUUID(), "b".repeat(43)],
-      );
-      const stale = (
-        await db.query<{ n: number }>("SELECT count(*)::int AS n FROM identity.auth_requests WHERE expires_at < $1::timestamptz - interval '1 day'", [at])
-      ).rows[0]!.n;
-      expect(stale).toBeGreaterThanOrEqual(1);
-
       // river.auth_attempts (M8; an hour since the security review of 3a86e8f): every attempt made
       // more than an hour before `at` goes, two hours old included; one made at `at` stays.
       const keptState = randomUUID().replaceAll("-", "") + "k";
@@ -121,11 +119,12 @@ describe("river.daily_job", () => {
       expect(staleAttempts).toBeGreaterThanOrEqual(2);
 
       const summary = (await db.query<{ r: Record<string, number> }>("SELECT river.daily_job($1) AS r", [at])).rows[0]!.r;
-      expect(summary).toMatchObject({ ended_follows: 1, deleted_auth_attempts: staleAttempts, deleted_auth_requests: stale });
+      expect(summary).toMatchObject({ ended_follows: 1, deleted_auth_attempts: staleAttempts });
+      // Mosaic ID's upkeep is identity.daily_job's now (identityDailyJob.test.ts).
+      expect(summary).not.toHaveProperty("deleted_auth_requests");
+      expect(summary).not.toHaveProperty("released_addresses");
       const attemptsLeft = (await db.query<{ state: string }>("SELECT state FROM river.auth_attempts")).rows.map((r) => r.state);
       expect(attemptsLeft).toEqual([keptState]);
-      const requestsLeft = (await db.query<{ id: string }>("SELECT id FROM identity.auth_requests")).rows.map((r) => r.id);
-      expect(requestsLeft).toEqual([keptRequest]);
       expect(summary.deleted_follows).toBeGreaterThanOrEqual(1);
       expect(summary.restamped_samples).toBe(samplesBefore.seeded);
       expect(samplesBefore.seeded).toBeGreaterThanOrEqual(5);
