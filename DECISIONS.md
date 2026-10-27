@@ -395,6 +395,31 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — The `act` schema's details, and reading the manifest block (B1)
+- Decision: `checkAct()` (`src/shared/spaceActions/act.ts`) reads 3.4 this way, for Mosaic ID
+  before it signs and for spaces at step 8:
+  - `ref` is a UUID in lowercase canonical form, so one action has one spelling of its key.
+  - `target` (and a withdraw's target) is an absolute `https:` IRI of at most 2,048 characters,
+    with no credentials; a fragment is allowed, since a space's ids may carry one. Whether it is
+    on the space's host is step 11's check. The manifest's `endpoint` carries no fragment.
+  - A comment's `content` counts characters as code points (as `max_length` will), must not be
+    blank, and is refused as HTML when it contains `<` followed by a letter, `/`, `!` or `?`
+    (`x < y` stays plain text). Control characters other than tab, line feed and carriage
+    return are refused. `lang` has a BCP 47 tag's shape, at most 35 characters.
+  - Poll choice ids are 1 to 64 of `A-Z a-z 0-9 _ -`, 1 to 20 of them, none repeated. "One
+    unless `multiple`" is the target's check (step 11, `not_accepted`).
+  - `withdraws` names one of the four verbs, never `withdraw`.
+- Manifest block: the endpoint must be on the manifest's host exactly (2.1 says "same host",
+  so a subdomain is another host), `audience` must be `space.id` (or the origin when there is
+  none) or the block is ignored, and `did_hosts` entries that aren't plain hosts are dropped
+  (they would match nothing anyway).
+- Why: 3.4 says "plain text, no HTML" and "a client-chosen UUID" without saying how to tell;
+  these are the narrowest readings that still take ordinary text. `space-actions-1.md` 3.4 now
+  lists these formats, so a space porting from the spec agrees with the reference schema.
+- Alternatives: refusing any `<` (refuses "x < y"); sanitizing instead of refusing (a signature
+  must cover exactly what the space keeps); accepting any UUID case (two spellings of one `ref`).
+- Thread / PR: B1.2 (claude/practical-curie-3emib5)
+
 ## 2026-10-27 — The River copies the envelope module instead of sharing it with Mosaic ID (Adam; A1)
 - Decision (Adam, 2026-10-27, starting A1): the River gets its own envelope encryption at
   `src/river/acting/crypto/envelope.ts`, copied from Mosaic ID's `src/identity/keys/envelope.ts`
