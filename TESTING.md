@@ -69,6 +69,11 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A3 delete: API db `fediversePosts` (new, 5: DELETE with the token and the text erased,
+  unknown then 404 counted as deleted, a refused redirect reaching nothing, the delete limit, another
+  member); unit `ui/activity` (`canDelete`); e2e `composer` (new: post, then delete from Your
+  activity by keyboard with axe). The stand-in serves `DELETE /api/v1/statuses/:id`, and rules can
+  answer 404.
 - 2026-10-27, A3 composer: unit `ui/compose` (new: the counter's link, mention and warning rules,
   the reply's start, the exact request, times in the member's clock); e2e `composer` (new: Reply
   only on live fediverse cards after linking, preview with the exact request, sent by keyboard,
