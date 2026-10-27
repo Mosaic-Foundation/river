@@ -210,6 +210,28 @@ describe("requests", () => {
     }
   });
 
+  it("sends DELETE with its headers, and never follows a redirect for one (ADR-011 item 7)", async () => {
+    const ok = spyAgent();
+    ok.mock.get("https://public.example").intercept({ path: "/api/v1/statuses/1", method: "DELETE" }).reply(200, "{}");
+    const res = await guardWith(ok).fetch("https://public.example/api/v1/statuses/1", {
+      method: "DELETE",
+      headers: { authorization: "Bearer secret" },
+    });
+    expect(res.status).toBe(200);
+    expect(ok.calls).toEqual(["DELETE https://public.example/api/v1/statuses/1"]);
+
+    for (const status of [301, 302, 303, 307, 308]) {
+      const spy = spyAgent();
+      spy.mock.get("https://public.example").intercept({ path: "/api/v1/statuses/1", method: "DELETE" }).reply(status, "", {
+        headers: { location: "https://other.example/steal" },
+      });
+      // No redirect option given: DELETE refuses anyway.
+      const err = await refusal(guardWith(spy).fetch("https://public.example/api/v1/statuses/1", { method: "DELETE" }));
+      expect(err.code, String(status)).toBe("redirect_refused");
+      expect(spy.calls, String(status)).toEqual(["DELETE https://public.example/api/v1/statuses/1"]);
+    }
+  });
+
   it("follows up to 3 redirects, each checked, and refuses a 4th", async () => {
     const spy = spyAgent();
     const origin = spy.mock.get("https://public.example");

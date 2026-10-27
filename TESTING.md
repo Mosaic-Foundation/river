@@ -83,6 +83,8 @@ Newest first: date, slice, tests added, counts.
   redirects, a refused connection, the 31st post, Sign out everywhere, another member's preview).
   `tests/api/helpers/linkFediverse.ts` links an account through the real flow. The timeout test
   waits out the guard's 6 s.
+- 2026-10-27, A3 guard DELETE: unit `fetchGuard` (new case: DELETE is sent, and 301 to 308 on a
+  DELETE are refused without the option, nothing reaching the target). Unit 999.
 - 2026-10-27, A2 UI: unit `ui/linkedAccounts` (new: the explainer, every callback result, the
   unlink sentences); e2e `linkedAccounts` (new: link and unlink by keyboard with axe at each step,
   GoToSocial, another account than the one named, a server's name as text, Akkoma refused, a
