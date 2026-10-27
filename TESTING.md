@@ -66,6 +66,10 @@ Newest first: date, slice, tests added, counts.
 
 - 2026-10-27, space actions B1.1: unit `hostList` (new: host-list matching on a dot boundary,
   ports, wildcards, dots and non-ASCII refused, https URLs). Unit 787.
+
+- 2026-10-27, A1 acting tables: API db `actingTables` (new; as river_app: member and instance
+  isolation, cross-member foreign keys, column grants, credential and limit-kind CHECKs, preview
+  discard, attempts consumed once); API db `dailyJob` (the acting purges, as postgres, rolled back).
 - 2026-10-26, identity account page: API `identity` (the page, `/account/options`, refused
   requests and origins; check 28 covers both); e2e `identity` (the account page's two cases; the
   CSP, axe and Tab test covers `/account`). Unit 734, API 203, e2e 153.

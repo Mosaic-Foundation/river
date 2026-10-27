@@ -418,6 +418,33 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   on `civic.social` would need a configuration change, which item 9 set out to avoid).
 - Thread / PR: B1.1 (claude/practical-curie-3emib5)
 
+## 2026-10-27 — The acting tables' details (A1)
+- Decision (migration `20261027120000_acting_tables.sql`):
+  - `linked_accounts.status` gains `lapsed` beside `active`, `revoked` and `unlinked`: the daily job
+    deletes a credential unused for 180 days and marks it so, so the member's message can say why
+    ("unused for six months") rather than "stopped working". Only an active link holds a credential,
+    and `revoked_at` is when it was deleted for any reason (CHECK constraints). Ended links go a year
+    after that.
+  - `acting_attempts` has its own `id` (the credential's additional data needs a row id; `state`
+    stays UNIQUE), `requested` (the handle typed, checked at the callback, fediverse-posting-1 1.6)
+    and `return_to` (a River path only; a CHECK refuses `//host` and `/\host`). It is a member's
+    table: every linking, grant and step-up callback runs with the member's session.
+  - `member_actions` stores `limit_kind` (`text`, `toggle`, `follow`, `delete`), with a CHECK tying
+    it to the verb, so ADR-010 §9's counts are one indexed query. Verbs: `post`, `reply`, `comment`,
+    `poll_answer`; `boost`, `unboost`, `favourite`, `unfavourite`, `support`, `rsvp`, `withdraw`;
+    `follow`, `unfollow`; `delete`. It also keeps `target_label`, `subject_title` and `subject_url`
+    so Your activity reads without the item, which retention may delete.
+  - River_app may delete its own unsent previews (a RESTRICTIVE policy) and its own linked accounts
+    (a sign-in DID change deletes grants, ADR-010 §6); sent acts are deleted only by the daily job.
+    UPDATE is granted on outcome columns only: never whose row, what verb, where, when or the epoch.
+  - Foreign keys to a member's own link and own undone act are on `(account_id, id)` with
+    `ON DELETE SET NULL (column)`, so an act can't point at another member's rows and outlives what
+    it pointed at.
+- Why: fediverse-posting-1 item 8 and ADR-010 §6, §7 and §9 list the columns but not these.
+- Alternatives: computing the limit kind from the verb in every query; deleting idle links outright
+  (the member would lose the row Your activity names); one `status` for every way a link ends.
+- Thread / PR: A1 tables PR
+
 ## 2026-10-27 — Acting for members: Adam's answers to the Phase 2 design (#66)
 - Decision (Adam, 2026-10-27, answering the questions on #66, which he merged):
   1. **Fediverse:** link existing accounts (ADR-011 approach 1). Mosaic doesn't host fediverse

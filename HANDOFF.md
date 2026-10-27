@@ -46,6 +46,35 @@ passed; UI built.
   DECISIONS.md, "Host lists match subdomains on a dot boundary; sign-in's TRUSTED_DID_HOSTS stays
   exact (B1)".
 
+## A1 acting core, part 3: the acting tables and the daily job's purges — 2026-10-27
+
+- Branch / PR: claude/tender-keller-7s064x-tables → PR (needs-adam: replaces `river.daily_job`, the
+  `pg_cron` function, and sets the permissions on the tables that will hold credentials)
+- Migrations: `20261027120000_acting_tables.sql` (new tables `river.oauth_clients`,
+  `river.linked_accounts`, `river.acting_attempts`, `river.member_actions`, each with ENABLE and
+  FORCE RLS and policies; `river.daily_job` replaced).
+
+**What it does.** The four tables ADR-010 and fediverse-posting-1 item 8 list, registered in
+`src/db/tables.ts` (`oauth_clients` per instance, the other three per member). Credentials are
+bytea ciphertext with their wrapped data key and key version (sealed by
+`src/river/acting/crypto/`, #70); a CHECK keeps them whole and only on active links. The daily job
+now also deletes previews older than 15 minutes, attempts older than a day, credentials idle 180
+days (the link becomes `lapsed`), acts older than a year and links that ended a year ago.
+DECISIONS.md has the details the spec left open. No code reads the tables yet.
+
+**Keys.** None.
+
+**Tests.** API db `actingTables` (new: isolation between members and instances, foreign keys to
+another member's rows refused, no update of identity columns, credential CHECKs, verb and limit
+kind, preview discard but no deleting a sent act, attempts consumed once and `return_to` kept on
+the River); API db `dailyJob` (new test: the acting purges). `npm run check`: 53 files, 735 tests
+passed; UI built. API db (local Supabase after `db reset`): `actingTables` 24, `dailyJob` and
+`catalog` pass; `emailReservation` and `recoveryTiming` need the identity dev server and weren't run.
+
+### Follow-ups
+- Merge after Adam's review. The limits and Your activity PRs build on this branch.
+- B2 replaces `river.daily_job` again; it must start from this version.
+
 ## Phase 2 design: Adam's answers recorded — 2026-10-27
 
 - Branch / PR: claude/admiring-lamport-esckd6 (restarted from `main` after #66 merged) → PR
