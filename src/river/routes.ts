@@ -16,7 +16,7 @@ import { memberExport } from "./export/index.js";
 import { FeedInputError, memberFeed, readerItem, visitorFeed, type FeedParams } from "./feed/index.js";
 import { checkFraming } from "./frame/check.js";
 import { followingRoutes } from "./following/routes.js";
-import { requireInstance, type Instance } from "./instances.js";
+import { databaseAnswers, requireInstance, type Instance } from "./instances.js";
 import { resetRateLimits } from "./rateLimit.js";
 
 /** A query parameter as one string; repeated or nested values are refused, not guessed at. */
@@ -87,6 +87,19 @@ export function riverRoutes(): Router {
   // Says which app answered, for checking a deployment. Needs no database.
   router.get("/", (_req, res) => {
     res.json({ app: "river", name: "Mosaic River" });
+  });
+
+  // The keep-alive's request (.github/workflows/keep-alive.yml): unlike /health, this one reads
+  // the database. 503 when it doesn't answer, logging only the error's code.
+  router.get("/health/db", async (_req, res) => {
+    res.set("Cache-Control", "no-store");
+    try {
+      await databaseAnswers();
+      res.json({ ok: true, app: "river", database: true });
+    } catch (err) {
+      console.error(`river: GET /health/db failed (${(err as { code?: unknown }).code ?? "no code"})`);
+      res.status(503).json({ ok: false, app: "river", database: false });
+    }
   });
 
   router.use(authRoutes());

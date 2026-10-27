@@ -20,6 +20,26 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Identity move, part 4: a daily keep-alive for the shared Supabase project — 2026-10-27
+
+- Branch / PR: claude/trusting-carson-y03109-keepalive → PR (needs-adam: a new workflow in `.github/`)
+- Migrations: none
+
+**What it does.** `GET /health/db` on the River (`/api/health/db` on Vercel) and on Mosaic ID each
+make one read that returns no data, and answer `{ ok, app, database }` (503 when the database
+doesn't answer). `.github/workflows/keep-alive.yml` requests both once a day at 10:41 UTC, so the
+free project both apps share doesn't pause. It has no checkout, token or secret, and is skipped
+until Adam sets the two origin variables (`docs/deploy.md`, Before).
+
+**Keys.** Repository variables `KEEPALIVE_RIVER_ORIGIN`, `KEEPALIVE_IDENTITY_ORIGIN` (not app env).
+
+**Tests.** Unit `health` (503 with no database, per app), `workflows` (keep-alive: no checkout,
+`permissions: {}`, no secrets). API `health` (new: 200 and no-store from both dev servers).
+`npm run check`: 62 files, 965 tests passed; UI built.
+
+### Follow-ups
+- When Mosaic ID has its own Supabase project, its keep-alive moves to its repository.
+
 ## Identity move, part 3: what Mosaic ID shares with the River — 2026-10-27
 
 - Branch / PR: claude/trusting-carson-y03109-shared → PR

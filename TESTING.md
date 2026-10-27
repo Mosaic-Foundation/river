@@ -64,6 +64,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, identity move part 4: unit `health` (`/health/db` 503 without a database),
+  `workflows` (keep-alive has no checkout, token or secret); API `health` (new; both dev servers'
+  `/health/db` answer 200, no-store).
 - 2026-10-27, A2 stand-in fediverse server: unit `standInMastodon` (new: the SYNTHETIC
   Mastodon and GoToSocial stand-in in `tests/support/standInMastodon/`, through `handle()` and
   behind the real fetch guard; discovery per host, apps, PKCE, tokens, scopes, revocation, rules,

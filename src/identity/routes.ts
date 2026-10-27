@@ -8,6 +8,7 @@
 import path from "node:path";
 import express, { Router, type NextFunction, type Request, type Response } from "express";
 import { env } from "../config/env.js";
+import { forIdentity } from "../db/context.js";
 import { accountRoutes } from "./flows/account.js";
 import { authorizeRoutes } from "./flows/authorize.js";
 import { asyncRoutes } from "./flows/common.js";
@@ -17,6 +18,7 @@ import { recoverRoutes } from "./flows/recover.js";
 import { testRoutes } from "./flows/testRoutes.js";
 import { noStore, sameOriginPosts, securityHeaders } from "./http.js";
 import { IDENTITY_CSS, errorPage, homePage } from "./pages.js";
+import { touchDatabase } from "./store.js";
 
 /** Where `npm run build:identity-client` writes the bundled browser script. */
 const PUBLIC_DIR = path.resolve("identity", "public");
@@ -61,6 +63,18 @@ export function identityRoutes(): Router {
 
   router.use(noStore);
   router.use(sameOriginPosts);
+
+  // The keep-alive's request (.github/workflows/keep-alive.yml): unlike /health, this one reads
+  // the database. 503 when it doesn't answer, logged by errorLogLine (name and code only).
+  router.get("/health/db", async (req, res) => {
+    try {
+      await forIdentity({}, touchDatabase);
+      res.json({ ok: true, app: "identity", database: true });
+    } catch (err) {
+      console.error(errorLogLine(req.method, req.path, err));
+      res.status(503).json({ ok: false, app: "identity", database: false });
+    }
+  });
   const routes = asyncRoutes(router);
   didLogRoutes(routes);
   authorizeRoutes(routes);
