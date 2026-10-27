@@ -455,6 +455,21 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   (the member would lose the row Your activity names); one `status` for every way a link ends.
 - Thread / PR: A1 tables PR
 
+## 2026-10-27 — The test vectors' shape, and the endpoint runner deferred to B5 (B1)
+- Decision: the vectors are signed for the stand-in space (`stand-in.example`) at a fixed clock,
+  with test DIDs at `id.test.example` and its look-alikes, and carry a `hosts` section that every
+  host-list implementation (a space's `did_hosts`, `SPACE_ACTION_HOSTS`,
+  `IDENTITY_SPACE_ACTION_HOSTS`) can be checked against. Unknown top-level claims are refused
+  (`invalid_action`), and `space-actions-1.md` 3.3 and 4 step 8 now say so, since a vector makes
+  it normative. The command-line runner against a real endpoint (spec 8) is deferred to B5: it
+  needs the builder to re-sign for that space's audience, endpoint, targets and clock, and the
+  space to read the test DID logs, which only a real hub deployment can settle.
+- Why: spec 8 asks for one signed request per case with a fixed clock; fixed vectors are what
+  other implementations can diff against. A real hub's run is B5's job, against Demosville.
+- Alternatives: vectors parameterised now (no consumer until B5); dropping the unknown-claim
+  vector (the reference verifier would then be stricter than the vectors say).
+- Thread / PR: B1.4 (claude/practical-curie-3emib5)
+
 ## 2026-10-27 — The reference verifier's readings (B1)
 - Decision: where section 4 and 3.6 are silent, `src/shared/spaceActions/verify.ts` reads them so:
   - Step 1: the media type is compared without parameters (`application/jwt; charset=utf-8` is
