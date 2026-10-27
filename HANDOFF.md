@@ -20,6 +20,30 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A2 linking, part 1: the stand-in Mastodon and GoToSocial server — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5 → PR (merges on green: test code only)
+- Migrations: none
+
+**What it does.** `tests/support/standInMastodon/` is the stand-in fediverse server of
+fediverse-posting-1 item 9, SYNTHETIC (written from Mastodon's documentation, not recorded). Hosts:
+`mastodon.stand-in.example` (Mastodon 4.3.2, discovery with S256, 500 characters),
+`gts.stand-in.example` (GoToSocial 0.19.1, no discovery, 5,000 characters, no `profile` scope, no
+`uri` on accounts), `mastodon42`, `nodiscovery` and `akkoma` for the refusals, and
+`elsewhere.stand-in.example` as the redirect target that counts what reaches it. It serves
+WebFinger, NodeInfo, discovery, `/api/v2/instance`, apps, token, revoke and verify_credentials,
+checks client secrets, PKCE, tokens and scopes, records every request, and takes rules (401, 403,
+422, 429 with Retry-After, 5xx, a redirect, a dropped connection). `authorize()` plays the
+member approving or denying on the server's page. `guardOptions()` puts it behind the real fetch
+guard. Nothing in `src/` uses it yet.
+
+**Keys.** None (the next PR adds the test-only `TEST_STAND_IN_FEDIVERSE`).
+
+**Tests.** Unit `standInMastodon` (new, 19). `npm run check`: 63 files, 979 tests passed; UI built.
+
+### Follow-ups
+- A2 part 2 wires it into the dev server; A3 and A4 add the acting endpoints and a slow switch.
+
 ## A1 acting core, part 6: npm run revoke-links and its runbook — 2026-10-27
 
 - Branch / PR: claude/tender-keller-7s064x-revoke → PR, stacked on the tables PR (#72)
