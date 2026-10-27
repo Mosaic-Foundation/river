@@ -42,7 +42,44 @@ which can merge without this one. The build plan's A1 row
 
 ## Space actions B1.3: the reference verifier — 2026-10-27
 
+## Space actions B1.4: signed test vectors and the conformance suite — 2026-10-27
+
 - Branch / PR: claude/practical-curie-3emib5 → PR (merged)
+- Migrations: none
+
+**What it does.** Fourth PR of B1 (spec section 8). `tests/conformance/space-actions/vectors.json`
+holds six test DIDs (logs and published key seeds, tests only, on reserved `.example` hosts), the
+stand-in space's manifest, a fixed clock and 38 cases: a valid request per verb (and withdraw),
+the edges that still pass (59 s either way, a 300 s lifetime, a DID on a subdomain of a
+`did_hosts` entry, the same `ref` and act again), and one per refusal a request alone can
+trigger, steps 1 to 9. Steps 1 to 6 are marked "no DID request". The dot boundary appears twice:
+13 `hosts` cases (`civic.social` covers `civic.social` and `floyd.civic.social`, never
+`evilcivic.social` or `civic.social.example.com`, plus ports, case, dots and wildcards) for every
+host list, and signed requests from DIDs at `floyd.id.test.example` (accepted),
+`evilid.test.example` and `id.test.example.evil.example` (refused before any request).
+`generate.ts` builds the file deterministically (`npx tsx scripts/space-actions-vectors.ts`);
+`suite.ts` runs it against any `send` function and checks hosts against any matcher.
+`space-actions-1.md` 3.3 now says unknown claims are refused, as the verifier and a vector do.
+
+**Keys.** None.
+
+**Tests.** Unit `spaceActionsConformance` (new, 7: the file equals its builder; a valid case per
+verb, read from the signed acts; the four `civic.social` cases; the reference verifier passes
+every case and every host case; the suite catches a text-suffix host check and a space that
+trusts `test.example`). `npm run check`: 58 files, 926 tests passed; UI built.
+
+### Follow-ups
+- B5: the vectors are signed for the stand-in's audience, endpoint and targets at a fixed clock,
+  and their DID logs live at `id.test.example`, so a real space can't pass them as they are. A
+  runner for a real endpoint (`npm run conformance:space-actions -- --endpoint`, spec 8) needs
+  the builder to take the space's origin, audience, endpoint, targets and clock and re-sign
+  (the keys are published), and a way for that space to read the test logs. Deferred to B5.
+- `valid-repeat-same-ref` can't tell a stored answer from a recomputed one when ids come from
+  the `ref`; "records one action" (check 4) is proven in `spaceActionsVerify`.
+
+## Space actions B1.3: the reference verifier — 2026-10-27
+
+- Branch / PR: claude/practical-curie-3emib5 → #75 (merged)
 - Migrations: none
 
 **What it does.** Third PR of B1. `src/shared/spaceActions/verify.ts` is section 4 as a pure
