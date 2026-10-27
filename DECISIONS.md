@@ -395,6 +395,27 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — Your activity in A1: read only, at /activity, sent acts only (A1)
+- Decision: "Your activity" is a page at `/activity` (the Following page's layout), linked from
+  the profile menu (after Following) and the phone's You tab. `GET /api/activity` (members only,
+  50 a page, newest first by `sent_at`, a keyset cursor) lists every act but unsent previews. It
+  never returns the stored request (it can hold text the member later deleted, and the page needs
+  only what was done, where, how it went and a link) and turns only https URLs into links. Each
+  entry is a verb ("Boosted"), who or where ("as @ana@example.social", "at Demosville"), the
+  item it answered, the time, how it went in words that name the other side, and View ↗. Undo
+  comes with the sending PRs (A3, A4, B3). The You tab's Sign out everywhere note now says
+  "Then check Your activity for anything you didn't send", and the profile menu carries "After Sign
+  out everywhere, check Your activity for anything you didn't send" under its items (ADR-010 §10).
+  A failed act shows the other side's own words when there are some, else "Didn't go to {host}"
+  with its code; the sending PRs store the spec's message for each code. Until the acting tables
+  exist the list is empty (a catalog check, as for the session epoch).
+- Why: ADR-010 §7 places it in the profile menu and the You tab and A1 asks for it read only; the
+  rest of its shape wasn't specified.
+- Alternatives: a dialog from the menu, like My information (a year of rows needs paging and its own
+  address to be linked from "Sign out everywhere"); showing the request body (the preview already
+  showed it, and deletes erase it anyway).
+- Thread / PR: A1 activity PR
+
 ## 2026-10-27 — An act in flight reads "unknown"; limits count acts by when they were sent (A1)
 - Decision (`src/river/acting/acts.ts`, `limits.ts`):
   - Send and a toggle claim the act in one short transaction: a row lock on the account

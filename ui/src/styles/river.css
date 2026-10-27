@@ -1840,3 +1840,13 @@ a.button {
     height: var(--size-external-mark-phone);
   }
 }
+
+/* ADR-010 §10: the reminder under a member's Sign out everywhere. */
+.profile-note {
+  margin: 0;
+  padding: var(--space-sm);
+  border-top: var(--border-width) solid var(--color-border);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  max-width: var(--layout-panel);
+}

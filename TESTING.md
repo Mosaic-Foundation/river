@@ -64,6 +64,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A1 Your activity: unit `actingActivity`, `ui/activity` (new); API db `activity`
+  (new; calls the dev server and writes acts as river_app, finding the account by DID as postgres);
+  e2e `activity` (new; seeds acts as the local stack's postgres) and `profile` (menu items).
 - 2026-10-27, A1 limits: unit `actingLimits` (new); API db `actingLimits` (new; as river_app:
   limits by kind with backdated rows, a race for the last allowance on two connections, preview
   expiry and single send, the session epoch after Sign out everywhere, inactive links). Unit 737.
