@@ -1,7 +1,7 @@
 // Drives the stand-in fediverse server inside the running dev server (TEST_ROUTES=1 and
 // TEST_STAND_IN_FEDIVERSE=1; src/river/acting/fediverse/testRoutes.ts). Its answers are SYNTHETIC
 // (tests/support/standInMastodon/).
-import type { StandInRequest, StandInRule } from "../../support/standInMastodon/index.js";
+import type { StandInApp, StandInRequest, StandInRule } from "../../support/standInMastodon/index.js";
 import { API } from "./member.js";
 
 const BASE = `${API}/test/stand-in-fediverse`;
@@ -37,6 +37,9 @@ export const standIn = {
   },
   async requests(): Promise<StandInRequest[]> {
     return (await (await ok(await fetch(`${BASE}/requests`))).json()) as StandInRequest[];
+  },
+  async apps(): Promise<StandInApp[]> {
+    return (await (await ok(await fetch(`${BASE}/apps`))).json()) as StandInApp[];
   },
   async tokens(): Promise<string[]> {
     return (await (await ok(await fetch(`${BASE}/tokens`))).json()) as string[];

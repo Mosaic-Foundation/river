@@ -23,6 +23,7 @@ export interface StandInHarness {
   readonly requests: unknown[];
   readonly rules: unknown[];
   readonly tokens: Map<string, unknown>;
+  readonly apps: Map<string, unknown>;
   reset(): void;
   revokeAll(): void;
 }

@@ -38,7 +38,9 @@ export type LinkErrorCode =
   | "unsupported_software"
   | "unsupported_version"
   | "unreachable"
-  | "busy";
+  | "busy"
+  | "registration_refused"
+  | "too_many_links";
 
 export class LinkError extends Error {
   constructor(
