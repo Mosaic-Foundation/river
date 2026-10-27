@@ -69,6 +69,12 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A2 start: API db `fediverseLink` (moved from `tests/api/`, since it now forgets the
+  stand-in hosts' app registrations as postgres before each test and reads stored bytes; new:
+  `POST /api/linked-accounts/fediverse/start`: the authorize URL, the state cookie, one
+  registration per server, GoToSocial's scopes, refusals, 429 and redirect on registration, the
+  three-account limit). Stand-in rules in API tests carry no Retry-After (the dev server's guard
+  would keep refusing that host).
 - 2026-10-27, A2 discovery: unit `fediverseLinkServer` (new: handles and profile URLs, WebFinger,
   NodeInfo, discovery, instance, the refusals), `env` (`TEST_STAND_IN_FEDIVERSE` refused on Vercel
   and in production); API `fediverseLink` (new: `POST /api/linked-accounts/fediverse/check`

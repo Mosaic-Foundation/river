@@ -395,6 +395,30 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — App registration and the start of a link (A2)
+- Decision (`src/river/acting/fediverse/apps.ts`, `link.ts`; `POST /api/linked-accounts/fediverse/start`):
+  - `POST /api/v1/apps` is form-encoded with `redirect_uris[]`, `scopes` space-separated and
+    `website` set to `RIVER_PUBLIC_ORIGIN`. It refuses redirects (`redirect: "error"`) like every
+    credential-carrying request: it carries none, but its answer is the client secret.
+  - A stored registration is reused while its redirect URI, scopes and software still match and
+    its secret opens; otherwise a new app is registered and replaces the row. Two members racing
+    to register on one server: the first row stored wins (`ON CONFLICT DO NOTHING`), and the
+    loser's app stays unused on the server, holding no one's authorization.
+  - A 429 on registration reads "{host} is busy; try again in a few minutes." (ADR-011 item 2);
+    any other refusal "{host} didn't let the River register. Try again later." (502).
+  - The start finds the server again from the input; nothing the browser kept from the check is
+    trusted. The attempt stores the handle as typed (`requested`), the actor's host, `return_to`
+    `/linked-accounts`, and the PKCE verifier (32 random bytes, base64url) sealed with purpose
+    `pkce_verifier` to the attempt's own row. The state is 32 random bytes, base64url.
+  - The state cookie is `__Host-river-link`, signed with its own purpose (`link-state`), 10 minutes,
+    like the sign-in cookie. One per browser: a second link started in another tab replaces it,
+    and the first tab's callback is then refused.
+  - Three active fediverse links per member (item 1.1); linking one of them again is always
+    allowed (409 "You've linked 3 accounts, the most the River allows. Unlink one to link
+    another.").
+- Why: items 1.4 and 1.5 give the requests, not these details.
+- Thread / PR: A2 start PR
+
 ## 2026-10-27 — Finding the server before linking, and the stand-in in the dev server (A2)
 - Decision (`src/river/acting/fediverse/server.ts`, `guard.ts`, `routes.ts`):
   - The box takes `@name@domain` (or `acct:`) or a profile URL whose path names the account
