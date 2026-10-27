@@ -157,4 +157,93 @@ describe("river.daily_job", () => {
       expect(still).toBe(1);
     });
   });
+
+  it("purges acting rows: stale previews, day-old attempts, idle credentials, year-old actions (ADR-010)", async () => {
+    await rolledBack(async (db) => {
+      const at = (await db.query<{ at: Date }>("SELECT now() AS at")).rows[0]!.at;
+      const account = (
+        await db.query<{ id: string }>("INSERT INTO river.accounts (instance_id) VALUES ($1) RETURNING id", [SEED_INSTANCE])
+      ).rows[0]!.id;
+      const sealed = "'\\x" + "ab".repeat(40) + "'::bytea, '\\x" + "cd".repeat(60) + "'::bytea, 1";
+      const link = (used: string, actor: string) =>
+        db
+          .query<{ id: string }>(
+            `INSERT INTO river.linked_accounts (instance_id, account_id, kind, server_host, actor_uri,
+                                                token_ciphertext, token_dek, token_key_version, created_at, last_used_at)
+             VALUES ($1, $2, 'fediverse', 'example.social', $3, ${sealed}, $4::timestamptz - interval '400 days', $4::timestamptz - ${used})
+             RETURNING id`,
+            [SEED_INSTANCE, account, actor, at],
+          )
+          .then((r) => r.rows[0]!.id);
+      const idle = await link("interval '181 days'", "https://example.social/users/idle");
+      const recent = await link("interval '179 days'", "https://example.social/users/recent");
+      const ended = (
+        await db.query<{ id: string }>(
+          `INSERT INTO river.linked_accounts (instance_id, account_id, kind, server_host, actor_uri, status, revoked_at)
+           VALUES ($1, $2, 'fediverse', 'example.social', 'https://example.social/users/old', 'unlinked', $3::timestamptz - interval '366 days')
+           RETURNING id`,
+          [SEED_INSTANCE, account, at],
+        )
+      ).rows[0]!.id;
+
+      const action = (status: string, age: string, verb = "post", kind = "text") =>
+        db
+          .query<{ id: string }>(
+            `INSERT INTO river.member_actions (instance_id, account_id, channel, linked_account_id, target_host, verb, limit_kind,
+                                               status, session_epoch, created_at)
+             VALUES ($1, $2, 'fediverse', $3, 'example.social', $4, $5, $6, 1, $7::timestamptz - ${age}) RETURNING id`,
+            [SEED_INSTANCE, account, recent, verb, kind, status, at],
+          )
+          .then((r) => r.rows[0]!.id);
+      const stalePreview = await action("previewed", "interval '16 minutes'");
+      const freshPreview = await action("previewed", "interval '14 minutes'");
+      const sentOld = await action("sent", "interval '366 days'");
+      const sentRecent = await action("sent", "interval '364 days'");
+      const undo = await action("sent", "interval '1 day'", "delete", "delete");
+      await db.query("UPDATE river.member_actions SET undoes_id = $1 WHERE id = $2", [sentOld, undo]);
+
+      const attempt = (age: string) =>
+        db
+          .query<{ id: string }>(
+            `INSERT INTO river.acting_attempts (instance_id, account_id, state, purpose, server_host, created_at)
+             VALUES ($1, $2, $3, 'fediverse_link', 'example.social', $4::timestamptz - ${age}) RETURNING id`,
+            [SEED_INSTANCE, account, randomUUID().replaceAll("-", ""), at],
+          )
+          .then((r) => r.rows[0]!.id);
+      const staleAttempt = await attempt("interval '25 hours'");
+      const freshAttempt = await attempt("interval '23 hours'");
+
+      const summary = (await db.query<{ r: Record<string, number> }>("SELECT river.daily_job($1) AS r", [at])).rows[0]!.r;
+      expect(summary.deleted_previews).toBeGreaterThanOrEqual(1);
+      expect(summary.deleted_acting_attempts).toBeGreaterThanOrEqual(1);
+      expect(summary.lapsed_links).toBeGreaterThanOrEqual(1);
+      expect(summary.deleted_member_actions).toBeGreaterThanOrEqual(1);
+      expect(summary.deleted_linked_accounts).toBeGreaterThanOrEqual(1);
+
+      const actions = (
+        await db.query<{ id: string; undoes_id: string | null }>("SELECT id, undoes_id FROM river.member_actions WHERE account_id = $1", [account])
+      ).rows;
+      expect(actions.map((a) => a.id).sort()).toEqual([freshPreview, sentRecent, undo].sort());
+      // The undo outlives the year-old act it undid, pointing at nothing.
+      expect(actions.find((a) => a.id === undo)!.undoes_id).toBeNull();
+      expect(actions.map((a) => a.id)).not.toContain(stalePreview);
+
+      const attempts = (await db.query<{ id: string }>("SELECT id FROM river.acting_attempts WHERE account_id = $1", [account])).rows;
+      expect(attempts.map((a) => a.id)).toEqual([freshAttempt]);
+      expect(attempts.map((a) => a.id)).not.toContain(staleAttempt);
+
+      const links = (
+        await db.query<{ id: string; status: string; has_token: boolean; revoked_at: Date | null }>(
+          `SELECT id, status, token_ciphertext IS NOT NULL AS has_token, revoked_at
+             FROM river.linked_accounts WHERE account_id = $1 ORDER BY actor_uri`,
+          [account],
+        )
+      ).rows;
+      expect(links).toEqual([
+        { id: idle, status: "lapsed", has_token: false, revoked_at: at },
+        { id: recent, status: "active", has_token: true, revoked_at: null },
+      ]);
+      expect(links.map((l) => l.id)).not.toContain(ended);
+    });
+  });
 });

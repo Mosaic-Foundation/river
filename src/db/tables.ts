@@ -21,6 +21,12 @@ export const RIVER_TABLES = {
   // the callback reads one back through river.consume_auth_attempt().
   login_methods: "account",
   auth_attempts: "instance",
+  // Acting for members (ADR-010, migration 20261027120000_acting_tables.sql). Credentials in these
+  // rows are sealed (src/river/acting/crypto/); river_app never rewrites whose row it is.
+  oauth_clients: "instance",
+  linked_accounts: "account",
+  acting_attempts: "account",
+  member_actions: "account",
 } as const;
 
 export type RiverTable = keyof typeof RIVER_TABLES;
