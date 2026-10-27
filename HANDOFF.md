@@ -50,6 +50,33 @@ key is left, until `--include-unreadable`). `npm run check`: 55 files, 798 tests
 ### Follow-ups
 - B2 adds Mosaic ID's revoke-every-grant step to the runbook (step 4).
 
+## A1 acting core, part 4: limits under an account row lock — 2026-10-27
+
+- Branch / PR: claude/tender-keller-7s064x-limits → PR, stacked on the tables PR (merge after it;
+  needs-adam with it, as the acting permissions)
+- Migrations: none (uses `20261027120000_acting_tables.sql`)
+
+**What it does.** `src/river/acting/acts.ts` writes every act's row before anything is sent:
+`createPreview()` stores a text act's exact request at the session's epoch; `claimPreview()` (Send)
+and `startToggle()` take a row lock on the account, check the epoch, the preview (unsent, under 15
+minutes) and the link (still active, marked used), count ADR-010 §9's limits, mark the row
+`unknown` with `sent_at` and commit, all before any outbound request; `finishAct()` records the
+outcome (the other side's message cut to 300 characters). `limits.ts` has the table and the
+rolling-window count. Nothing calls them yet: A3 and B3 send.
+
+**Keys.** None.
+
+**Tests.** Unit `actingLimits` (new: the table, each verb's kind). API db `actingLimits` (new:
+the 31st post in an hour refused with its retry time, previews not counted; the daily, follow,
+delete and toggle limits; two racing sends for the last allowance send one; a preview sent once
+and its outcome recorded once; a 16-minute-old preview refused; after Sign out everywhere the old
+session can't preview, send or toggle and the old preview can't be sent from a new session (check
+16's database half); another member's preview and an unlinked account refused). `npm run check`:
+54 files, 737 tests passed; UI built.
+
+### Follow-ups
+- A3: rate-limit the preview route in memory (DECISIONS, this date).
+
 ## A1 acting core, part 3: the acting tables and the daily job's purges — 2026-10-27
 
 - Branch / PR: claude/tender-keller-7s064x-tables → PR (needs-adam: replaces `river.daily_job`, the

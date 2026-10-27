@@ -423,6 +423,26 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   would stay valid).
 - Thread / PR: A1 revoke-links PR
 
+## 2026-10-27 — An act in flight reads "unknown"; limits count acts by when they were sent (A1)
+- Decision (`src/river/acting/acts.ts`, `limits.ts`):
+  - Send and a toggle claim the act in one short transaction: a row lock on the account
+    (`SELECT … FOR UPDATE`), the session epoch (the cookie's, the account's and, for Send, the
+    preview's must all agree), the preview unsent and under 15 minutes old, the link active, then
+    ADR-010 §9's counts; the row is set to `unknown` with `sent_at` and committed before any
+    outbound request. The outcome then replaces `unknown`. A function that dies mid-request leaves
+    `unknown`, which is what the member should be told.
+  - Every row but a preview counts toward the limits, `failed` ones included (each reached for the
+    other side, and counting them keeps a broken server from inviting a retry loop), by `sent_at`
+    in each rolling window. The answer to an act over a limit carries when it may go: the moment the
+    max-th most recent act leaves the window.
+  - Previews themselves aren't limited here; A3's preview route adds an in-memory limit like the
+    River's other costly requests.
+- Why: ADR-010 §9 says "counts the account's rows … writes the new row and commits" without
+  saying which rows or what state the row holds while the other side answers.
+- Alternatives: a `sending` status (one more state for the list to explain, and a dead function
+  would leave it forever); counting only `sent` and `held` (failures would be free to repeat).
+- Thread / PR: A1 limits PR
+
 ## 2026-10-27 — The acting tables' details (A1)
 - Decision (migration `20261027120000_acting_tables.sql`):
   - `linked_accounts.status` gains `lapsed` beside `active`, `revoked` and `unlinked`: the daily job
