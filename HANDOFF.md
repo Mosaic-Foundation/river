@@ -20,6 +20,36 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A1 acting core, part 6: npm run revoke-links and its runbook — 2026-10-27
+
+- Branch / PR: claude/tender-keller-7s064x-revoke → PR, stacked on the tables PR (#72)
+  (needs-adam: an outbound request, `POST /oauth/revoke` to members' servers per ADR-011 item 6,
+  and a change to the fetch guard)
+- Migrations: none
+
+**What it does.** `npm run revoke-links` (`scripts/revoke-links.ts`, `src/river/acting/revoke.ts`)
+is for after the database and `RIVER_TOKEN_KEY` may have leaked. It is a dry run unless given
+`--apply`. With `--apply` it revokes every active fediverse link at its server and deletes the
+token whatever the server answered, deletes grant tokens, then deletes the app registrations, all
+for what the given key opens (the runbook rotates first and runs it with the leaked key;
+`--include-unreadable` deletes the rest). It reports servers and counts only. The fetch guard gains `redirect: "error"` for requests that carry
+a credential (`redirect_refused`; nothing reaches the redirect's target). `docs/deploy.md` has the
+runbook and `RIVER_TOKEN_KEY`'s row (Production only), and CLAUDE.md's Commands list the script.
+
+**Keys.** `.env.revoke` (gitignored, Adam's machine): `DATABASE_URL`, `DATABASE_CA_CERT`,
+`RIVER_TOKEN_KEY`.
+
+**Tests.** Unit `fetchGuard` (new case: `redirect: "error"` refuses 301 to 308 and sends nothing
+on). API db `revokeLinks` (new, on the second instance: a dry run changes nothing; `--apply`
+revokes at the server with exactly the token and app credentials, form-encoded; a 503 and a 307
+count as not confirmed and a stand-in redirect target receives nothing (fails if the option is
+removed); every credential and app registration is deleted and the rows stay revoked; the report
+holds no secret; after a rotation, what the old key sealed is revoked and a link made with the new
+key is left, until `--include-unreadable`). `npm run check`: 55 files, 798 tests passed; UI built.
+
+### Follow-ups
+- B2 adds Mosaic ID's revoke-every-grant step to the runbook (step 4).
+
 ## A1 acting core, part 5: Your activity (read only) — 2026-10-27
 
 - Branch / PR: claude/tender-keller-7s064x-activity → PR, stacked on the limits PR (merge after

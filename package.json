@@ -24,6 +24,7 @@
     "test:live": "vitest run --config vitest.live.config.ts",
     "record-fixtures": "tsx scripts/record-fixtures.ts",
     "recover-dids": "tsx --env-file-if-exists=.env.recover scripts/recover-dids.ts",
+    "revoke-links": "tsx --env-file-if-exists=.env.revoke scripts/revoke-links.ts",
     "check": "npm run lint && npm run typecheck && npm run test:unit && npm run lint --prefix ui && npm run build --prefix ui"
   },
   "dependencies": {

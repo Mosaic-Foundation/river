@@ -395,6 +395,34 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — revoke-links: a dry run first, redirects refused per request, app registrations deleted (A1)
+- Decision (`npm run revoke-links`, `src/river/acting/revoke.ts`; runbook in `docs/deploy.md`):
+  - It is a dry run unless given `--apply`. The dry run opens each credential with the
+    `RIVER_TOKEN_KEY` it was given, so Adam can see the key is the right one before anything
+    changes. `--instance` limits it to one instance.
+  - It acts only on credentials (and app registrations) that open with the key it is given. The
+    runbook rotates the key first and then runs it with the leaked one, so nothing sealed in
+    between survives under the leaked key, and links made after the rotation are left alone.
+    `--include-unreadable` also deletes what doesn't open, for when the key itself is in doubt.
+  - With `--apply`, every active fediverse link is revoked at its server
+    (`POST /oauth/revoke` with the app's `client_id` and `client_secret`), then its token is deleted
+    and the link reads `revoked` whatever the server said. Grant tokens are deleted (Mosaic ID's
+    revoke-every-grant step is B2's). Then every app registration whose secret opens is deleted,
+    because that secret leaked with the key. It walks instances, then accounts (`forInstance()`), then each
+    account's links (`forAccount()`), so it needs no new database function.
+  - ADR-011 item 6 asks for credential-carrying requests with "redirects off (`maxRedirects: 0`)".
+    The guard gains a per-request `redirect: "error"` instead: any 3xx is the failure
+    `redirect_refused` and nothing goes to its target. A 307 or 308 would otherwise re-send the
+    body, token included, to another host. A second guard with `maxRedirects: 0` would also work,
+    but it would keep its own per-host limits and `Retry-After` state apart from the River's.
+    A2 and A3 use the same option.
+  - The report names servers and counts, never a token, secret, account or handle.
+- Why: ADR-010 §5 names the script and the runbook but not these details.
+- Alternatives: a SECURITY DEFINER function to list every link across accounts (a new path around
+  row security for one rare script); leaving app registrations in place (their leaked secrets
+  would stay valid).
+- Thread / PR: A1 revoke-links PR
+
 ## 2026-10-27 — Your activity in A1: read only, at /activity, sent acts only (A1)
 - Decision: "Your activity" is a page at `/activity` (the Following page's layout), linked from
   the profile menu (after Following) and the phone's You tab. `GET /api/activity` (members only,

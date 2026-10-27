@@ -40,6 +40,8 @@ carry between the two.
 - `npm run test:live`: `@live` tests against real hubs and fediverse accounts (on demand, never in `ci`)
 - `npm run recover-dids`: re-key DIDs with the offline recovery key (Adam's machine only; key from
   a file outside the repo or a prompt, never the repo or an env var)
+- `npm run revoke-links`: revoke and delete every credential the River holds for members (Adam's
+  machine only; dry run unless `--apply`; runbook in `docs/deploy.md`)
 
 Use npm 12 for installs and lockfile changes (`npx -y npm@12.2.0 install`). npm 10 fails to
 resolve vitest 4's peer dependencies. Commit both `package-lock.json` and `ui/package-lock.json`.

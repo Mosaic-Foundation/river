@@ -196,6 +196,20 @@ describe("requests", () => {
     expect(await res.json()).toEqual({ ok: true });
   });
 
+  it("with redirect: error, refuses any 3xx and sends nothing to its target (credential-carrying requests)", async () => {
+    for (const status of [301, 302, 303, 307, 308]) {
+      const spy = spyAgent();
+      spy.mock.get("https://public.example").intercept({ path: "/oauth/revoke", method: "POST" }).reply(status, "", {
+        headers: { location: "https://other.example/steal" },
+      });
+      const err = await refusal(
+        guardWith(spy).fetch("https://public.example/oauth/revoke", { method: "POST", body: "token=secret", redirect: "error" }),
+      );
+      expect(err.code, String(status)).toBe("redirect_refused");
+      expect(spy.calls, String(status)).toEqual(["POST https://public.example/oauth/revoke"]);
+    }
+  });
+
   it("follows up to 3 redirects, each checked, and refuses a 4th", async () => {
     const spy = spyAgent();
     const origin = spy.mock.get("https://public.example");

@@ -64,6 +64,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A1 revoke-links: unit `fetchGuard` (`redirect: "error"`); API db `revokeLinks` (new;
+  as river_app on the second instance, servers stood in by MockAgent behind the real guard).
+
 - 2026-10-27, A1 Your activity: unit `actingActivity`, `ui/activity` (new); API db `activity`
   (new; calls the dev server and writes acts as river_app, finding the account by DID as postgres);
   e2e `activity` (new; seeds acts as the local stack's postgres) and `profile` (menu items).
