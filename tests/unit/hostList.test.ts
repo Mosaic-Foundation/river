@@ -41,6 +41,8 @@ describe("hostMatches", () => {
     ["[::1]:3001", "[::1]:3001", "IPv6 literals"],
     ["999.1.1.1", "999.1.1.1", "not an IPv4 address"],
     ["-civic.social", "civic.social", "a label starting with a hyphen"],
+    ["\u212Aey.civic.social", "civic.social", "a non-ASCII letter that lowercases to ASCII"],
+    ["floyd.civic.social", "civic.soci\u0430l", "a non-ASCII entry"],
   ])("%s is not covered by %s (%s)", (host, entry) => {
     expect(hostMatches(host, entry)).toBe(false);
   });
@@ -81,10 +83,10 @@ describe("httpsUrlHostInList", () => {
 
 describe("parseHostList", () => {
   it("lowercases and keeps valid entries", () => {
-    expect(parseHostList("X", [" Civic.Social ", "localhost:3001"])).toEqual(["civic.social", "localhost:3001"]);
+    expect(parseHostList("X", [" Civic.Social ", "localhost:3001", "localhost"])).toEqual(["civic.social", "localhost:3001", "localhost"]);
     expect(isHostEntry("civic.social")).toBe(true);
   });
-  it.each(["*.civic.social", ".civic.social", "civic.social.", "https://civic.social", "civic.social/x", ""])(
+  it.each(["*.civic.social", ".civic.social", "civic.social.", "https://civic.social", "civic.social/x", "", "civic.social:443", "social"])(
     "throws on %j, naming it",
     (entry) => {
       expect(() => parseHostList("SPACE_ACTION_HOSTS", [entry])).toThrow(/SPACE_ACTION_HOSTS/);

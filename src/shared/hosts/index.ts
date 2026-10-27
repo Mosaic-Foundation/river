@@ -27,6 +27,9 @@ interface ParsedHost {
 
 function parseHost(value: unknown): ParsedHost | undefined {
   if (typeof value !== "string" || value.length === 0 || value.length > 259) return undefined;
+  // ASCII only, checked before lowercasing: toLowerCase() maps some non-ASCII letters (the Kelvin
+  // sign) to ASCII ones. A URL's host is already punycode.
+  if (!/^[\x21-\x7e]+$/.test(value)) return undefined;
   const lower = value.toLowerCase();
   const colon = lower.indexOf(":");
   const hostname = colon === -1 ? lower : lower.slice(0, colon);
@@ -81,12 +84,20 @@ export function httpsUrlHostInList(url: unknown, list: readonly string[]): strin
 /**
  * A configured host list, lowercased, for a variable read at startup. Throws, naming the entry,
  * when an entry isn't a plain host: a mistyped list must stop the app, not quietly match nothing.
+ * Stricter than isHostEntry() on two mistakes a list in an environment variable can make: `:443`
+ * (a URL's host never carries it, so the entry would match nothing) and a single label other than
+ * `localhost` (`social` would cover every host under it).
  */
 export function parseHostList(name: string, entries: readonly string[]): string[] {
   return entries.map((entry) => {
     const trimmed = entry.trim();
-    if (!isHostEntry(trimmed)) {
+    const parsed = parseHost(trimmed);
+    if (!parsed) {
       throw new Error(`${name}: "${trimmed}" is not a host (hostname[:port], no wildcard, no leading or trailing dot)`);
+    }
+    if (parsed.port === "443") throw new Error(`${name}: "${trimmed}" names port 443, which https hosts never carry`);
+    if (parsed.labels.length === 1 && parsed.labels[0] !== "localhost") {
+      throw new Error(`${name}: "${trimmed}" is a single label, which would cover every host under it`);
     }
     return trimmed.toLowerCase();
   });
