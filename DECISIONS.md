@@ -395,6 +395,23 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — The linked accounts list and unlinking (A2)
+- Decision (`GET /api/linked-accounts`, `POST /api/linked-accounts/:id/unlink`;
+  `src/river/acting/fediverse/accounts.ts`):
+  - The list shows a member's fediverse links that are `active`, `revoked` (the server refused
+    the token: "Link it again") or `lapsed` (180 idle days), oldest first, with handle, server,
+    name, avatar, software, granted scopes and dates. `unlinked` rows stay in the table for Your
+    activity but aren't listed. Mosaic ID grants join the list in B2.
+  - Unlinking is a POST (Origin-checked) rather than a DELETE, because the row is kept. It opens the
+    token, revokes it at the server with the app's credentials (redirects refused), then clears
+    the ciphertext and marks the row `unlinked`. No database transaction is held while the
+    server answers. `revokedThere` is true only for a 200. A link already `revoked` or `lapsed`
+    holds no token, so it is marked `unlinked` without a request.
+  - Another member's id, an unknown id or one already unlinked answers 404, and nothing changes.
+- Why: item 1.7 and ADR-010 §6 give the order (revoke, then delete whatever the answer); the
+  rest wasn't specified.
+- Thread / PR: A2 unlink PR
+
 ## 2026-10-27 — The link callback (A2)
 - Decision (`GET /api/auth/fediverse/callback`; `src/river/acting/fediverse/link.ts`, `oauth.ts`):
   - It always answers a 303 to `/linked-accounts?link={result}` at once, with `Cache-Control:

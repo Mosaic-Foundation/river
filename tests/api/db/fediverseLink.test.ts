@@ -486,3 +486,107 @@ describe("GET /auth/fediverse/callback", () => {
     expect(result).toMatchObject({ status: 303, location: "/linked-accounts?link=signed_out", referrerPolicy: "no-referrer" });
   });
 });
+
+function list(who: Member | null): Promise<Response> {
+  return fetch(`${API}/linked-accounts`, { headers: who ? { cookie: who.cookie } : {} });
+}
+
+function unlink(id: string, who: Member = member): Promise<Response> {
+  return fetch(`${API}/linked-accounts/${id}/unlink`, { method: "POST", headers: { origin: who.origin, cookie: who.cookie } });
+}
+
+describe("Linked accounts: the list and unlinking", () => {
+  it("lists the member's links without any credential (check 17)", async () => {
+    const who = await logs.signIn();
+    await link("@ana@mastodon.stand-in.example", "ana", { who });
+    await link("@bob@gts.stand-in.example", "bob", { who });
+    const res = await list(who);
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    for (const token of await standIn.tokens()) expect(text.includes(token)).toBe(false);
+    for (const app of await standIn.apps()) expect(text.includes(app.clientSecret)).toBe(false);
+    const body = JSON.parse(text) as { accounts: Array<Record<string, unknown>> };
+    expect(body.accounts).toHaveLength(2);
+    expect(body.accounts[0]).toMatchObject({
+      handle: "@ana@mastodon.stand-in.example",
+      server: "mastodon.stand-in.example",
+      displayName: "Ana (stand-in)",
+      software: "Mastodon",
+      status: "active",
+      lastUsedAt: null,
+    });
+    expect(body.accounts[0]?.scopes).toEqual(MASTODON_SCOPES.split(" "));
+    expect(Object.keys(body.accounts[0] ?? {}).sort()).toEqual(
+      ["avatarUrl", "displayName", "handle", "id", "lastUsedAt", "linkedAt", "scopes", "server", "software", "status"].sort(),
+    );
+    // Another member sees none of them.
+    expect(((await (await list(member)).json()) as { accounts: unknown[] }).accounts.some((a) => (a as { id: string }).id === body.accounts[0]?.id)).toBe(false);
+    expect((await list(null)).status).toBe(401);
+  });
+
+  it("unlink revokes at the server with the token and app credentials, then deletes the token (check 14)", async () => {
+    const who = await logs.signIn();
+    await link("@ana@mastodon.stand-in.example", "ana", { who });
+    const [row] = await linkedRows(who);
+    const [token] = await standIn.tokens();
+    const res = await unlink(row?.id ?? "", who);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ handle: "@ana@mastodon.stand-in.example", server: "mastodon.stand-in.example", revokedThere: true });
+    const revoke = (await standIn.requests()).find((r) => r.path === "/oauth/revoke");
+    const form = new URLSearchParams(revoke?.body);
+    expect(form.get("token")).toBe(token);
+    expect(form.get("client_id")).toBe((await standIn.apps())[0]?.clientId);
+    expect(form.get("client_secret")).toBe((await standIn.apps())[0]?.clientSecret);
+    const [after] = await linkedRows(who);
+    expect(after).toMatchObject({ id: row?.id, status: "unlinked", token_ciphertext: null });
+    expect(((await (await list(who)).json()) as { accounts: unknown[] }).accounts).toEqual([]);
+    // Unlinking again finds nothing.
+    expect((await unlink(row?.id ?? "", who)).status).toBe(404);
+  });
+
+  it("with the server down, the token is still deleted and the answer says so (check 14)", async () => {
+    const who = await logs.signIn();
+    await link("@ana@mastodon.stand-in.example", "ana", { who });
+    const [row] = await linkedRows(who);
+    await standIn.rules([{ path: "/oauth/revoke", answer: "down" }]);
+    const res = await unlink(row?.id ?? "", who);
+    expect(((await res.json()) as { revokedThere: boolean }).revokedThere).toBe(false);
+    expect((await linkedRows(who))[0]).toMatchObject({ status: "unlinked", token_ciphertext: null });
+  });
+
+  it("a redirect on the revoke is refused and reaches nothing (check 13)", async () => {
+    const who = await logs.signIn();
+    await link("@bob@gts.stand-in.example", "bob", { who });
+    const [row] = await linkedRows(who);
+    await standIn.rules([{ path: "/oauth/revoke", answer: "redirect" }]);
+    expect(((await (await unlink(row?.id ?? "", who)).json()) as { revokedThere: boolean }).revokedThere).toBe(false);
+    expect((await standIn.requests()).filter((r) => r.host === "elsewhere.stand-in.example")).toHaveLength(0);
+    expect((await linkedRows(who))[0]?.status).toBe("unlinked");
+  });
+
+  it("can't unlink another member's account, and needs the River's Origin", async () => {
+    const who = await logs.signIn();
+    await link("@ana@mastodon.stand-in.example", "ana", { who });
+    const [row] = await linkedRows(who);
+    expect((await unlink(row?.id ?? "", member)).status).toBe(404);
+    expect((await unlink("not-a-uuid", who)).status).toBe(404);
+    const noOrigin = await fetch(`${API}/linked-accounts/${row?.id}/unlink`, { method: "POST", headers: { cookie: who.cookie } });
+    expect(noOrigin.status).toBe(403);
+    expect((await linkedRows(who))[0]?.status).toBe("active");
+    expect((await standIn.requests()).some((r) => r.path === "/oauth/revoke")).toBe(false);
+  });
+
+  it("a link the server already revoked is listed as such and unlinks without a request", async () => {
+    const who = await logs.signIn();
+    await link("@ana@mastodon.stand-in.example", "ana", { who });
+    const [row] = await linkedRows(who);
+    await admin.query(
+      "UPDATE river.linked_accounts SET status = 'revoked', token_ciphertext = NULL, token_dek = NULL, token_key_version = NULL, revoked_at = now() WHERE id = $1",
+      [row?.id],
+    );
+    const listed = (await (await list(who)).json()) as { accounts: Array<{ status: string }> };
+    expect(listed.accounts[0]?.status).toBe("revoked");
+    expect(((await (await unlink(row?.id ?? "", who)).json()) as { revokedThere: boolean }).revokedThere).toBe(false);
+    expect((await standIn.requests()).some((r) => r.path === "/oauth/revoke")).toBe(false);
+  });
+});
