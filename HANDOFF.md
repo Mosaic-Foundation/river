@@ -41,6 +41,7 @@ choice, npm, moving its tests and vectors. One finding: `identity/api/index.ts` 
 - A small PR giving the identity side its own `createApp` and a test that nothing under
   `src/river/` is reachable from `identity/api/index.ts` (proposed in section 1.1).
 - The space-actions package needs an ADR from Adam first.
+
 ## A2 linking, part 1: the stand-in Mastodon and GoToSocial server — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5 → PR (merges on green: test code only)
