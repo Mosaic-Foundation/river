@@ -64,6 +64,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A1 limits: unit `actingLimits` (new); API db `actingLimits` (new; as river_app:
+  limits by kind with backdated rows, a race for the last allowance on two connections, preview
+  expiry and single send, the session epoch after Sign out everywhere, inactive links). Unit 737.
 - 2026-10-27, A1 acting tables: API db `actingTables` (new; as river_app: member and instance
   isolation, cross-member foreign keys, column grants, credential and limit-kind CHECKs, preview
   discard, attempts consumed once); API db `dailyJob` (the acting purges, as postgres, rolled back).
