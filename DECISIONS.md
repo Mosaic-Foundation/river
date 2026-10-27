@@ -16,6 +16,21 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-10-27 — "One daily job" now that Mosaic ID has its own (identity move, part 1)
+- Question: spec 4.5 says "One daily job ... deleting `auth_attempts` and `auth_requests`", and
+  CLAUDE.md's Database section says "Scheduled work is one `pg_cron` job defined in a migration".
+  Adam asked for Mosaic ID's upkeep to move into its own function and pg_cron job, so it can leave
+  this database.
+- Reading used: one job per schema: `river-daily` (04:17 UTC) and `identity-daily` (04:23 UTC),
+  each SQL only, defined in a migration, with no network calls.
+- Proposed change: spec 4.5: "One daily job per schema, `pg_cron` on Supabase (SQL in a
+  migration): the River's at 04:17 UTC (retention, Ended follows, `auth_attempts` older than an
+  hour, acting purges, re-stamping samples); Mosaic ID's at 04:23 UTC (`auth_requests` a day after
+  expiry, addresses unverified after 24 hours)." CLAUDE.md, Database: "Scheduled work is one
+  `pg_cron` job per schema (`river-daily`, `identity-daily`), each defined in a migration, SQL
+  only, with no network calls (spec 4.5)." CLAUDE.md is Adam's to edit.
+- Thread / PR: claude/trusting-carson-y03109 (#81)
+
 ### 2026-10-26 — Posting and hub changes in Phase 2 (acting for members)
 - Question: `river-v1.md` section 5 keeps "Posting, replying, liking or boosting from the River",
   "A River ActivityPub actor…" and "any Civic Hub change" out of scope; Adam's Phase 2 design
