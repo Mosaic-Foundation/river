@@ -25,7 +25,10 @@ export function readManifestActions(manifest: unknown, manifestUrl: string): Man
     return undefined;
   }
   if (origin.protocol !== "https:") return undefined;
-  if (!isHttpsIri(block.endpoint) || new URL(block.endpoint).host !== origin.host) return undefined;
+  // The endpoint is `htu` exactly, so it carries no fragment.
+  if (!isHttpsIri(block.endpoint) || block.endpoint.includes("#") || new URL(block.endpoint).host !== origin.host) {
+    return undefined;
+  }
 
   // `audience` is the space's id when it has one, else its origin.
   const spaceId = object(object(manifest)?.space)?.id;

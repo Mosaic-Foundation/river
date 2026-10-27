@@ -40,7 +40,10 @@ function fail(reason: string): ActCheck {
   return { ok: false, reason };
 }
 
-/** An absolute https IRI with no credentials and no fragment, at most 2,048 characters. */
+/**
+ * An absolute https IRI with no credentials, at most 2,048 characters. A fragment is allowed: a
+ * space's ids (a withdraw's target) may carry one, as AS2 ids often do.
+ */
 export function isHttpsIri(value: unknown): value is string {
   if (typeof value !== "string" || value.length === 0 || value.length > MAX_IRI_LENGTH) return false;
   let url: URL;
@@ -49,7 +52,7 @@ export function isHttpsIri(value: unknown): value is string {
   } catch {
     return false;
   }
-  return url.protocol === "https:" && url.username === "" && url.password === "" && !value.includes("#");
+  return url.protocol === "https:" && url.username === "" && url.password === "";
 }
 
 /** Length in characters (code points), as `max_length` counts them. */

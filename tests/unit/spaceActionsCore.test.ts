@@ -24,6 +24,7 @@ describe("checkAct", () => {
     { verb: "comment", target: TARGET, ref: REF, content: "x < y, and 2 > 1" },
     { verb: "comment", target: TARGET, ref: REF, content: "é".repeat(5000) },
     { verb: "support", target: TARGET, ref: REF },
+    { verb: "withdraw", target: `${TARGET}#cmt_552`, ref: REF, withdraws: "comment" },
     { verb: "rsvp", target: TARGET, ref: REF, answer: "maybe" },
     { verb: "poll_answer", target: TARGET, ref: REF, choices: ["a"] },
     { verb: "poll_answer", target: TARGET, ref: REF, choices: ["a", "b_2"] },
@@ -43,7 +44,6 @@ describe("checkAct", () => {
     ["an uppercase ref", { verb: "support", target: TARGET, ref: REF.toUpperCase() }],
     ["a ref that isn't a UUID", { verb: "support", target: TARGET, ref: "abc" }],
     ["an http target", { verb: "support", target: "http://demosville.civic.social/x", ref: REF }],
-    ["a target with a fragment", { verb: "support", target: `${TARGET}#c1`, ref: REF }],
     ["a target with credentials", { verb: "support", target: "https://u:p@demosville.civic.social/x", ref: REF }],
     ["empty content", { verb: "comment", target: TARGET, ref: REF, content: "  \n " }],
     ["content over 5,000", { verb: "comment", target: TARGET, ref: REF, content: "a".repeat(5001) }],
@@ -109,6 +109,7 @@ describe("readManifestActions", () => {
     ["an endpoint on another host", { endpoint: "https://evil.example/actions" }],
     ["an endpoint on a subdomain", { endpoint: "https://x.demosville.civic.social/actions" }],
     ["an http endpoint", { endpoint: "http://demosville.civic.social/actions" }],
+    ["an endpoint with a fragment", { endpoint: "https://demosville.civic.social/actions#x" }],
     ["the wrong audience", { audience: "did:web:other.civic.social" }],
   ])("ignores a block with %s", (_label, change) => {
     expect(readManifestActions(manifest(change), URL)).toBeUndefined();
@@ -165,10 +166,35 @@ describe("the JWS builder", () => {
 });
 
 describe("refusal codes", () => {
-  it("has every code of 3.5 with its status, and stores only final ones", () => {
-    expect(Object.keys(REFUSALS)).toHaveLength(21);
-    expect(REFUSALS.expired).toBe(401);
-    expect(REFUSALS.too_long).toBe(413);
-    for (const code of FINAL_REFUSALS) expect(["not_member", "rate_limited", "expired"]).not.toContain(code);
+  it("has every code of 3.5 with its status", () => {
+    expect(REFUSALS).toEqual({
+      malformed: 400,
+      invalid_action: 400,
+      bad_type: 401,
+      untrusted_did: 401,
+      wrong_audience: 401,
+      expired: 401,
+      bad_signature: 401,
+      not_member: 403,
+      not_eligible: 403,
+      assurance_required: 403,
+      blocked: 403,
+      unknown_target: 404,
+      replayed: 409,
+      ref_conflict: 409,
+      closed: 410,
+      too_long: 413,
+      not_accepted: 422,
+      not_withdrawable: 422,
+      rate_limited: 429,
+      did_unavailable: 503,
+      unavailable: 503,
+    });
+  });
+
+  it("stores exactly the final refusals of 3.6", () => {
+    expect([...FINAL_REFUSALS].sort()).toEqual(
+      ["blocked", "closed", "not_accepted", "not_eligible", "not_withdrawable", "too_long", "unknown_target"],
+    );
   });
 });
