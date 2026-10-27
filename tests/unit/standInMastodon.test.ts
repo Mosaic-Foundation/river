@@ -280,3 +280,70 @@ describe("behind the fetch guard", () => {
     await expect(guard().fetch("https://mastodon.social/api/v2/instance")).rejects.toMatchObject({ code: "unresolvable_host" });
   });
 });
+
+describe("statuses and search (A3)", () => {
+  function json(answer: { body: string }) {
+    return JSON.parse(answer.body) as Record<string, unknown>;
+  }
+
+  it("search resolves an https URI to one local status, the same one each time, and finds nothing under /missing", () => {
+    const { token } = link(MASTODON_HOST, MASTODON_SCOPES);
+    const auth = { authorization: `Bearer ${token}` };
+    const q = encodeURIComponent("https://remote.example/users/a/statuses/1");
+    const first = json(get(MASTODON_HOST, `/api/v2/search?q=${q}&resolve=true&type=statuses&limit=1`, auth));
+    const again = json(get(MASTODON_HOST, `/api/v2/search?q=${q}&resolve=true&type=statuses&limit=1`, auth));
+    expect((first.statuses as Array<{ id: string }>)[0]?.id).toBe((again.statuses as Array<{ id: string }>)[0]?.id);
+    const missing = json(get(MASTODON_HOST, `/api/v2/search?q=${encodeURIComponent("https://remote.example/missing/1")}&resolve=true&type=statuses&limit=1`, auth));
+    expect(missing.statuses).toEqual([]);
+  });
+
+  it("posts, keeps an Idempotency-Key for an hour on Mastodon, and counts a link as 23", () => {
+    const { token } = link(MASTODON_HOST, MASTODON_SCOPES);
+    const headers = { authorization: `Bearer ${token}`, "idempotency-key": "k1" };
+    const a = post(MASTODON_HOST, "/api/v1/statuses", { status: "Hello", visibility: "unlisted" }, headers);
+    const b = post(MASTODON_HOST, "/api/v1/statuses", { status: "Hello", visibility: "unlisted" }, headers);
+    expect(a.status).toBe(200);
+    expect(json(a).id).toBe(json(b).id);
+    expect(server.posted()).toHaveLength(1);
+    server.now = () => Date.now() + 61 * 60_000;
+    post(MASTODON_HOST, "/api/v1/statuses", { status: "Hello" }, headers);
+    expect(server.posted()).toHaveLength(2);
+
+    const url = `https://example.com/${"x".repeat(200)}`;
+    expect(post(MASTODON_HOST, "/api/v1/statuses", { status: `${"a".repeat(470)} ${url}` }, { authorization: `Bearer ${token}` }).status).toBe(200);
+    expect(post(MASTODON_HOST, "/api/v1/statuses", { status: "a".repeat(501) }, { authorization: `Bearer ${token}` }).status).toBe(422);
+  });
+
+  it("GoToSocial ignores the Idempotency-Key and counts plain characters up to 5,000", () => {
+    const { token } = link(GTS_HOST, GTS_SCOPES, "bob");
+    const headers = { authorization: `Bearer ${token}`, "idempotency-key": "k1" };
+    post(GTS_HOST, "/api/v1/statuses", { status: "Hi" }, headers);
+    post(GTS_HOST, "/api/v1/statuses", { status: "Hi" }, headers);
+    expect(server.posted()).toHaveLength(2);
+    expect(post(GTS_HOST, "/api/v1/statuses", { status: "a".repeat(5000) }, headers).status).toBe(200);
+    expect(post(GTS_HOST, "/api/v1/statuses", { status: "a".repeat(5001) }, headers).status).toBe(422);
+  });
+
+  it("needs write:statuses, a known reply target and a non-empty text", () => {
+    const { token } = link(MASTODON_HOST, "profile read:search");
+    expect(post(MASTODON_HOST, "/api/v1/statuses", { status: "Hi" }, { authorization: `Bearer ${token}` }).status).toBe(403);
+    const writer = link(MASTODON_HOST, MASTODON_SCOPES).token;
+    const auth = { authorization: `Bearer ${writer}` };
+    expect(post(MASTODON_HOST, "/api/v1/statuses", { status: "Hi", in_reply_to_id: "404" }, auth).status).toBe(404);
+    expect(post(MASTODON_HOST, "/api/v1/statuses", { status: " " }, auth).status).toBe(422);
+  });
+
+  it("a slow answer comes after the guard has given up, though the post was made", async () => {
+    const { token } = link(MASTODON_HOST, MASTODON_SCOPES);
+    server.rules.push({ path: "/api/v1/statuses", answer: "slow" });
+    const guard = createFetchGuard({ ...server.guardOptions(), timeoutMs: 200 });
+    await expect(
+      guard.fetch(`https://${MASTODON_HOST}/api/v1/statuses`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/x-www-form-urlencoded" },
+        body: "status=Hi",
+      }),
+    ).rejects.toMatchObject({ code: "timeout" });
+    expect(server.posted()).toHaveLength(1);
+  });
+});
