@@ -395,6 +395,21 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — Settings → Linked accounts is a page (A2)
+- Decision: Settings is a dialog (the light/dark switch), too small for a form, a list and an
+  explainer. Linked accounts is a page at `/linked-accounts` (the Following page's layout). For
+  members, the Settings dialog has a "Linked accounts" section linking to it, and the phone's You
+  tab has the link too. The page has three steps: type and Check; read the explainer (item 1.3,
+  word for word) and "Continue to {server}"; approve on the server and come back with a notice.
+  The callback's result is read once from `?link=` and then removed from the address. Avatars
+  aren't shown: they would be the page's only image from a member's server, and the name and
+  handle say enough. Unlink asks for a confirmation in place, and when the server didn't confirm
+  it shows ADR-010 §6's "also remove it there" sentence. A link the server revoked (or one that
+  lapsed) shows its note with "Link it again", which puts the handle back in the box.
+- Why: fediverse-posting-1 item 1.1 says "Settings → Linked accounts", but the Settings dialog
+  has no room for this.
+- Thread / PR: A2 UI PR
+
 ## 2026-10-27 — The linked accounts list and unlinking (A2)
 - Decision (`GET /api/linked-accounts`, `POST /api/linked-accounts/:id/unlink`;
   `src/river/acting/fediverse/accounts.ts`):

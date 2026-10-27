@@ -20,6 +20,26 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A2 linking, part 6: Settings → Linked accounts — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-ui → PR (UI only, but stacked on parts 2 to 5, which
+  are needs-adam; merge after them)
+- Migrations: none
+
+**What it does.** `/linked-accounts` (`ui/src/LinkedAccounts.tsx`, words in
+`ui/src/lib/linkedAccounts.ts`) lists the member's linked accounts with what the River can do as
+each, Unlink with a confirmation, and "Link a fediverse account": Check, the item 1.3 explainer,
+"Continue to {server}", then back with a notice for the callback's result. The Settings dialog
+(members) and the phone's You tab link to it. A2 is complete with this PR.
+
+**Keys.** None.
+
+**Tests.** Unit `ui/linkedAccounts` (new, 4). e2e `linkedAccounts` (new, 5). `npm run check`: 65 files, 998 tests passed; UI built.
+
+### Follow-ups
+- A3 (posts and replies) needs the guard's `DELETE` first (its own needs-adam PR), then the composer.
+- A5's recordings replace nothing here; the stand-in stays for writes.
+
 ## A2 linking, part 5: the list and unlinking — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5-unlink → PR (needs-adam: `POST /oauth/revoke` to

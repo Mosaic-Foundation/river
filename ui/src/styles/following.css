@@ -880,3 +880,63 @@
 .activity-more {
   margin-top: var(--space-lg);
 }
+
+/* Settings → Linked accounts (fediverse-posting-1 item 1): the activity list's rows, a form below. */
+.linked-account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  border-bottom: var(--border-width) solid var(--color-border);
+  padding: var(--space-md) 0;
+  overflow-wrap: anywhere;
+}
+
+.linked-account p {
+  margin: 0;
+}
+
+.linked-account-handle {
+  color: var(--color-text-muted);
+}
+
+.linked-account-note {
+  color: var(--color-danger);
+}
+
+.linked-account-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-md);
+}
+
+.linked-accounts-main .panel {
+  margin-top: var(--space-lg);
+}
+
+.link-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.link-form label {
+  font-weight: var(--font-weight-bold);
+}
+
+.link-form-row {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.link-explainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.link-notice {
+  margin: 0 0 var(--space-lg);
+}
