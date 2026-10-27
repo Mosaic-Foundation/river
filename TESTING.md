@@ -67,6 +67,12 @@ Newest first: date, slice, tests added, counts.
 - 2026-10-27, A1 acting tables: API db `actingTables` (new; as river_app: member and instance
   isolation, cross-member foreign keys, column grants, credential and limit-kind CHECKs, preview
   discard, attempts consumed once); API db `dailyJob` (the acting purges, as postgres, rolled back).
+
+- 2026-10-27, A1 envelope: unit `riverCredentials` (new: the River's envelope copy round-trips
+  and refuses other keys, rows and flipped bytes; credentials bound to instance, account, row and
+  purpose, client secrets to instance and host; no plaintext in the stored bytes; key version and
+  input checks; `RIVER_TOKEN_KEY` read only on use). Unit 745.
+
 - 2026-10-27, space actions B1.1: unit `hostList` (new: host-list matching on a dot boundary,
   ports, wildcards, dots and non-ASCII refused, https URLs). Unit 787.
 
