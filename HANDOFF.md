@@ -20,6 +20,25 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A1 acting core, docs: the River copies the envelope module — 2026-10-27
+
+- Branch / PR: claude/tender-keller-7s064x → PR (needs-adam: changes ADR-010's wording)
+- Migrations: none
+
+**What it does.** Records Adam's change to A1: the River keeps its own copy of the envelope
+encryption (`src/river/acting/crypto/envelope.ts`, built in the next A1 PR) and Mosaic ID's
+`src/identity/keys/envelope.ts` stays untouched, since Mosaic ID is moving to its own repository.
+ADR-010 §5 and its Consequences say so; DECISIONS.md has the entry. The build plan's A1 row
+(2026-10-26 entry below) still says "move"; read it as "copy".
+
+**Keys.** None.
+
+**Tests.** None (docs only).
+
+### Follow-ups
+- The rest of A1 follows as separate PRs (envelope and `RIVER_TOKEN_KEY`; tables and the daily
+  job; limits; Your activity; `npm run revoke-links`).
+
 ## Phase 2 design: Adam's answers recorded — 2026-10-27
 
 - Branch / PR: claude/admiring-lamport-esckd6 (restarted from `main` after #66 merged) → PR
