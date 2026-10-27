@@ -70,6 +70,9 @@ Newest first: date, slice, tests added, counts.
   isolation, cross-member foreign keys, column grants, credential and limit-kind CHECKs, preview
   discard, attempts consumed once); API db `dailyJob` (the acting purges, as postgres, rolled back).
 
+- 2026-10-27, space actions B1.5: unit `standInSpace` (new: the stand-in space in
+  `tests/support/standInSpace/`, reached in-process through `handle(Request)`; the conformance
+  suite through it; its own rules and switches). Unit 951.
 - 2026-10-27, space actions B1.4: unit `spaceActionsConformance` (new: vectors.json against its
   builder, then the suite against the reference verifier; regenerate the file with
   `npx tsx scripts/space-actions-vectors.ts` after changing `generate.ts`). Unit 926.
