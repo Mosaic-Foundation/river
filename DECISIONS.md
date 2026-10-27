@@ -404,7 +404,10 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   entry is a verb ("Boosted"), who or where ("as @ana@example.social", "at Demosville"), the
   item it answered, the time, how it went in words that name the other side, and View ↗. Undo
   comes with the sending PRs (A3, A4, B3). The You tab's Sign out everywhere note now says
-  "Then check Your activity for anything you didn't send" (ADR-010 §10). Until the acting tables
+  "Then check Your activity for anything you didn't send", and the profile menu carries "After Sign
+  out everywhere, check Your activity for anything you didn't send" under its items (ADR-010 §10).
+  A failed act shows the other side's own words when there are some, else "Didn't go to {host}"
+  with its code; the sending PRs store the spec's message for each code. Until the acting tables
   exist the list is empty (a catalog check, as for the session epoch).
 - Why: ADR-010 §7 places it in the profile menu and the You tab and A1 asks for it read only; the
   rest of its shape wasn't specified.
