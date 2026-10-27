@@ -275,3 +275,214 @@ describe("POST /linked-accounts/fediverse/start", () => {
     expect(await standIn.requests()).toHaveLength(0);
   });
 });
+
+interface Callback {
+  status: number;
+  location: string;
+  referrerPolicy: string | null;
+  setCookies: string[];
+}
+
+/** Starts a link as `who`, approves on the stand-in as `username`, and follows the server's redirect to the River's callback. */
+async function link(
+  input: string,
+  username: string,
+  options: { who?: Member; deny?: boolean; cookie?: (linkCookie: string) => string | undefined } = {},
+): Promise<Callback & { authorizeUrl: string; callbackUrl: string; linkCookie: string }> {
+  const who = options.who ?? member;
+  const started = await start(input, who);
+  expect(started.status).toBe(200);
+  const { authorizeUrl } = (await started.json()) as { authorizeUrl: string };
+  const linkCookie = (started.headers.getSetCookie().find((c) => c.startsWith("__Host-river-link=")) ?? "").split(";")[0] ?? "";
+  const approved = await standIn.authorize(authorizeUrl, username, options.deny);
+  if (!approved.location) throw new Error(`stand-in refused: ${approved.error}`);
+  const back = new URL(approved.location);
+  const callbackUrl = `${API}/auth/fediverse/callback${back.search}`;
+  const cookieHeader = options.cookie ? options.cookie(linkCookie) : linkCookie;
+  const res = await callback(callbackUrl, who, cookieHeader);
+  return { ...res, authorizeUrl, callbackUrl, linkCookie };
+}
+
+async function callback(url: string, who: Member | null, linkCookie: string | undefined): Promise<Callback> {
+  const cookies = [who?.cookie, linkCookie].filter(Boolean).join("; ");
+  const res = await fetch(url, { redirect: "manual", headers: cookies ? { cookie: cookies } : {} });
+  return {
+    status: res.status,
+    location: res.headers.get("location") ?? "",
+    referrerPolicy: res.headers.get("referrer-policy"),
+    setCookies: res.headers.getSetCookie(),
+  };
+}
+
+interface LinkedRow {
+  id: string;
+  kind: string;
+  server_host: string;
+  actor_uri: string;
+  acct: string;
+  remote_account_id: string;
+  display_name: string;
+  avatar_url: string;
+  software: string;
+  scopes: string;
+  status: string;
+  default_visibility: string | null;
+  default_language: string | null;
+  token_ciphertext: Buffer | null;
+  linked_at: Date;
+}
+
+async function linkedRows(who: Member): Promise<LinkedRow[]> {
+  const { rows } = await admin.query<LinkedRow>("SELECT * FROM river.linked_accounts WHERE account_id = $1 ORDER BY created_at", [await accountOf(who)]);
+  return rows;
+}
+
+describe("GET /auth/fediverse/callback", () => {
+  it("links a Mastodon account and stores the token only as ciphertext (check 1)", async () => {
+    const who = await logs.signIn();
+    const result = await link("@ana@mastodon.stand-in.example", "ana", { who });
+    expect(result.status).toBe(303);
+    expect(result.location).toBe("/linked-accounts?link=linked");
+    expect(result.referrerPolicy).toBe("no-referrer");
+    expect(result.setCookies).toContain("__Host-river-link=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax");
+
+    const rows = await linkedRows(who);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "fediverse",
+      server_host: "mastodon.stand-in.example",
+      actor_uri: "https://mastodon.stand-in.example/users/ana",
+      acct: "ana@mastodon.stand-in.example",
+      remote_account_id: "109000000000000001",
+      display_name: "Ana (stand-in)",
+      avatar_url: "https://mastodon.stand-in.example/avatars/ana.png",
+      software: "mastodon",
+      scopes: MASTODON_SCOPES,
+      status: "active",
+      default_visibility: "unlisted",
+      default_language: "en",
+    });
+
+    const [token] = await standIn.tokens();
+    expect(token).toBeDefined();
+    const bytes = await admin.query<{ row: string }>("SELECT row_to_json(l)::text AS row FROM river.linked_accounts l WHERE id = $1", [rows[0]?.id]);
+    expect(bytes.rows[0]?.row.includes(token ?? "-")).toBe(false);
+    expect(rows[0]?.token_ciphertext?.includes(Buffer.from(token ?? "-"))).toBe(false);
+
+    // The exchange sent the code, the verifier, the client secret and the exact redirect URI; the
+    // account was read with the token. Nothing else carried it.
+    const requests = await standIn.requests();
+    const exchange = requests.find((r) => r.path === "/oauth/token");
+    const form = new URLSearchParams(exchange?.body);
+    expect(form.get("grant_type")).toBe("authorization_code");
+    expect(form.get("code_verifier")).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(form.get("redirect_uri")).toBe(`${member.origin}/api/auth/fediverse/callback`);
+    expect(form.get("client_secret")).toBe((await standIn.apps())[0]?.clientSecret);
+    const withToken = requests.filter((r) => r.headers.authorization !== undefined);
+    expect(withToken.map((r) => r.path)).toEqual(["/api/v1/accounts/verify_credentials"]);
+    expect(withToken[0]?.headers.authorization).toBe(`Bearer ${token}`);
+  });
+
+  it("links a GoToSocial account through WebFinger, with its own defaults (check 3)", async () => {
+    const who = await logs.signIn();
+    const result = await link("https://gts.stand-in.example/@bob", "bob", { who });
+    expect(result.location).toBe("/linked-accounts?link=linked");
+    const [row] = await linkedRows(who);
+    expect(row).toMatchObject({
+      actor_uri: "https://gts.stand-in.example/users/bob",
+      acct: "bob@gts.stand-in.example",
+      software: "gotosocial",
+      scopes: GTS_SCOPES,
+      display_name: "Bob <b>stand-in</b>",
+      default_visibility: "public",
+      default_language: null,
+    });
+  });
+
+  it("refuses a missing or different state cookie without spending the attempt (check 2)", async () => {
+    const who = await logs.signIn();
+    const missing = await link("@ana@mastodon.stand-in.example", "ana", { who, cookie: () => undefined });
+    expect(missing.location).toBe("/linked-accounts?link=expired");
+    expect(missing.setCookies).toEqual([]);
+    const forged = await callback(missing.callbackUrl, who, missing.linkCookie.replace(/=./, "=x"));
+    expect(forged.location).toBe("/linked-accounts?link=expired");
+    expect((await standIn.requests()).some((r) => r.path === "/oauth/token")).toBe(false);
+    // The right cookie still works: nothing was spent.
+    expect((await callback(missing.callbackUrl, who, missing.linkCookie)).location).toBe("/linked-accounts?link=linked");
+    expect(await linkedRows(who)).toHaveLength(1);
+  });
+
+  it("refuses a used attempt, and another member's (check 2)", async () => {
+    const who = await logs.signIn();
+    const first = await link("@ana@mastodon.stand-in.example", "ana", { who });
+    expect(first.location).toBe("/linked-accounts?link=linked");
+    expect((await callback(first.callbackUrl, who, first.linkCookie)).location).toBe("/linked-accounts?link=expired");
+    const thief = await logs.signIn();
+    const second = await link("@bob@mastodon.stand-in.example", "bob", { who: thief, cookie: () => undefined });
+    expect((await callback(second.callbackUrl, member, second.linkCookie)).location).toBe("/linked-accounts?link=expired");
+    expect((await standIn.requests()).filter((r) => r.path === "/oauth/token")).toHaveLength(1);
+  });
+
+  it("refuses an account other than the one typed, and revokes its token (check 2)", async () => {
+    const who = await logs.signIn();
+    const result = await link("@ana@mastodon.stand-in.example", "bob", { who });
+    expect(result.location).toBe("/linked-accounts?link=different_account");
+    expect(await linkedRows(who)).toHaveLength(0);
+    const [token] = await standIn.tokens();
+    const revoke = (await standIn.requests()).find((r) => r.path === "/oauth/revoke");
+    expect(new URLSearchParams(revoke?.body).get("token")).toBe(token);
+  });
+
+  it("a denial links nothing and exchanges nothing", async () => {
+    const who = await logs.signIn();
+    const result = await link("@ana@mastodon.stand-in.example", "ana", { who, deny: true });
+    expect(result.location).toBe("/linked-accounts?link=denied");
+    expect((await standIn.requests()).some((r) => r.path === "/oauth/token")).toBe(false);
+    expect(await linkedRows(who)).toHaveLength(0);
+  });
+
+  it("a redirect on the token exchange or verify_credentials fails and reaches nothing (check 13)", async () => {
+    const who = await logs.signIn();
+    await standIn.rules([{ path: "/oauth/token", answer: "redirect" }]);
+    expect((await link("@ana@mastodon.stand-in.example", "ana", { who })).location).toBe("/linked-accounts?link=failed");
+    await standIn.rules([{ path: "/api/v1/accounts/verify_credentials", answer: "redirect" }]);
+    expect((await link("@ana@mastodon.stand-in.example", "ana", { who })).location).toBe("/linked-accounts?link=failed");
+    const requests = await standIn.requests();
+    expect(requests.filter((r) => r.host === "elsewhere.stand-in.example")).toHaveLength(0);
+    // The token it got was revoked, since nothing will hold it.
+    expect(requests.filter((r) => r.path === "/oauth/revoke")).toHaveLength(1);
+    expect(await linkedRows(who)).toHaveLength(0);
+  });
+
+  it("linking the same account again reuses its row", async () => {
+    const who = await logs.signIn();
+    await link("@ana@mastodon.stand-in.example", "ana", { who });
+    const [before] = await linkedRows(who);
+    await admin.query(
+      "UPDATE river.linked_accounts SET status = 'unlinked', token_ciphertext = NULL, token_dek = NULL, token_key_version = NULL, revoked_at = now() WHERE id = $1",
+      [before?.id],
+    );
+    expect((await link("@ana@mastodon.stand-in.example", "ana", { who })).location).toBe("/linked-accounts?link=linked");
+    const after = await linkedRows(who);
+    expect(after).toHaveLength(1);
+    expect(after[0]).toMatchObject({ id: before?.id, status: "active" });
+  });
+
+  it("a server that forgot the app is forgotten too", async () => {
+    const who = await logs.signIn();
+    const started = await start("@ana@mastodon.stand-in.example", who);
+    const { authorizeUrl } = (await started.json()) as { authorizeUrl: string };
+    const linkCookie = (started.headers.getSetCookie()[0] ?? "").split(";")[0] ?? "";
+    const approved = await standIn.authorize(authorizeUrl, "ana");
+    await standIn.rules([{ path: "/oauth/token", answer: 401, message: "invalid_client" }]);
+    const res = await callback(`${API}/auth/fediverse/callback${new URL(approved.location ?? "").search}`, who, linkCookie);
+    expect(res.location).toBe("/linked-accounts?link=failed");
+    const { rows } = await admin.query("SELECT 1 FROM river.oauth_clients WHERE host = 'mastodon.stand-in.example'");
+    expect(rows).toHaveLength(0);
+  });
+
+  it("a visitor is sent to the page without anything being spent", async () => {
+    const result = await callback(`${API}/auth/fediverse/callback?state=x&code=y`, null, undefined);
+    expect(result).toMatchObject({ status: 303, location: "/linked-accounts?link=signed_out", referrerPolicy: "no-referrer" });
+  });
+});
