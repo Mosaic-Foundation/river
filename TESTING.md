@@ -64,17 +64,13 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
-<<<<<<< HEAD
 - 2026-10-27, identity move part 4: unit `health` (`/health/db` 503 without a database),
   `workflows` (keep-alive has no checkout, token or secret); API `health` (new; both dev servers'
   `/health/db` answer 200, no-store).
-
-=======
 - 2026-10-27, A2 stand-in fediverse server: unit `standInMastodon` (new: the SYNTHETIC
   Mastodon and GoToSocial stand-in in `tests/support/standInMastodon/`, through `handle()` and
   behind the real fetch guard; discovery per host, apps, PKCE, tokens, scopes, revocation, rules,
   a refused redirect reaching nothing). Unit 979.
->>>>>>> origin/main
 - 2026-10-27, A1 revoke-links: unit `fetchGuard` (`redirect: "error"`); API db `revokeLinks` (new;
   as river_app on the second instance, servers stood in by MockAgent behind the real guard).
 
