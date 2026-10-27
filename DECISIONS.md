@@ -395,6 +395,36 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — The link callback (A2)
+- Decision (`GET /api/auth/fediverse/callback`; `src/river/acting/fediverse/link.ts`, `oauth.ts`):
+  - It always answers a 303 to `/linked-accounts?link={result}` at once, with `Cache-Control:
+    no-store` and `Referrer-Policy: no-referrer`, never a page of its own. Results: `linked`,
+    `denied`, `expired`, `different_account`, `too_many`, `busy`, `unreachable`, `failed`,
+    `signed_out`; the Linked accounts page words them (A2 part 6). Refusals log the result name only.
+  - The state in the query must equal the signed cookie's before the attempt is touched, so a
+    request without the cookie (or with another tab's) spends nothing; the right one still works.
+    The attempt is then consumed with one `UPDATE … WHERE used_at IS NULL AND created_at > now() -
+    10 minutes RETURNING`, under the member's own row security (another member's state finds
+    nothing). The cookie is cleared only when its own attempt was the one tried.
+  - A visitor (no session, or one ended by Sign out everywhere) is sent to the page with
+    `signed_out` and nothing is spent or exchanged.
+  - Matching the account: the token's `acct` must be the named account's name (or `name@domain`),
+    and its actor must be on the server the attempt went to: Mastodon's `uri`, or WebFinger on the
+    named handle when there's no `uri` (the GoToSocial stand-in has none). Otherwise the token is
+    revoked at once and nothing is stored.
+  - What is stored: `acct` is the handle as named, without the `@` (`ana@example.social`, not the
+    server's local `ana`); the display name as text (the page escapes it); the avatar only if
+    https; the scopes the token answer granted; `source.privacy` if it is public, unlisted or
+    private, and `source.language` if it looks like a language tag.
+  - Linking an account again (same actor) reuses its row, so Your activity keeps pointing at it.
+    The account's row lock is taken first, so two callbacks can't both take the third place.
+  - The token exchange, verify_credentials and revoke all refuse redirects. A refused redirect
+    counts as a refusal (`failed`), not as `unreachable`. Any token obtained but not stored is
+    revoked. An `invalid_client` from the token endpoint deletes the stored app registration, so
+    the next link registers again.
+- Why: item 1.6 gives the steps, not these details.
+- Thread / PR: A2 callback PR
+
 ## 2026-10-27 — App registration and the start of a link (A2)
 - Decision (`src/river/acting/fediverse/apps.ts`, `link.ts`; `POST /api/linked-accounts/fediverse/start`):
   - `POST /api/v1/apps` is form-encoded with `redirect_uris[]`, `scopes` space-separated and
