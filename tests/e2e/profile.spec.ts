@@ -57,7 +57,7 @@ test.describe("item 1: the profile menu", () => {
     await button.click();
     await expect(button).toHaveAttribute("aria-expanded", "true");
     const menu = page.getByRole("menu", { name: "Your profile and settings" });
-    await expect(menu.getByRole("menuitem")).toHaveText(["My information", "Following", "Settings", "Sign out", "Sign out everywhere"]);
+    await expect(menu.getByRole("menuitem")).toHaveText(["My information", "Following", "Your activity", "Settings", "Sign out", "Sign out everywhere"]);
     // The bar itself has no Following link any more (ui-revisions-11 item 1): Follow and the menu go there.
     await expect(bar.getByRole("link", { name: "Following", exact: true })).toHaveCount(0);
     await expect(menu.getByRole("menuitem", { name: "My information" })).toBeFocused();
@@ -79,14 +79,14 @@ test.describe("item 1: the profile menu", () => {
     await expect(bar.getByRole("link", { name: "Sign in" })).toBeVisible({ timeout: 30_000 });
   });
 
-  test("the Following page has the same menu: My information, Following, Settings, Sign out", async ({ page }) => {
+  test("the Following page has the same menu: My information, Following, Your activity, Settings, Sign out", async ({ page }) => {
     const did = await signUp(page, "profile-following");
     await page.goto("/following?mode=civic");
     await expect(page.getByRole("heading", { level: 1, name: "Following" })).toBeVisible({ timeout: 30_000 });
     const button = page.locator(".topbar").getByRole("button", { name: "Your profile and settings" });
     await button.click();
     const menu = page.getByRole("menu", { name: "Your profile and settings" });
-    await expect(menu.getByRole("menuitem")).toHaveText(["My information", "Following", "Settings", "Sign out", "Sign out everywhere"]);
+    await expect(menu.getByRole("menuitem")).toHaveText(["My information", "Following", "Your activity", "Settings", "Sign out", "Sign out everywhere"]);
     await expect(menu.getByRole("menuitem", { name: "Following" })).toHaveAttribute("href", "/following?mode=civic");
     await menu.getByRole("menuitem", { name: "My information" }).click();
     await expect(page.getByTestId("my-did")).toHaveText(did);

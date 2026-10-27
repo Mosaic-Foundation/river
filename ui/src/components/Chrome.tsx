@@ -63,6 +63,8 @@ export interface HeaderProps {
   onMode: (mode: string) => void;
   /** The Following page, keeping the mode (the profile menu's Following item; Follow goes there too). */
   followingHref: string;
+  /** Your activity, keeping the mode. */
+  activityHref: string;
   searchOpen: boolean;
   onToggleSearch: () => void;
   onFollow: (trigger: HTMLButtonElement) => void;
@@ -74,7 +76,7 @@ export interface HeaderProps {
   title?: string | null;
 }
 
-export function Header({ modes, mode, onMode, followingHref, searchOpen, onToggleSearch, onFollow, viewer, onSignOut, title }: HeaderProps) {
+export function Header({ modes, mode, onMode, followingHref, activityHref, searchOpen, onToggleSearch, onFollow, viewer, onSignOut, title }: HeaderProps) {
   const switchShown = showModeSwitch(modes);
   return (
     <header className={["topbar", switchShown ? "topbar-modes" : "", title ? "topbar-titled" : ""].filter(Boolean).join(" ")}>
@@ -114,7 +116,7 @@ export function Header({ modes, mode, onMode, followingHref, searchOpen, onToggl
           <span className="follow-label">Follow</span>
         </button>
         {/* Who is signed in, their DID and Settings live in this menu, not the bar (ui-revisions-9). */}
-        {viewer !== undefined && <ProfileMenu viewer={viewer} onSignOut={onSignOut} followingHref={followingHref} />}
+        {viewer !== undefined && <ProfileMenu viewer={viewer} onSignOut={onSignOut} followingHref={followingHref} activityHref={activityHref} />}
       </div>
     </header>
   );
@@ -149,8 +151,20 @@ export function TabBar({ active, onChange }: { active: Tab; onChange: (tab: Tab)
   );
 }
 
-/** The You tab (phone): sign up or sign in, or who is signed in, Sign out and Sign out everywhere (spec F2, F3, F10). */
-export function YouPanel({ viewer, onSignOut }: { viewer: Viewer | null | undefined; onSignOut: (everywhere?: boolean) => void }) {
+/**
+ * The You tab (phone): sign up or sign in, or who is signed in, Your activity (ADR-010 §7), Sign out
+ * and Sign out everywhere (spec F2, F3, F10).
+ */
+export function YouPanel({
+  viewer,
+  onSignOut,
+  activityHref = "/activity",
+}: {
+  viewer: Viewer | null | undefined;
+  onSignOut: (everywhere?: boolean) => void;
+  /** Your activity (ADR-010 §7), keeping the mode. */
+  activityHref?: string;
+}) {
   if (viewer === undefined) return null;
   if (viewer === null) {
     return (
@@ -176,6 +190,9 @@ export function YouPanel({ viewer, onSignOut }: { viewer: Viewer | null | undefi
       <p>Signed in as</p>
       <p className="account-id">{viewerLabel(viewer)}</p>
       <p className="card-muted">What you mark read is saved to your account.</p>
+      <p>
+        <a href={activityHref}>Your activity</a>: everything the River has sent in your name.
+      </p>
       <p className="account-actions">
         <button type="button" className="button button-secondary" onClick={() => onSignOut()}>
           Sign out
@@ -184,7 +201,10 @@ export function YouPanel({ viewer, onSignOut }: { viewer: Viewer | null | undefi
           Sign out everywhere
         </button>
       </p>
-      <p className="card-muted">Sign out everywhere ends your sessions on every device, this one included.</p>
+      <p className="card-muted">
+        Sign out everywhere ends your sessions on every device, this one included. Then check{" "}
+        <a href={activityHref}>Your activity</a> for anything you didn't send.
+      </p>
     </>
   );
 }

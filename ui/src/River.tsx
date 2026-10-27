@@ -525,6 +525,7 @@ export function River() {
         mode={chosenMode}
         onMode={changeMode}
         followingHref={withMode("/following", linkMode)}
+        activityHref={withMode("/activity", linkMode)}
         searchOpen={searchOpen}
         onToggleSearch={() => setSearchOpen((open) => !open)}
         onFollow={(trigger) => {
@@ -658,7 +659,7 @@ export function River() {
         {tab === "you" && (
           <section className="tab-placeholder phone-only" aria-labelledby="tab-title">
             <h1 id="tab-title">You</h1>
-            <YouPanel viewer={viewer} onSignOut={endSession} />
+            <YouPanel viewer={viewer} onSignOut={endSession} activityHref={withMode("/activity", linkMode)} />
           </section>
         )}
         {(tab === "following" || tab === "circles") && (

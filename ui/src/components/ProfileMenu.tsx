@@ -1,6 +1,6 @@
 // The profile menu (docs/spec/ui-revisions-9.md item 1): a round button at the right of the top
 // bar, a member's initials or a person icon, opening a menu of My information and Following
-// (members), Settings, Sign out and Sign out everywhere (or Sign in for a visitor). My information explains DIDs and shows the member's;
+// (members), Your activity (members, ADR-010 §7), Settings, Sign out and Sign out everywhere (or Sign in for a visitor). My information explains DIDs and shows the member's;
 // Settings holds the light/dark switch (item 2). Keyboard and screen readers as the circles menu:
 // a menu button, arrow keys, Escape, a click outside, focus back on the button.
 import { useEffect, useId, useRef, useState } from "react";
@@ -84,12 +84,15 @@ export function ProfileMenu({
   viewer,
   onSignOut,
   followingHref = "/following",
+  activityHref = "/activity",
 }: {
   viewer: Viewer | null;
   /** `everywhere`: end every session of this account, on every device. */
   onSignOut: (everywhere?: boolean) => void;
   /** The Following page, keeping the mode (ui-revisions-11 item 1: the bar's link moved here). */
   followingHref?: string;
+  /** Your activity (ADR-010 §7), keeping the mode. */
+  activityHref?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -104,6 +107,7 @@ export function ProfileMenu({
       ? [
           { key: "info", label: "My information", action: "info" as const },
           { key: "following", label: "Following", href: followingHref },
+          { key: "activity", label: "Your activity", href: activityHref },
         ]
       : []),
     { key: "settings", label: "Settings", action: "settings" },
