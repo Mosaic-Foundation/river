@@ -395,6 +395,38 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — The acting tables' details (A1)
+- Decision (migration `20261027120000_acting_tables.sql`):
+  - `linked_accounts.status` gains `lapsed` beside `active`, `revoked` and `unlinked`: the daily job
+    deletes a credential unused for 180 days and marks it so, so the member's message can say why
+    ("unused for six months") rather than "stopped working". Only an active link holds a credential,
+    and `revoked_at` is when it was deleted for any reason (CHECK constraints). Ended links go a year
+    after that. Linking the same actor again reuses its row (its Your activity rows keep pointing at
+    it) and sets `linked_at`; the idle clock is `coalesce(last_used_at, linked_at)`, so a link made
+    again after a long break isn't lapsed the next night.
+  - `acting_attempts` has its own `id` (the credential's additional data needs a row id; `state`
+    stays UNIQUE), `requested` (the handle typed, checked at the callback, fediverse-posting-1 1.6)
+    and `return_to` (a River path only; a CHECK refuses `//host` and `/\host`). It is a member's
+    table: every linking, grant and step-up callback runs with the member's session.
+  - `member_actions` stores `limit_kind` (`text`, `toggle`, `follow`, `delete`), with a CHECK tying
+    it to the verb, so ADR-010 §9's counts are one indexed query. Verbs: `post`, `reply`, `comment`,
+    `poll_answer`; `boost`, `unboost`, `favourite`, `unfavourite`, `support`, `rsvp`, `withdraw`;
+    `follow`, `unfollow`; `delete`. It also keeps `target_label`, `subject_title` and `subject_url`
+    so Your activity reads without the item, which retention may delete.
+  - River_app may delete its own unsent previews (a RESTRICTIVE policy) and its own linked accounts
+    (a sign-in DID change deletes grants, ADR-010 §6); sent acts are deleted only by the daily job.
+    UPDATE is granted on outcome columns only: never whose row, what verb, where, when or the epoch.
+    A trigger keeps a sent act sent: once a row leaves `previewed` it can't return, and its
+    `sent_at` can't change (a CHECK ties `previewed` to an empty `sent_at`), so the preview delete
+    can't be used to remove a sent act.
+  - Foreign keys to a member's own link and own undone act are on `(account_id, id)` with
+    `ON DELETE SET NULL (column)`, so an act can't point at another member's rows and outlives what
+    it pointed at.
+- Why: fediverse-posting-1 item 8 and ADR-010 §6, §7 and §9 list the columns but not these.
+- Alternatives: computing the limit kind from the verb in every query; deleting idle links outright
+  (the member would lose the row Your activity names); one `status` for every way a link ends.
+- Thread / PR: A1 tables PR
+
 ## 2026-10-27 — A second answer where an entry isn't changeable is `not_accepted` (B1)
 - Decision: in the stand-in space (and as the reading for spaces), 2.2's `changeable` works so:
   where it is true (RSVPs by default), a later `rsvp` or `poll_answer` from the same DID on the
