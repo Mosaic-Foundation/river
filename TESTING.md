@@ -69,6 +69,11 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A2 callback: API db `fediverseLink` (new: the callback: Mastodon and GoToSocial
+  links with their stored fields and the token absent from the stored bytes, state cookie
+  refusals that spend nothing, used and other members' attempts, another account revoked,
+  denial, redirects refused on token-carrying requests reaching nothing, re-linking, a forgotten
+  app, a visitor). 23 tests.
 - 2026-10-27, A2 start: API db `fediverseLink` (moved from `tests/api/`, since it now forgets the
   stand-in hosts' app registrations as postgres before each test and reads stored bytes; new:
   `POST /api/linked-accounts/fediverse/start`: the authorize URL, the state cookie, one

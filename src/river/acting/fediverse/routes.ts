@@ -7,18 +7,22 @@
 //   POST /linked-accounts/fediverse/start  { input }  → { authorizeUrl }
 //        "Continue to {server}": registers the River there if needed (item 1.4), stores an attempt
 //        and sets the 10-minute state cookie; the page then sends the browser to authorizeUrl.
+//   GET  /auth/fediverse/callback?state=&code=   (or &error=)
+//        The server sends the browser back here (item 1.6). Always a 303 to
+//        /linked-accounts?link={result}, at once, with Referrer-Policy: no-referrer, so the code
+//        doesn't linger; the state cookie is cleared once its attempt is spent.
 //
 // Refusals answer 4xx or 502 with { error, message }, the message naming the server. Rate-limited
 // per account (429).
 import { Router, type Response } from "express";
 import { env } from "../../../config/env.js";
 import type { Viewer } from "../../accounts.js";
-import { LINK_STATE_COOKIE, STATE_MAX_AGE_S, cookieHeader, sign } from "../../auth/cookies.js";
+import { LINK_STATE_COOKIE, STATE_MAX_AGE_S, cookieHeader, readCookie, sign, unsign } from "../../auth/cookies.js";
 import { readSession, requireMember } from "../../auth/session.js";
 import { requireInstance, type Instance } from "../../instances.js";
-import { limitBy } from "../../rateLimit.js";
+import { limitBy, limitByIp } from "../../rateLimit.js";
 import { fediverseGuard } from "./guard.js";
-import { startLink } from "./link.js";
+import { finishLink, LINKED_ACCOUNTS_PATH, startLink, type LinkResult } from "./link.js";
 import { BAD_INPUT_MESSAGE, checkServer, findAccount, LinkError, softwareLabel } from "./server.js";
 
 /** HTTP status per refusal. */
@@ -98,6 +102,36 @@ export function fediverseLinkRoutes(): Router {
       }
     },
   );
+
+  router.get("/auth/fediverse/callback", limitByIp("callback"), requireInstance(), readSession(), async (req, res) => {
+    const done = (result: LinkResult | "signed_out", clearState: boolean) => {
+      res.status(303).set("Cache-Control", "no-store").set("Referrer-Policy", "no-referrer");
+      if (clearState) res.append("Set-Cookie", cookieHeader(LINK_STATE_COOKIE, "", 0));
+      res.location(`${LINKED_ACCOUNTS_PATH}?link=${result}`).end();
+    };
+    const viewer = res.locals.viewer as Viewer | undefined;
+    if (!viewer) {
+      done("signed_out", false);
+      return;
+    }
+    const cookieState = unsign(env.sessionSecret, "link-state", readCookie(req.get("cookie"), LINK_STATE_COOKIE));
+    // A mismatched cookie may belong to a link started in another tab: leave it.
+    const matches = typeof req.query.state === "string" && cookieState !== undefined && req.query.state === cookieState;
+    try {
+      const result = await finishLink(await fediverseGuard(), (res.locals.instance as Instance).id, viewer.accountId, {
+        state: req.query.state,
+        cookieState,
+        code: req.query.code,
+        error: req.query.error,
+      });
+      if (result !== "linked") console.warn(`Fediverse link refused: ${result}`);
+      done(result, matches);
+    } catch (err) {
+      // Logged by name only, never its message.
+      console.error(`Fediverse link failed: ${err instanceof Error ? err.name : "error"}`);
+      done("failed", matches);
+    }
+  });
 
   return router;
 }

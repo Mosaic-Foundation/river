@@ -144,6 +144,13 @@ export async function appFor(
   });
 }
 
+/** The instance's stored app on this server, opened, with its software; undefined if none opens. */
+export async function storedAppFor(instanceId: string, host: string): Promise<(AppCredentials & { software: string }) | undefined> {
+  const row = await storedApp(instanceId, host);
+  const app = row ? opened(instanceId, host, row) : undefined;
+  return app && row ? { ...app, software: row.software } : undefined;
+}
+
 /** Forgets the instance's app on this server (it answered `invalid_client`): the next link registers again. */
 export async function forgetApp(instanceId: string, host: string, clientId: string): Promise<void> {
   await forInstance(instanceId, (db) => db.query("DELETE FROM river.oauth_clients WHERE host = $1 AND client_id = $2", [host, clientId]));

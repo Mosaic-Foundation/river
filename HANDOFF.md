@@ -20,6 +20,28 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A2 linking, part 4: the callback stores the link — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-callback → PR (needs-adam: an auth flow that stores
+  members' tokens, and the token, verify_credentials and revoke requests). Stacked on part 3.
+- Migrations: none
+
+**What it does.** `GET /api/auth/fediverse/callback` checks the state against the
+`__Host-river-link` cookie, consumes the attempt, exchanges the code with the PKCE verifier and
+client secret, reads `verify_credentials`, checks the account is the one the member named
+(revoking the token if not), and stores the token sealed to the linked account's row with the
+account's handle, id, name, avatar, scopes and default visibility and language. It then
+redirects at once to `/linked-accounts?link={result}` with `Referrer-Policy: no-referrer`. Every
+credential-carrying request refuses redirects (`src/river/acting/fediverse/oauth.ts`).
+
+**Keys.** None.
+
+**Tests.** API db `fediverseLink` (23). `npm run check`: 64 files, 994 tests passed; UI built.
+
+### Follow-ups
+- Part 5: list and unlink. Part 6: the page at `/linked-accounts` (until then the callback lands on the 404 page).
+- `scripts/revoke-links` and `oauth.ts` each have a revoke request; fold them together when A3 touches either.
+
 ## A2 linking, part 3: app registration and the authorize URL — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5-start → PR (needs-adam: an auth flow, a new cookie,
