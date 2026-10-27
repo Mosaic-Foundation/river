@@ -44,6 +44,28 @@ and no identity function or job names river), `emailReservation` (calls `identit
 ### Follow-ups
 - Part 2 (separate migration histories) waits on Adam's review of its plan.
 
+## Identity move, part 3: what Mosaic ID shares with the River — 2026-10-27
+
+- Branch / PR: claude/trusting-carson-y03109-shared → PR
+- Migrations: none
+
+**What it does.** `docs/identity-shared-code.md` lists everything identity code imports from
+outside `src/identity/`. That is `src/shared/` (fetch guard, Vercel glue, `/health`, app names),
+plus `src/config/env.ts`, `src/db/*` and `src/app.ts`. For each it proposes copy, cut, split or
+drop. It names the contracts the two apps share without shared code (the sign-in note, DID logs,
+the authorize redirect). It also says what a space-actions package would take: an ADR, a license
+choice, npm, moving its tests and vectors. One finding: `identity/api/index.ts` goes through
+`src/app.ts`, so the mosaic-id function bundles all of `src/river/`.
+
+**Keys.** None.
+
+**Tests.** None (docs only). `npm run check`: see the PR.
+
+### Follow-ups
+- A small PR giving the identity side its own `createApp` and a test that nothing under
+  `src/river/` is reachable from `identity/api/index.ts` (proposed in section 1.1).
+- The space-actions package needs an ADR from Adam first.
+
 ## A2 linking, part 1: the stand-in Mastodon and GoToSocial server — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5 → PR (merges on green: test code only)
