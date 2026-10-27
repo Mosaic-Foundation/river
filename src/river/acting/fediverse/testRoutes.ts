@@ -10,6 +10,7 @@
 //   GET  /test/stand-in-fediverse/requests                   → every request it received
 //   GET  /test/stand-in-fediverse/tokens                     → the tokens it issued
 //   GET  /test/stand-in-fediverse/apps                       → the apps registered with it, secrets included
+//   GET  /test/stand-in-fediverse/statuses                   → the statuses posted through it
 import { Router } from "express";
 import { standInFediverse } from "./guard.js";
 
@@ -58,6 +59,10 @@ export function standInFediverseRoutes(): Router {
 
   router.get(`${base}/apps`, async (_req, res) => {
     res.set("Cache-Control", "no-store").json([...(await standInFediverse()).standIn.apps.values()]);
+  });
+
+  router.get(`${base}/statuses`, async (_req, res) => {
+    res.set("Cache-Control", "no-store").json((await standInFediverse()).standIn.posted());
   });
 
   return router;
