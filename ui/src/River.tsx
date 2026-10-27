@@ -27,6 +27,8 @@ import { TAB_PLACEHOLDERS, type Tab } from "./lib/tabs";
 import { FeedCard } from "./components/FeedCard";
 import { FilterButton, FilterSheet, FilterSidebar, SearchField, type FilterState } from "./components/Filters";
 import { CLEARED, toggleCircle } from "./lib/filters";
+import { Composer } from "./components/Composer";
+import { loadLinkedAccounts } from "./lib/linkedAccounts";
 import { InfoDialog } from "./components/InfoDialog";
 import { NotFound } from "./components/NotFound";
 import { CirclesPanel } from "./components/CirclesPanel";
@@ -180,6 +182,8 @@ export function River() {
   const [searchOpen, setSearchOpen] = useState(() => filtersFromUrl().q !== "");
   const [sampleTrigger, setSampleTrigger] = useState<HTMLElement | null>(null);
   const [followTrigger, setFollowTrigger] = useState<HTMLElement | null>(null);
+  // The composer (fediverse-posting-1 item 3): what opened it, and the item a reply answers.
+  const [compose, setCompose] = useState<{ trigger: HTMLElement; replyTo: string | null; key: number } | null>(null);
   // The reader view (ui-revisions-1 item 1): the item in the address bar, and where the feed was.
   const [readerId, setReaderId] = useState<string | null>(() => itemIdFromPath(window.location.pathname));
   const [fetchedItem, setFetchedItem] = useState<{ id: string; state: ReaderState } | null>(null);
@@ -189,6 +193,19 @@ export function River() {
   const browserReads = useBrowserReadState();
   const serverReads = useServerReadState(load.status === "ok" ? load.items : []);
   const viewer = load.status === "ok" ? load.viewer : undefined;
+  // Members with a linked fediverse account get Post and Reply (item 2).
+  const [linked, setLinked] = useState(false);
+  const hasLink = Boolean(viewer) && linked;
+  useEffect(() => {
+    if (!viewer) return;
+    const controller = new AbortController();
+    loadLinkedAccounts(controller.signal).then(
+      (result) => setLinked(result.status === "ok" && result.accounts.some((a) => a.status === "active")),
+      () => undefined,
+    );
+    return () => controller.abort();
+  }, [viewer]);
+  const startPost = hasLink ? (trigger: HTMLElement) => setCompose({ trigger, replyTo: null, key: Date.now() }) : undefined;
   const reads = viewer ? serverReads : browserReads;
   const now = useNow();
 
@@ -529,6 +546,7 @@ export function River() {
         linkedAccountsHref={withMode("/linked-accounts", linkMode)}
         searchOpen={searchOpen}
         onToggleSearch={() => setSearchOpen((open) => !open)}
+        onPost={startPost}
         onFollow={(trigger) => {
           // Visitors: the sign-up note. Members: the follow box (the phone's Following tab, or the
           // Following page on a desktop).
@@ -614,6 +632,7 @@ export function River() {
                         onMarkRead={() => reads.markRead(ids)}
                         onMarkUnread={() => reads.markUnread(ids)}
                         onSampleInfo={(trigger) => setSampleTrigger(trigger)}
+                        onReply={hasLink ? (itemId, trigger) => setCompose({ trigger, replyTo: itemId, key: Date.now() }) : undefined}
                         onSource={(source) => {
                           // A card's source name: only that source, from the top (ui-revisions-11 item 2).
                           setFilter({ source });
@@ -665,6 +684,7 @@ export function River() {
               onSignOut={endSession}
               activityHref={withMode("/activity", linkMode)}
               linkedAccountsHref={withMode("/linked-accounts", linkMode)}
+              onPost={startPost}
             />
           </section>
         )}
@@ -708,6 +728,7 @@ export function River() {
       >
         <p>{SAMPLE_EXPLAINER}</p>
       </InfoDialog>
+      {compose && <Composer key={compose.key} trigger={compose.trigger} replyToItemId={compose.replyTo} onClose={() => setCompose(null)} />}
       <InfoDialog
         trigger={followTrigger}
         title="Follow a Space"
