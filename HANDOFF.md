@@ -82,7 +82,43 @@ passed; UI built. API db (local Supabase after `db reset`): `actingTables` 24, `
 
 ## Space actions B1.4: signed test vectors and the conformance suite — 2026-10-27
 
+## Space actions B1.5: the stand-in space — 2026-10-27
+
 - Branch / PR: claude/practical-curie-3emib5 → PR (merged)
+- Migrations: none
+
+**What it does.** Last PR of B1 (spec section 8). `tests/support/standInSpace/` is a small Mosaic
+space at `https://stand-in.example`, for tests only, built on the reference verifier. Its
+`handle(Request)` serves `/.well-known/civic.json` (a hub-shaped manifest with an `actions`
+block), `/events` (an AS2 page whose activities carry `civic:actions`: a proposal with comment
+and support, two events, a single-choice poll, a poll marked "passkey", a changeable
+multiple-choice poll and a proposal whose support has closed) and `POST /actions`. Its own rules
+(steps 10 to 13) apply 2.2 as each entry says: `closes_at`, `max_length`, RSVP `options`, poll
+`choices` and `multiple`, `changeable` (a later RSVP replaces the earlier one; a second answer
+where an entry isn't changeable is `not_accepted`), `withdrawable`, `assurance: "passkey"`, and
+withdrawals by this DID only. Switches give `not_member` (with `join`), `held` and
+`rate_limited` (Retry-After 60); blocks give `blocked`. It keeps every accepted or held action
+with its JWS. Its items are frozen, so nothing per-person reaches the feed. Action ids are
+`/actions/{ref}`. B3 wires it behind the River's fetch guard (`TEST_STAND_IN_SPACE=1`).
+
+**Keys.** None.
+
+**Tests.** Unit `standInSpace` (new, 25: the whole conformance suite through its HTTP handler;
+the manifest a client accepts; the feed's actions; every step-11 refusal; each entry's own
+limits; changeable and not; withdrawals; blocks; the three switches, with the same `ref`
+succeeding after `not_member` and `rate_limited`). `npm run check`: 59 files, 951 tests passed;
+UI built.
+
+### Follow-ups
+- B3: the stand-in lives under `tests/support/` (spec 8), outside `tsc`'s `src/`, so the River's
+  dev server can't import it as is. B3 decides how a `TEST_STAND_IN_SPACE=1` process loads it
+  (a test-only entry under `tests/` that starts the River with the stand-in's dispatcher, for
+  example), and adds `TEST_STAND_IN_SPACE` to `src/config/env.ts`'s test-only list.
+- B1 is done: B2 (Mosaic ID grants and signing) and B3 (River space actions) build on it.
+
+## Space actions B1.4: signed test vectors and the conformance suite — 2026-10-27
+
+- Branch / PR: claude/practical-curie-3emib5 → #77 (merged)
 - Migrations: none
 
 **What it does.** Fourth PR of B1 (spec section 8). `tests/conformance/space-actions/vectors.json`
