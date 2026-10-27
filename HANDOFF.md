@@ -20,6 +20,31 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A1 acting core, part 5: Your activity (read only) — 2026-10-27
+
+- Branch / PR: claude/tender-keller-7s064x-activity → PR, stacked on the limits PR (merge after
+  #72 and #73)
+- Migrations: none (reads `river.member_actions`; an empty list until it exists)
+
+**What it does.** `GET /api/activity` (`src/river/acting/activity.ts`, `routes.ts`) lists a member's
+sent acts, newest first, 50 a page, without request bodies and with https-only links. The page at
+`/activity` (`ui/src/Activity.tsx`, words in `ui/src/lib/activity.ts`) shows each act, how it went
+(naming the other side; its own message as text) and View ↗. The profile menu has "Your
+activity" after Following; the phone's You tab links to it, and its Sign out everywhere note says to
+check it. DECISIONS.md has the entry.
+
+**Keys.** None.
+
+**Tests.** Unit `actingActivity` (new: cursor, https-only links), unit `ui/activity` (new: verbs,
+targets, results). API db `activity` (new, over HTTP: members only; previews, request bodies and
+another member's acts never listed; non-https links dropped; 50 a page with a cursor; bad cursors
+400). e2e `activity` (new: the menu link in its mode, four kinds of result in order, the other
+side's `<b>` shown as text, links, axe and Tab; the empty list; a visitor's prompt; the phone's You
+tab) and `profile` (menu items now include Your activity). `npm run check`: see the PR.
+
+### Follow-ups
+- Undo on each entry arrives with the sending PRs (A3, A4, B3).
+
 ## A1 acting core, part 4: limits under an account row lock — 2026-10-27
 
 - Branch / PR: claude/tender-keller-7s064x-limits → PR, stacked on the tables PR (merge after it;
