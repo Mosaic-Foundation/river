@@ -65,7 +65,7 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 Newest first: date, slice, tests added, counts.
 
 - 2026-10-27, space actions B1.1: unit `hostList` (new: host-list matching on a dot boundary,
-  ports, wildcards and dots refused, https URLs). Unit 783.
+  ports, wildcards, dots and non-ASCII refused, https URLs). Unit 787.
 - 2026-10-26, identity account page: API `identity` (the page, `/account/options`, refused
   requests and origins; check 28 covers both); e2e `identity` (the account page's two cases; the
   CSP, axe and Tab test covers `/account`). Unit 734, API 203, e2e 153.

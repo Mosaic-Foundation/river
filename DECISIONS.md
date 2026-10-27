@@ -402,7 +402,9 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   `evilcivic.social` or `civic.social.example.com`). Ports follow the TRUSTED_DID_HOSTS rule
   (an entry with a port matches only that port; one without matches only hosts without one). An
   IPv4 entry matches only itself. Entries that aren't plain hosts (wildcards, leading or trailing
-  dots, schemes, paths, IPv6) match nothing, and the env getters will refuse them at startup.
+  dots, schemes, paths, IPv6, non-ASCII) match nothing, and the env getters will refuse them at
+  startup, along with `:443` and single labels other than `localhost`. `space-actions-1.md` 2.1
+  and 4 step 4 now say this for `did_hosts`, so other spaces implement the same rule.
 - Why: Adam asked for exact-or-subdomain matching on a dot boundary for every host check
   (2026-10-27), and ADR-012 item 9 already says "that host or any subdomain" for
   `SPACE_ACTION_HOSTS`. One function for all three lists keeps the River, Mosaic ID and the
