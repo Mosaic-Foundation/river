@@ -55,8 +55,11 @@ A space that accepts actions adds `actions` to its manifest (for a Civic.Social 
 - `endpoint` MUST be `https:` on the same host as the manifest. A client MUST ignore the block
   otherwise.
 - `audience` MUST equal `space.id` when the space has one, else the space's origin.
-- `did_hosts` lists the hosts whose DIDs the space accepts. In 0.1 only `did:webvh` DIDs are
-  defined.
+- `did_hosts` lists the hosts whose DIDs the space accepts. An entry covers its own host and any
+  subdomain of it, on a dot boundary only: `civic.social` covers `civic.social` and
+  `floyd.civic.social`, never `evilcivic.social` or `civic.social.example.com`. Ports must agree.
+  Every host list in this protocol (`SPACE_ACTION_HOSTS`, `IDENTITY_SPACE_ACTION_HOSTS`) is read
+  the same way (`src/shared/hosts/`). In 0.1 only `did:webvh` DIDs are defined.
 - `verbs` lists the verbs the space implements (section 3). A client MUST ignore verbs it doesn't
   know.
 - `join` (optional) is a page where a person becomes a member of the space, opened as a full page.
@@ -258,7 +261,8 @@ In this order, stopping at the first failure. Each step is a conformance case (s
 2. The header's `alg` is exactly `EdDSA` and `typ` exactly `mosaic-action+jwt` (`bad_type`).
 3. `iss` equals `sub`, is a `did:webvh`, and `kid` starts with `iss` followed by `#`
    (`untrusted_did`).
-4. The DID's host is in `did_hosts`, checked **before** any request (`untrusted_did`).
+4. The DID's host is in `did_hosts` (that host or a subdomain on a dot boundary, 2.1), checked
+   **before** any request (`untrusted_did`).
 5. `aud`, `htm` and `htu` match the manifest exactly (`wrong_audience`).
 6. `iat` is not more than 60 s in the future, `exp` has not passed by more than 60 s, and
    `exp - iat` is at most 300 (`expired`).
