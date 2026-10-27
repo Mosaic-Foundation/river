@@ -395,6 +395,42 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — Finding the server before linking, and the stand-in in the dev server (A2)
+- Decision (`src/river/acting/fediverse/server.ts`, `guard.ts`, `routes.ts`):
+  - The box takes `@name@domain` (or `acct:`) or a profile URL whose path names the account
+    (`/@ana`, `/users/ana`, …); a URL's host is the domain. A bare `name@domain` is refused, as in
+    the follow box (it reads like an email address). WebFinger runs on the domain; the server is
+    the host of the actor URL it returns.
+  - NodeInfo is read strictly: its document must be https on the same host as the server (its
+    answer decides what the River sends there). No NodeInfo, or an unreadable one, is refused
+    ("The River can't tell which software {host} runs, so it can't post through it yet.").
+  - Versions compare `major.minor` from the start of NodeInfo's string (`4.4.0-nightly…`,
+    `0.19.1 git-…` and a leading `v` read fine; anything else is too old). Mastodon also needs
+    its discovery document to list `S256` and, when it lists `scopes_supported`, every scope the
+    River asks for; either missing reads "this version of Mastodon".
+  - The River uses the fixed paths ADR-011 lists (`/oauth/authorize`, `/oauth/token`,
+    `/oauth/revoke`), never the endpoints the discovery document names, so no answer can send a
+    request or a member to another host.
+  - `/api/v2/instance` that fails or lacks the numbers falls back to each software's default
+    (500 or 5,000 characters, 23 per link); the server has the last word on length anyway (a 422).
+    Nothing stores the limit (A2 adds no column): the composer (A3) reads it again.
+  - `POST /api/linked-accounts/fediverse/check` does this before the explainer, so the member
+    learns early that their server can't be linked. It and the start (next PR) share a limit of
+    30 per account in 10 minutes, in memory like the other per-account limits.
+  - A 429 or a guard `retry_later` reads "{host} is busy; try again in a few minutes."; any other
+    guard failure "We couldn't reach {host}. Try again in a few minutes."
+  - Tests: with `TEST_STAND_IN_FEDIVERSE=1` (test-only, refused on Vercel) the dev server's
+    fediverse guard is a second guard whose dispatcher sends the stand-in hosts to
+    `tests/support/standInMastodon/` (loaded with a dynamic import, so no build includes it) and
+    other hosts to the recorded fixtures, or nowhere without them. With `TEST_ROUTES=1` it also
+    mounts `/api/test/stand-in-fediverse/*` to drive it (rules, the authorize page, what it
+    received). CI's `.env` gains it and a per-run `RIVER_TOKEN_KEY`.
+- Why: fediverse-posting-1 item 1.2 lists the checks but not these readings.
+- Alternatives: wiring the stand-in into `getFetchGuard()` (every adapter would see it, and it
+  changes the guard's module); trusting the discovery document's endpoints (another host could
+  receive the client secret).
+- Thread / PR: A2 discovery PR
+
 ## 2026-10-27 — revoke-links: a dry run first, redirects refused per request, app registrations deleted (A1)
 - Decision (`npm run revoke-links`, `src/river/acting/revoke.ts`; runbook in `docs/deploy.md`):
   - It is a dry run unless given `--apply`. The dry run opens each credential with the
