@@ -64,6 +64,8 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A1 revoke-links: unit `fetchGuard` (`redirect: "error"`); API db `revokeLinks` (new;
+  as river_app on the second instance, servers stood in by MockAgent behind the real guard).
 - 2026-10-27, A1 acting tables: API db `actingTables` (new; as river_app: member and instance
   isolation, cross-member foreign keys, column grants, credential and limit-kind CHECKs, preview
   discard, attempts consumed once); API db `dailyJob` (the acting purges, as postgres, rolled back).

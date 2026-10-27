@@ -20,6 +20,34 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A1 acting core, part 6: npm run revoke-links and its runbook — 2026-10-27
+
+- Branch / PR: claude/tender-keller-7s064x-revoke → PR, stacked on the tables PR (#72)
+  (needs-adam: an outbound request, `POST /oauth/revoke` to members' servers per ADR-011 item 6,
+  and a change to the fetch guard)
+- Migrations: none
+
+**What it does.** `npm run revoke-links` (`scripts/revoke-links.ts`, `src/river/acting/revoke.ts`)
+is for after the database and `RIVER_TOKEN_KEY` may have leaked. It is a dry run unless given
+`--apply`. With `--apply` it revokes every active fediverse link at its server and deletes the
+token whatever the server answered, deletes grant tokens, then deletes every app registration. It
+reports servers and counts only. The fetch guard gains `redirect: "error"` for requests that carry
+a credential (`redirect_refused`; nothing reaches the redirect's target). `docs/deploy.md` has the
+runbook and `RIVER_TOKEN_KEY`'s row (Production only), and CLAUDE.md's Commands list the script.
+
+**Keys.** `.env.revoke` (gitignored, Adam's machine): `DATABASE_URL`, `DATABASE_CA_CERT`,
+`RIVER_TOKEN_KEY`.
+
+**Tests.** Unit `fetchGuard` (new case: `redirect: "error"` refuses 301 to 308 and sends nothing
+on). API db `revokeLinks` (new, on the second instance: a dry run changes nothing; `--apply`
+revokes at the server with exactly the token and app credentials, form-encoded; a 503 and a 307
+count as not confirmed and nothing goes to the redirect's target; every credential and app
+registration is deleted and the rows stay revoked; no app registration or the wrong key still
+deletes; the report holds no secret). `npm run check`: 55 files, 798 tests passed; UI built.
+
+### Follow-ups
+- B2 adds Mosaic ID's revoke-every-grant step to the runbook (step 4).
+
 ## A1 acting core, part 3: the acting tables and the daily job's purges — 2026-10-27
 
 - Branch / PR: claude/tender-keller-7s064x-tables → PR (needs-adam: replaces `river.daily_job`, the
