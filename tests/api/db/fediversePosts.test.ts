@@ -341,3 +341,80 @@ describe("preview and send", () => {
     expect(await statusRequests()).toHaveLength(0);
   });
 });
+
+describe("delete from Your activity (check 10)", () => {
+  async function sentPost(l: Linked, text = "To be deleted"): Promise<string> {
+    const view = (await (await preview(l, { text })).json()) as { id: string };
+    expect(((await (await post(`/acts/${view.id}/send`, l.who)).json()) as { status: string }).status).toBe("sent");
+    return view.id;
+  }
+
+  it("sends DELETE for that status with the member's token, erases the stored text, and says what other servers may keep", async () => {
+    const l = await linked();
+    const id = await sentPost(l, "Something I regret");
+    const remoteId = String((await act(id)).remote_id);
+    const res = await post(`/acts/${id}/delete`, l.who);
+    expect(res.status).toBe(200);
+    const result = (await res.json()) as { id: string; status: string; message: string };
+    expect(result).toMatchObject({
+      status: "sent",
+      message: "Deleted on mastodon.stand-in.example. Other servers are asked to delete their copies; some may keep them.",
+    });
+    const del = (await standIn.requests()).find((r) => r.method === "DELETE");
+    expect(del?.path).toBe(`/api/v1/statuses/${remoteId}`);
+    expect(del?.headers.authorization).toMatch(/^Bearer /);
+    expect(await standIn.statuses()).toHaveLength(0);
+
+    const original = await act(id);
+    expect(original).toMatchObject({ status: "undone", request: null });
+    expect(JSON.stringify(original).includes("Something I regret")).toBe(false);
+    expect(await act(result.id)).toMatchObject({ verb: "delete", limit_kind: "delete", status: "sent", undoes_id: id });
+
+    // It can't be deleted twice.
+    expect((await post(`/acts/${id}/delete`, l.who)).status).toBe(400);
+  });
+
+  it("an unknown answer leaves the post; one already gone on the server (404) counts as deleted", async () => {
+    const l = await linked();
+    const id = await sentPost(l);
+    await standIn.rules([{ path: "/api/v1/statuses/", method: "DELETE", answer: 503 }]);
+    expect(((await (await post(`/acts/${id}/delete`, l.who)).json()) as { status: string }).status).toBe("unknown");
+    expect((await act(id)).status).toBe("sent");
+    await standIn.rules([{ path: "/api/v1/statuses/", method: "DELETE", answer: 404 }]);
+    const again = (await (await post(`/acts/${id}/delete`, l.who)).json()) as { status: string };
+    expect(again.status).toBe("sent");
+    expect(await act(id)).toMatchObject({ status: "undone", request: null });
+  });
+
+  it("a redirect on the DELETE is refused and reaches nothing (check 13)", async () => {
+    const l = await linked();
+    const id = await sentPost(l);
+    await standIn.rules([{ path: "/api/v1/statuses/", method: "DELETE", answer: "redirect" }]);
+    expect(((await (await post(`/acts/${id}/delete`, l.who)).json()) as { status: string }).status).toBe("failed");
+    expect((await standIn.requests()).filter((r) => r.host === "elsewhere.stand-in.example")).toHaveLength(0);
+    expect((await act(id)).status).toBe("sent");
+  });
+
+  it("the delete limit: 30 in 30 minutes, then 429 and no request", async () => {
+    const l = await linked();
+    const id = await sentPost(l);
+    const accountId = (await admin.query<{ account_id: string }>("SELECT account_id FROM river.linked_accounts WHERE id = $1", [l.linkId])).rows[0]!.account_id;
+    await admin.query(
+      `INSERT INTO river.member_actions (instance_id, account_id, channel, target_host, verb, limit_kind, status, session_epoch, created_at, sent_at)
+       SELECT a.instance_id, a.id, 'fediverse', 'mastodon.stand-in.example', 'delete', 'delete', 'sent', a.session_epoch, now() - interval '5 minutes', now() - interval '5 minutes'
+         FROM river.accounts a, generate_series(1, 30) WHERE a.id = $1`,
+      [accountId],
+    );
+    const res = await post(`/acts/${id}/delete`, l.who);
+    expect(res.status).toBe(429);
+    expect((await standIn.requests()).some((r) => r.method === "DELETE")).toBe(false);
+  });
+
+  it("another member can't delete it", async () => {
+    const l = await linked();
+    const id = await sentPost(l);
+    const other = await linked("@bob@mastodon.stand-in.example", "bob");
+    expect((await post(`/acts/${id}/delete`, other.who)).status).toBe(400);
+    expect((await standIn.requests()).some((r) => r.method === "DELETE")).toBe(false);
+  });
+});

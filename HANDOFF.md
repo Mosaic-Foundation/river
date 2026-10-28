@@ -20,6 +20,26 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A3 posts, part 3: delete from Your activity — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-delete → PR #93 (needs-adam: a new outbound request,
+  `DELETE /api/v1/statuses/:id` with members' tokens). #90, #91 and #92 have merged.
+- Migrations: none
+
+**What it does.** Your activity offers "Delete this post" (or reply) on fediverse posts sent from the
+River. After a confirmation that says other servers may keep copies, `POST /api/acts/:id/delete`
+writes a `delete` act (counted against the delete limit) and sends `DELETE` to the member's server.
+On success, or if the post is already gone, the original reads Undone and its stored text is erased.
+A3 is complete with this PR.
+
+**Keys.** None.
+
+**Tests.** API db `fediversePosts` (22). Unit `ui/activity`. e2e `composer` (5). `npm run check`:
+66 files, 1011 tests passed; UI built.
+
+### Follow-ups
+- A4: boost, favourite and follow, and their undo.
+
 ## A3 posts, part 4: the composer — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5-composer → PR #92 (UI only; part 2, #91, has merged)

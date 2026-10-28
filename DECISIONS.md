@@ -395,6 +395,23 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — Deleting a post from Your activity (A3)
+- Decision (`src/river/acting/fediverse/deletes.ts`; `POST /api/acts/:id/delete`;
+  `ui/src/components/DeleteControl.tsx`):
+  - Only a fediverse post or reply whose row reads `sent` (with the server's id) can be deleted, and
+    only through its own link while that link is active. A delete is its own act (verb `delete`,
+    `undoes_id` the original), written and claimed under the account's lock like a toggle, so it is
+    counted against ADR-010 §9's 30 deletes in 30 minutes; there is no preview, as the original is on
+    screen (ADR-010 §8). The page asks for a confirmation in place, with item 4's sentence.
+  - `DELETE https://{server}/api/v1/statuses/{id}` with the member's token. A 200, or a 404 (the post
+    is already gone there, which is what the member asked for), marks the original `undone` and sets
+    its stored request, the member's text, to NULL at once (ADR-010 §7). The answer's body, which
+    on Mastodon holds the deleted text, is dropped unread. Timeouts and 502 to 504 are `unknown` and
+    leave the original as it was; the member can delete again. A 401 revokes the link as for posts.
+  - The original keeps its `subject_title` (the item it answered, not the member's words), so Your
+    activity still says what was deleted.
+- Thread / PR: A3 delete PR
+
 ## 2026-10-27 — The composer (A3)
 - Decision (`ui/src/components/Composer.tsx`, `ui/src/lib/compose.ts`):
   - One modal dialog for posts and replies, in three steps: write, preview, result. "Post" sits in
