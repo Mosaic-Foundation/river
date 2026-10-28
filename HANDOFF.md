@@ -22,8 +22,7 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 ## A3 posts, part 4: the composer — 2026-10-27
 
-- Branch / PR: claude/modest-fermat-20y5r5-composer → PR (UI only; stacked on part 2, #91, which
-  is needs-adam: merge after it)
+- Branch / PR: claude/modest-fermat-20y5r5-composer → PR #92 (UI only; part 2, #91, has merged)
 - Migrations: none
 
 **What it does.** Members with a linked account get "Post" in the top bar (and the phone's You
