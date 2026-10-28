@@ -40,6 +40,7 @@ files, 1003 tests passed; UI built. River API files (local Supabase): 26 files, 
 
 ### Follow-ups
 - Part 3: delete from Your activity (needs the guard's DELETE, #90). Part 4: the composer.
+
 ## A3 posts, part 1: DELETE in the fetch guard — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5-guard-delete → PR (needs-adam: a fetch guard change,

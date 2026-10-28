@@ -429,6 +429,7 @@ Places where the spec looked contradictory or wrong, and the reading that was us
     answer is Public. And item 7's "server's software changed to an unsupported one" isn't
     checked at Send (it would cost a NodeInfo read per act); the next link refuses it.
 - Thread / PR: A3 posts PR
+
 ## 2026-10-27 — The fetch guard's DELETE never follows a redirect (A3)
 - Decision (`src/shared/fetch/guard.ts`): `DELETE` joins `GET`, `HEAD` and `POST`, as ADR-011
   item 7 says. Any 3xx answer to a `DELETE` is the failure `redirect_refused`, whether or not the
