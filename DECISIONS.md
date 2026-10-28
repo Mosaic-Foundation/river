@@ -448,6 +448,17 @@ Places where the spec looked contradictory or wrong, and the reading that was us
     checked at Send (it would cost a NodeInfo read per act); the next link refuses it.
 - Thread / PR: A3 posts PR
 
+## 2026-10-27 — The fetch guard's DELETE never follows a redirect (A3)
+- Decision (`src/shared/fetch/guard.ts`): `DELETE` joins `GET`, `HEAD` and `POST`, as ADR-011
+  item 7 says. Any 3xx answer to a `DELETE` is the failure `redirect_refused`, whether or not the
+  caller passed `redirect: "error"`, and nothing is sent to the redirect's target. Every other limit
+  is unchanged (address checks, https, 6 s, 2 MB, 2 per host, Retry-After).
+- Why: the only `DELETE` the River sends is deleting a member's post with their token (ADR-011
+  item 4). A 307 or 308 would re-send the method and the `Authorization` header to another host,
+  and a forgotten option shouldn't be able to allow that.
+- Alternatives: rely on each caller passing `redirect: "error"` (as POSTs with credentials do).
+- Thread / PR: A3 guard PR
+
 ## 2026-10-27 — Settings → Linked accounts is a page (A2)
 - Decision: Settings is a dialog (the light/dark switch), too small for a form, a list and an
   explainer. Linked accounts is a page at `/linked-accounts` (the Following page's layout). For
