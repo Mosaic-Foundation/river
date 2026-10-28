@@ -395,6 +395,41 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — Posts and replies: preview, Send, Try again (A3)
+- Decision (`src/river/acting/fediverse/posts.ts`, `postRoutes.ts`, `instance.ts`; `claimRetry()` in
+  `acts.ts`):
+  - A reply's post is resolved on the member's server when the member previews, not at Send, so
+    the stored request names that server's local id and Send sends exactly what was shown. If
+    resolving fails (not found, 401, 403, 429, unreachable, a refused redirect), the preview is
+    refused with item 7's sentence and no row is stored: nothing was sent, so there is no act to
+    list. Item 7's "failure on the search" row is read that way.
+  - What a River item's post is: a boost card's `boost_of.objectId`; a Create's object id; a bare
+    object's id; else the item's URL. Only live, shown items of `fediverse` spaces can be answered
+    (samples, hubs, feeds and Bluesky can't).
+  - The request is stored as `{ method, url, body }` and sent as JSON with
+    `Idempotency-Key: {act id}`. Send checks again that the stored URL is the link's own server's
+    `/api/v1/statuses`, so no row can send the token anywhere else.
+  - Outcomes: 200 `sent` (remote id and https URL); 401 `failed` and the link marked revoked, its
+    token deleted; 403, 404, 422 (the server's words, plain text, 300 characters), 429 (Retry-After)
+    `failed`; timeout, 502, 503, 504 `unknown`; other 5xx, refused connections, DNS and a refused
+    redirect `failed`. Send and Try again answer 200 with what happened (the act was recorded);
+    refusals before sending answer 4xx with `{ error, message, retryAt }`. Times are returned as
+    ISO dates and the page words them in the member's time zone.
+  - Try again: only an `unknown` post or reply, on Mastodon, within an hour of when it was sent,
+    from a session at the act's epoch, with the link still active. It isn't counted against the
+    limits again (it is the same act, with the same key). GoToSocial gets Check on only.
+    "Check on example.social" links to the account's profile (`https://{server}/@{name}`).
+  - The composer's facts come from `GET /api/acts/fediverse/compose`: active links (most recently
+    used first) with their default visibility and language and the server's character limit
+    (`/api/v2/instance`, kept an hour in memory; defaults if it fails), and the post being answered
+    (its warning, its link, and the `@user@domain` to mention when the River knows it).
+  - Previews are rate-limited in memory to 60 per account in 10 minutes (A1's follow-up).
+  - Not done: item 3.3's "a reply to a Quiet public post defaults to Quiet public". The fediverse
+    adapter shows only posts addressed to Public in `to` (spec 4.3), so every post a member can
+    answer is Public. And item 7's "server's software changed to an unsupported one" isn't
+    checked at Send (it would cost a NodeInfo read per act); the next link refuses it.
+- Thread / PR: A3 posts PR
+
 ## 2026-10-27 — The fetch guard's DELETE never follows a redirect (A3)
 - Decision (`src/shared/fetch/guard.ts`): `DELETE` joins `GET`, `HEAD` and `POST`, as ADR-011
   item 7 says. Any 3xx answer to a `DELETE` is the failure `redirect_refused`, whether or not the

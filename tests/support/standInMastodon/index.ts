@@ -18,7 +18,11 @@
 // `/api/v2/instance`, `POST /api/v1/apps`, `POST /oauth/token`, `POST /oauth/revoke` and
 // `GET /api/v1/accounts/verify_credentials`. The authorize page is a browser navigation, not a
 // River request, so it is a method here (`authorize()`), as if the member approved (or denied).
-// Later milestones add the acting endpoints (A3, A4).
+// For posts and replies (A3, item 3): `GET /api/v2/search` (resolving any https URI to a local
+// status, except one whose path contains `/missing`) and `POST /api/v1/statuses`, which keeps
+// each `Idempotency-Key` for an hour per account on Mastodon (and ignores it on GoToSocial, whose
+// support isn't checked), counts characters as the server's limit does, and records each post.
+// A4 adds the toggles.
 //
 // It records every request it receives (headers and bodies included: tests look for tokens in
 // them), checks client credentials, PKCE, tokens and scopes as Mastodon does, and has rules that
@@ -113,11 +117,36 @@ export interface StandInRule {
   method?: string;
   path: string;
   /** A status (with Mastodon's error body), a 307 to elsewhere.stand-in.example, or a dropped connection. */
-  answer: 401 | 403 | 422 | 429 | 500 | 502 | 503 | 504 | "redirect" | "down";
+  /**
+   * A status, a 307 to elsewhere.stand-in.example, a dropped connection, or "slow": the request
+   * arrives and is handled as usual, but the answer comes after SLOW_MS (longer than the guard's
+   * 6 s), so the River times out not knowing whether it worked.
+   */
+  answer: 401 | 403 | 422 | 429 | 500 | 502 | 503 | 504 | "redirect" | "down" | "slow";
   /** The error text for 422 (and any status). */
   message?: string;
   /** Seconds, for 429 and 503. */
   retryAfter?: number;
+}
+
+/** How late a "slow" answer comes. */
+export const SLOW_MS = 8_000;
+
+/** A status the stand-in holds: posted through it, or a remote post it resolved. */
+export interface StandInStatus {
+  id: string;
+  host: string;
+  uri: string;
+  url: string;
+  /** The poster's username; undefined for a resolved remote post. */
+  account?: string;
+  content: string;
+  spoilerText: string;
+  visibility: string;
+  inReplyToId: string | null;
+  language: string | null;
+  idempotencyKey?: string;
+  createdAt: number;
 }
 
 export interface StandInApp {
@@ -166,6 +195,11 @@ export class StandInFediverse {
   readonly apps = new Map<string, StandInApp>();
   /** Issued tokens by value. */
   readonly tokens = new Map<string, StandInToken>();
+  /** Statuses by id: posted here or resolved by search. */
+  readonly statuses = new Map<string, StandInStatus>();
+  /** The clock for idempotency keys, in ms (tests may move it). */
+  now: () => number = Date.now;
+  private nextStatusId = 110_000_000_000_000_000n;
   private readonly codes = new Map<string, Code>();
 
   /** Forgets everything: requests, rules, apps, codes and tokens. */
@@ -175,6 +209,13 @@ export class StandInFediverse {
     this.apps.clear();
     this.tokens.clear();
     this.codes.clear();
+    this.statuses.clear();
+    this.now = Date.now;
+  }
+
+  /** Statuses posted through the stand-in (not resolved remote ones), oldest first. */
+  posted(): StandInStatus[] {
+    return [...this.statuses.values()].filter((s) => s.account !== undefined);
   }
 
   /** Requests to one host (and, optionally, one path prefix). */
@@ -247,8 +288,9 @@ export class StandInFediverse {
     if (!server) return json(404, { error: "Record not found" });
 
     const rule = this.ruleFor(host, method, request.path);
-    // Through the dispatcher a "down" rule drops the connection before this; called directly, it is a 503.
-    if (rule) return ruleAnswer(rule);
+    // Through the dispatcher a "down" rule drops the connection before this; called directly, it
+    // is a 503. A "slow" rule changes only when the answer comes.
+    if (rule && rule.answer !== "slow") return ruleAnswer(rule);
 
     const route = `${method} ${url.pathname}`;
     switch (route) {
@@ -278,6 +320,10 @@ export class StandInFediverse {
         return this.revoke(host, request);
       case "GET /api/v1/accounts/verify_credentials":
         return this.verifyCredentials(host, server, request);
+      case "GET /api/v2/search":
+        return this.search(host, url, request);
+      case "POST /api/v1/statuses":
+        return this.postStatus(host, server, request);
       default:
         return json(404, { error: "Record not found" });
     }
@@ -418,6 +464,87 @@ export class StandInFediverse {
     return json(200, account);
   }
 
+  private nextId(): string {
+    this.nextStatusId += 1n;
+    return String(this.nextStatusId);
+  }
+
+  /** `GET /api/v2/search?q=&resolve=true&type=statuses&limit=1`: resolves a post's URI to a local id. */
+  private search(host: string, url: URL, request: StandInRequest): StandInAnswer {
+    const token = this.bearer(host, request, ["read:search", "read"]);
+    if ("status" in token) return token;
+    const q = url.searchParams.get("q") ?? "";
+    const empty = json(200, { accounts: [], statuses: [], hashtags: [] });
+    if (url.searchParams.get("type") !== "statuses" || url.searchParams.get("resolve") !== "true") return empty;
+    let target: URL;
+    try {
+      target = new URL(q);
+    } catch {
+      return empty;
+    }
+    if (target.protocol !== "https:" || target.pathname.includes("/missing")) return empty;
+    let status = [...this.statuses.values()].find((s) => s.host === host && (s.uri === q || s.url === q));
+    if (!status) {
+      status = {
+        id: this.nextId(),
+        host,
+        uri: q,
+        url: q,
+        content: "<p>A remote post.</p>",
+        spoilerText: "",
+        visibility: "public",
+        inReplyToId: null,
+        language: null,
+        createdAt: this.now(),
+      };
+      this.statuses.set(status.id, status);
+    }
+    return json(200, { accounts: [], statuses: [statusJson(status, host)], hashtags: [] });
+  }
+
+  /** `POST /api/v1/statuses`, with Mastodon's one-hour Idempotency-Key per account. */
+  private postStatus(host: string, server: StandInServerConfig, request: StandInRequest): StandInAnswer {
+    const token = this.bearer(host, request, ["write:statuses", "write"]);
+    if ("status" in token) return token;
+    const params = readParams(request);
+    const key = lower(request.headers)["idempotency-key"];
+    if (server.software === "mastodon" && key) {
+      const earlier = [...this.statuses.values()].find(
+        (s) => s.host === host && s.account === token.account.username && s.idempotencyKey === key && this.now() - s.createdAt < 3_600_000,
+      );
+      if (earlier) return json(200, statusJson(earlier, host));
+    }
+    const text = params.get("status") ?? "";
+    const spoiler = params.get("spoiler_text") ?? "";
+    const visibility = params.get("visibility") ?? "public";
+    if (text.trim() === "") return json(422, { error: "Validation failed: Text can't be blank" });
+    if (!["public", "unlisted", "private", "direct"].includes(visibility)) {
+      return json(422, { error: "Validation failed: Visibility is not included in the list" });
+    }
+    if (characterCount(text, server) + Array.from(spoiler).length > server.maxCharacters) {
+      return json(422, { error: `Validation failed: Text character limit of ${server.maxCharacters} exceeded` });
+    }
+    const inReplyTo = params.get("in_reply_to_id");
+    if (inReplyTo && !this.statuses.has(inReplyTo)) return json(404, { error: "Record not found" });
+    const id = this.nextId();
+    const status: StandInStatus = {
+      id,
+      host,
+      uri: `https://${host}/users/${token.account.username}/statuses/${id}`,
+      url: `https://${host}/@${token.account.username}/${id}`,
+      account: token.account.username,
+      content: `<p>${escapeHtml(text)}</p>`,
+      spoilerText: spoiler,
+      visibility,
+      inReplyToId: inReplyTo || null,
+      language: params.get("language") || null,
+      ...(key ? { idempotencyKey: key } : {}),
+      createdAt: this.now(),
+    };
+    this.statuses.set(id, status);
+    return json(200, statusJson(status, host));
+  }
+
   /**
    * Fetch guard options that send the stand-in hosts here and every other host to `fallback`
    * (the replayed fixtures, say). Without a fallback, other hosts don't resolve.
@@ -446,6 +573,12 @@ export class StandInFediverse {
         .intercept({ path: (path: string) => this.downAt(host, path), method: () => true })
         .replyWithError(Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }))
         .persist();
+      // A "slow" rule: handled now, answered after SLOW_MS (the guard has given up by then).
+      pool
+        .intercept({ path: (path: string) => this.slowAt(host, path), method: () => true })
+        .reply((opts) => this.mockAnswer(host, opts))
+        .delay(SLOW_MS)
+        .persist();
       pool
         .intercept({ path: () => true, method: () => true })
         .reply((opts) => {
@@ -461,6 +594,22 @@ export class StandInFediverse {
         .persist();
     }
     return agent;
+  }
+
+  private mockAnswer(host: string, opts: { method: string; path: string; headers?: unknown; body?: unknown }) {
+    const answer = this.handle({
+      host,
+      method: opts.method.toUpperCase(),
+      path: opts.path,
+      headers: headerRecord(opts.headers),
+      body: typeof opts.body === "string" ? opts.body : opts.body === undefined || opts.body === null ? "" : String(opts.body),
+    });
+    return { statusCode: answer.status, data: answer.body, responseOptions: { headers: answer.headers } };
+  }
+
+  private slowAt(host: string, path: string): boolean {
+    const pathname = path.split("?")[0] ?? path;
+    return this.rules.some((r) => r.answer === "slow" && (r.host === undefined || r.host === host) && pathname.startsWith(r.path));
   }
 
   private downAt(host: string, path: string): boolean {
@@ -480,6 +629,40 @@ class RoutingDispatcher extends Dispatcher {
     if (!target) throw Object.assign(new Error(`No dispatcher for ${String(options.origin)}`), { code: "ENOTFOUND" });
     return target.dispatch(options, handler);
   }
+}
+
+/**
+ * Characters as the server counts them: on Mastodon a URL counts as `characters_reserved_per_url`
+ * and a mention `@user@domain` as `@user`; elsewhere plain characters (item 3.1).
+ */
+export function characterCount(text: string, server: Pick<StandInServerConfig, "software" | "charactersReservedPerUrl">): number {
+  if (server.software !== "mastodon") return Array.from(text).length;
+  const urls = text.replace(/https?:\/\/\S+/g, "x".repeat(server.charactersReservedPerUrl));
+  const mentions = urls.replace(/(@[a-z0-9_]+)@[a-z0-9.-]+\.[a-z]+/gi, "$1");
+  return Array.from(mentions).length;
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
+}
+
+function statusJson(status: StandInStatus, host: string): Record<string, unknown> {
+  return {
+    id: status.id,
+    uri: status.uri,
+    url: status.url,
+    created_at: new Date(status.createdAt).toISOString(),
+    content: status.content,
+    spoiler_text: status.spoilerText,
+    visibility: status.visibility,
+    in_reply_to_id: status.inReplyToId,
+    language: status.language,
+    reblogged: false,
+    favourited: false,
+    account: status.account
+      ? { id: STAND_IN_ACCOUNTS.find((a) => a.username === status.account)?.id, acct: status.account, url: `https://${host}/@${status.account}` }
+      : { id: "1", acct: `someone@${new URL(status.uri).host}`, url: status.uri },
+  };
 }
 
 function opaque(): string {
@@ -502,7 +685,7 @@ function ruleAnswer(rule: StandInRule): StandInAnswer {
   if (rule.answer === "redirect") {
     return { status: 307, headers: { location: `https://${ELSEWHERE_HOST}/caught`, "content-type": "text/html" }, body: "" };
   }
-  const status = rule.answer === "down" ? 503 : rule.answer;
+  const status = rule.answer === "down" || rule.answer === "slow" ? 503 : rule.answer;
   const answer = json(status, { error: rule.message ?? ERRORS[status] ?? "Error" });
   if (rule.retryAfter !== undefined) answer.headers["retry-after"] = String(rule.retryAfter);
   return answer;

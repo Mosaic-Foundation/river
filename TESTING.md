@@ -69,6 +69,14 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A3 posts and replies (server): unit `standInMastodon` (new: search, statuses,
+  Mastodon's one-hour Idempotency-Key, GoToSocial without it, character counting, a slow answer);
+  API db `fediversePosts` (new, 17: compose, a reply resolved and sent once with its key, a boost
+  card's target, a post not found, 422 as text, 403, 401 revoking the link, 504 and a timeout as
+  unknown with Try again keeping one post, an hour later and GoToSocial with Check on only, refused
+  redirects, a refused connection, the 31st post, Sign out everywhere, another member's preview).
+  `tests/api/helpers/linkFediverse.ts` links an account through the real flow. The timeout test
+  waits out the guard's 6 s.
 - 2026-10-27, A3 guard DELETE: unit `fetchGuard` (new case: DELETE is sent, and 301 to 308 on a
   DELETE are refused without the option, nothing reaching the target). Unit 999.
 - 2026-10-27, A2 UI: unit `ui/linkedAccounts` (new: the explainer, every callback result, the

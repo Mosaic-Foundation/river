@@ -20,6 +20,27 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A3 posts, part 2: preview, Send and Try again for posts and replies — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-posts → PR (needs-adam: new outbound requests with
+  members' tokens, `GET /api/v2/search` and `POST /api/v1/statuses`, ADR-011 item 6)
+- Migrations: none
+
+**What it does.** `GET /api/acts/fediverse/compose` gives the composer the member's links (defaults,
+character limit) and the post being answered. `POST /api/acts/fediverse/preview` resolves a reply's
+post on the member's server and stores the exact request as a preview. `POST /api/acts/:id/send`
+claims it (epoch, limits) and posts it with `Idempotency-Key`. `POST /api/acts/:id/retry` re-sends
+an `unknown` post on Mastodon within the hour. Outcomes follow item 7's table, and a 401 revokes
+the link. The stand-in gains search, statuses and a slow answer. No UI yet (part 4).
+
+**Keys.** None.
+
+**Tests.** Unit `standInMastodon` (24); API db `fediversePosts` (new, 17). `npm run check`: 65
+files, 1003 tests passed; UI built. River API files (local Supabase): 26 files, 272 passed.
+
+### Follow-ups
+- Part 3: delete from Your activity (needs the guard's DELETE, #90). Part 4: the composer.
+
 ## A3 posts, part 1: DELETE in the fetch guard — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5-guard-delete → PR (needs-adam: a fetch guard change,
