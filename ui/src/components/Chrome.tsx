@@ -70,6 +70,8 @@ export interface HeaderProps {
   searchOpen: boolean;
   onToggleSearch: () => void;
   onFollow: (trigger: HTMLButtonElement) => void;
+  /** A new post as a linked fediverse account; given only when the member has one (item 2.3). */
+  onPost?: (trigger: HTMLButtonElement) => void;
   /** Undefined while the first feed loads; null for a visitor. */
   viewer: Viewer | null | undefined;
   /** `everywhere`: end every session of this account, on every device. */
@@ -78,7 +80,7 @@ export interface HeaderProps {
   title?: string | null;
 }
 
-export function Header({ modes, mode, onMode, followingHref, activityHref, linkedAccountsHref, searchOpen, onToggleSearch, onFollow, viewer, onSignOut, title }: HeaderProps) {
+export function Header({ modes, mode, onMode, followingHref, activityHref, linkedAccountsHref, searchOpen, onToggleSearch, onFollow, onPost, viewer, onSignOut, title }: HeaderProps) {
   const switchShown = showModeSwitch(modes);
   return (
     <header className={["topbar", switchShown ? "topbar-modes" : "", title ? "topbar-titled" : ""].filter(Boolean).join(" ")}>
@@ -117,6 +119,17 @@ export function Header({ modes, mode, onMode, followingHref, activityHref, linke
           <PlusIcon />
           <span className="follow-label">Follow</span>
         </button>
+        {onPost && (
+          <button
+            type="button"
+            className="button button-secondary post-button"
+            aria-haspopup="dialog"
+            data-testid="post-button"
+            onClick={(e) => onPost(e.currentTarget)}
+          >
+            Post
+          </button>
+        )}
         {/* Who is signed in, their DID and Settings live in this menu, not the bar (ui-revisions-9). */}
         {viewer !== undefined && (
           <ProfileMenu
@@ -171,9 +184,12 @@ export function YouPanel({
   onSignOut,
   activityHref = "/activity",
   linkedAccountsHref = "/linked-accounts",
+  onPost,
 }: {
   viewer: Viewer | null | undefined;
   onSignOut: (everywhere?: boolean) => void;
+  /** A new post as a linked fediverse account (item 2.3); given only when the member has one. */
+  onPost?: (trigger: HTMLButtonElement) => void;
   /** Your activity (ADR-010 §7), keeping the mode. */
   activityHref?: string;
   /** Settings → Linked accounts, keeping the mode. */
@@ -203,6 +219,13 @@ export function YouPanel({
     <>
       <p>Signed in as</p>
       <p className="account-id">{viewerLabel(viewer)}</p>
+      {onPost && (
+        <p>
+          <button type="button" className="button button-primary" aria-haspopup="dialog" onClick={(e) => onPost(e.currentTarget)}>
+            Post
+          </button>
+        </p>
+      )}
       <p className="card-muted">What you mark read is saved to your account.</p>
       <p>
         <a href={activityHref}>Your activity</a>: everything the River has sent in your name.

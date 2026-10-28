@@ -69,6 +69,12 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A3 composer: unit `ui/compose` (new: the counter's link, mention and warning rules,
+  the reply's start, the exact request, times in the member's clock); e2e `composer` (new: Reply
+  only on live fediverse cards after linking, preview with the exact request, sent by keyboard,
+  Your activity's entry, visibility defaults, the counter and Preview over the limit, a 422 as
+  text keeping the post, a visitor). `tests/e2e/fediverseHelpers.ts` now holds the sign-up, stand-in
+  and linking steps `linkedAccounts` used.
 - 2026-10-27, A3 posts and replies (server): unit `standInMastodon` (new: search, statuses,
   Mastodon's one-hour Idempotency-Key, GoToSocial without it, character counting, a slow answer);
   API db `fediversePosts` (new, 17: compose, a reply resolved and sent once with its key, a boost

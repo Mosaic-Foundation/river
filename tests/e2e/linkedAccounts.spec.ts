@@ -1,9 +1,6 @@
-import AxeBuilder from "@axe-core/playwright";
-import type { APIRequestContext, Page } from "@playwright/test";
-import pg from "pg";
-import { identityURL } from "../../playwright.config";
 import { expect, test } from "./fixtures";
-import { ADMIN_URL, addAuthenticator, resetLimits, riverAccount, setClock, testEmail, throughCallback } from "./identityHelpers";
+import { approveAs, resetStandIn, seriousAxe, signUp } from "./fediverseHelpers";
+import { resetLimits, setClock } from "./identityHelpers";
 
 // Settings → Linked accounts (fediverse-posting-1.md item 1; checks 1, 2 and 18): linking and
 // unlinking a fediverse account from the page, against the SYNTHETIC stand-in server the dev
@@ -14,52 +11,8 @@ import { ADMIN_URL, addAuthenticator, resetLimits, riverAccount, setClock, testE
 test.beforeEach(async ({ request }) => {
   await resetLimits(request);
   await setClock(request, 0);
-  const reset = await request.post("/api/test/stand-in-fediverse/reset");
-  expect(reset.status(), "start the dev server with TEST_STAND_IN_FEDIVERSE=1 (TESTING.md)").toBe(204);
-  const client = new pg.Client({ connectionString: ADMIN_URL });
-  await client.connect();
-  try {
-    // The stand-in forgot its apps; the instance forgets its registrations there too.
-    await client.query("DELETE FROM river.oauth_clients WHERE host LIKE '%.stand-in.example'");
-  } finally {
-    await client.end();
-  }
+  await resetStandIn(request);
 });
-
-async function signUp(page: Page, label: string): Promise<string> {
-  await addAuthenticator(page);
-  await page.goto("/");
-  await expect(page.getByTestId("feed-card").first()).toBeVisible({ timeout: 30_000 });
-  await page.goto("/api/auth/signin");
-  await page.waitForURL(`${identityURL}/authorize?**`);
-  await page.getByLabel("Email address").fill(testEmail(label));
-  await page.getByRole("button", { name: "Create a passkey" }).click();
-  await throughCallback(page, () => page.getByRole("link", { name: "Continue to Mosaic River" }).click());
-  await expect(page.getByTestId("feed-card").first()).toBeVisible({ timeout: 30_000 });
-  const account = await riverAccount(page.context());
-  if (!account) throw new Error("no River session after sign-up");
-  return account;
-}
-
-/** The stand-in servers' authorize pages: approve as `username` and send the browser back. */
-async function approveAs(page: Page, request: APIRequestContext, username: string): Promise<string[]> {
-  const visited: string[] = [];
-  await page.route(/^https:\/\/[a-z0-9-]+\.stand-in\.example\//, async (route) => {
-    visited.push(route.request().url());
-    const res = await request.post("/api/test/stand-in-fediverse/authorize", { data: { url: route.request().url(), username } });
-    const { location, error } = (await res.json()) as { location?: string; error?: string };
-    if (!location) throw new Error(`stand-in refused: ${error}`);
-    await route.fulfill({ status: 302, headers: { location } });
-  });
-  return visited;
-}
-
-async function seriousAxe(page: Page): Promise<string[]> {
-  const results = await new AxeBuilder({ page }).analyze();
-  return results.violations
-    .filter((v) => v.impact === "critical" || v.impact === "serious")
-    .map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(", ")}`);
-}
 
 test.describe("Linked accounts", () => {
   test("link and unlink a Mastodon account from the keyboard alone; axe on each step (checks 1 and 18)", async ({ page, request }) => {

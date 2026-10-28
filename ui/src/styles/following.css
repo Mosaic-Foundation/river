@@ -940,3 +940,77 @@
 .link-notice {
   margin: 0 0 var(--space-lg);
 }
+
+/* The composer (fediverse-posting-1 item 3): a modal on the info dialog's frame, wider. */
+.composer .composer-body {
+  max-width: 36rem;
+}
+
+.composer-form,
+.composer-preview,
+.composer-done {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.composer-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.composer-field label {
+  font-weight: var(--font-weight-bold);
+}
+
+.composer-text {
+  min-height: calc(var(--size-control) * 3);
+  padding: var(--space-sm) var(--space-md);
+  resize: vertical;
+}
+
+.composer-counter {
+  align-self: flex-end;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.composer-over {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-bold);
+}
+
+.composer-quote {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-left: var(--border-width) solid var(--color-border);
+  overflow-wrap: anywhere;
+}
+
+.composer-quote p {
+  margin: 0;
+}
+
+.composer-post {
+  padding: var(--space-md);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-md);
+  overflow-wrap: anywhere;
+}
+
+.composer-post p {
+  margin: 0;
+}
+
+.composer-post-text {
+  white-space: pre-wrap;
+}
+
+.composer-request {
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-sm);
+}

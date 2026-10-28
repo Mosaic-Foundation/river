@@ -46,6 +46,11 @@ export interface FeedCardProps {
   earlier?: FeedItem[];
   /** Shows only this card's source (a click on its name, ui-revisions-11 item 2). */
   onSource?: (spaceId: string) => void;
+  /**
+   * Reply as a linked fediverse account (fediverse-posting-1 item 2.1): given only to members with
+   * a link, and shown only on live fediverse cards (a boost card answers the boosted post).
+   */
+  onReply?: (itemId: string, trigger: HTMLButtonElement) => void;
 }
 
 /** The card's link to the embedded view: a plain click stays in the page, a modified one opens a tab. */
@@ -70,7 +75,7 @@ function originalLink(url: string) {
   return { href: url, target: "_blank", rel: "noopener noreferrer" } as const;
 }
 
-export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, open: opens, onOpen, earlier = [], onSource }: FeedCardProps) {
+export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, open: opens, onOpen, earlier = [], onSource, onReply }: FeedCardProps) {
   const titleId = `item-${item.id}-title`;
   const host = item.source === "live" ? linkHost(item.url) : undefined;
   const boosted = boostedPost(item);
@@ -290,6 +295,18 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
             Open<span aria-hidden="true"> ↗</span>
             <span className="visually-hidden"> on {host} (opens in a new tab)</span>
           </a>
+        )}
+        {onReply && item.source === "live" && item.space.adapter === "fediverse" && (
+          <button
+            type="button"
+            className="button button-secondary card-reply"
+            aria-haspopup="dialog"
+            aria-describedby={item.title ? titleId : undefined}
+            data-testid="card-reply"
+            onClick={(e) => onReply(item.id, e.currentTarget)}
+          >
+            Reply
+          </button>
         )}
         <button
           type="button"
