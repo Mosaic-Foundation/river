@@ -22,9 +22,8 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 ## A3 posts, part 3: delete from Your activity — 2026-10-27
 
-- Branch / PR: claude/modest-fermat-20y5r5-delete → PR (needs-adam: a new outbound request,
-  `DELETE /api/v1/statuses/:id` with members' tokens). Stacked on #90 (the guard's DELETE) and
-  #92 (the composer, on #91); merge after them.
+- Branch / PR: claude/modest-fermat-20y5r5-delete → PR #93 (needs-adam: a new outbound request,
+  `DELETE /api/v1/statuses/:id` with members' tokens). #90, #91 and #92 have merged.
 - Migrations: none
 
 **What it does.** Your activity offers "Delete this post" (or reply) on fediverse posts sent from the
@@ -41,10 +40,6 @@ A3 is complete with this PR.
 ### Follow-ups
 - A4: boost, favourite and follow, and their undo.
 
-## A3 posts, part 4: the composer — 2026-10-27
-
-- Branch / PR: claude/modest-fermat-20y5r5-composer → PR (UI only; stacked on part 2, #91, which
-  is needs-adam: merge after it)
 ## A3 posts, part 4: the composer — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5-composer → PR #92 (UI only; part 2, #91, has merged)
