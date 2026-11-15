@@ -362,6 +362,8 @@ export class StandInFediverse {
         }
         const toggle = /^\/api\/v1\/statuses\/([^/]+)\/(reblog|unreblog|favourite|unfavourite)$/.exec(url.pathname);
         if (method === "POST" && toggle) return this.toggleStatus(host, toggle[1] ?? "", toggle[2] as StatusToggleSegment, request);
+        const own = /^\/api\/v1\/accounts\/([^/]+)\/statuses$/.exec(url.pathname);
+        if (method === "GET" && own) return this.accountStatuses(host, own[1] ?? "");
         const follow = /^\/api\/v1\/accounts\/([^/]+)\/(follow|unfollow)$/.exec(url.pathname);
         if (method === "POST" && follow) return this.toggleFollow(host, follow[1] ?? "", follow[2] === "follow", request);
         return json(404, { error: "Record not found" });
@@ -632,6 +634,28 @@ export class StandInFediverse {
     if (follow) this.follows.set(key, account.locked ? "requested" : "following");
     else this.follows.delete(key);
     return json(200, this.relationshipJson(host, token.account.username, account));
+  }
+
+  /** `GET /api/v1/accounts/:id/statuses` (public, no token): the account's own posts, newest first. */
+  private accountStatuses(host: string, id: string): StandInAnswer {
+    const account = STAND_IN_ACCOUNTS.find((a) => a.id === id);
+    if (!account) return json(404, { error: "Record not found" });
+    const own = [...this.statuses.values()]
+      .filter((st) => st.host === host && st.account === account.username && st.visibility !== "private")
+      .sort((a, b) => b.createdAt - a.createdAt);
+    return json(200, own.map((st) => statusJson(st, host)));
+  }
+
+  /**
+   * A token issued without the browser steps, for tests that start from a linked account (the A5
+   * recorder's test): `scopes` as a member would tick them on Preferences → Development.
+   */
+  issueToken(host: string, username: string, scopes: string[]): string {
+    const account = STAND_IN_ACCOUNTS.find((a) => a.username === username);
+    if (!account || !STAND_IN_SERVERS[host]) throw new Error(`no stand-in account ${username}@${host}`);
+    const value = opaque();
+    this.tokens.set(value, { host, clientId: "personal-application", scopes, account, revoked: false });
+    return value;
   }
 
   /** `GET /api/v1/accounts/relationships?id[]=…`. */
