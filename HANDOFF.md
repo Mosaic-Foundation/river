@@ -22,7 +22,7 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 ## A4 part 2: Boost, Favourite, Follow and Undo in the UI — 2026-11-15
 
-- Branch / PR: claude/a4-toggles-ui → PR (merged when CI is green; no needs-adam trigger)
+- Branch / PR: claude/a4-toggles-ui → #96 (merged when CI is green; no needs-adam trigger)
 - Migrations: none
 
 **What it does.** Live fediverse cards get Boost and Favourite as the member's default linked
