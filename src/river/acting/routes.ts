@@ -2,7 +2,7 @@
 //
 //   GET /activity?cursor=   → { viewer, entries, nextCursor }   Your activity (ADR-010 §7), read only
 //   /linked-accounts/fediverse/…  linking a fediverse account (fediverse/routes.ts)
-//   /acts/…                 posts and replies: compose, preview, send, try again (fediverse/postRoutes.ts)
+//   /acts/…                 posts and replies, boosts, favourites and follows (fediverse/postRoutes.ts)
 //
 // Visitors get 401 "sign_in_required"; the UI shows them a sign-up prompt instead.
 import { Router } from "express";
