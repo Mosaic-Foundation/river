@@ -204,6 +204,32 @@ identity files need the identity dev server and weren't run.
 ### Follow-ups
 - Part 3 registers the app and sends the member to the server's authorize page.
 
+## Identity move, part 5: the runbook for moving the identity schema to its own project — 2026-10-27
+
+- Branch / PR: claude/trusting-carson-y03109-runbook → PR (held for Adam: it depends on parts 1
+  and 2, which wait on him)
+- Migrations: none
+
+**What it does.** `docs/identity-database-move.md` gives Adam the steps to move the identity schema
+from river-dev to its own Supabase project:
+- Preparation and a rehearsal, including the role, SSL, CA cert and pg_cron.
+- A short outage started by `ALTER ROLE identity_app NOLOGIN`.
+- `pg_dump -Fc --schema=identity --no-owner` and a single-transaction `pg_restore`.
+- Re-scheduling `identity-daily`, then checks for row counts, RLS, policies, the role and API-role
+  grants.
+- The new pooler URL and CA cert in Vercel, with a redeploy; then a smoke test.
+- Rollback before and after new writes, and clean-up.
+
+The dump and restore commands were rehearsed on the local stack into a scratch database.
+
+**Keys.** None.
+
+**Tests.** None (docs only). Rehearsal: RLS on and forced on 7 tables, 7 policies, grants and
+SECURITY DEFINER owners restored; `identity_app` sees 0 people and the lookups answer.
+
+### Follow-ups
+- Revisit after part 2's plan is settled (the runbook assumes `identity.schema_migrations`).
+
 ## Identity move, part 1: Mosaic ID's daily job is its own — 2026-10-27
 
 - Branch / PR: claude/trusting-carson-y03109 → PR (needs-adam: a migration that replaces
