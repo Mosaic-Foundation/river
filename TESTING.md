@@ -69,6 +69,12 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-11-15, A4 toggles (UI): unit `ui/toggles` (new, 3: default account, labels, which entries
+  can be undone); API db `fediverseToggles` (1 new: the River's own boosts and favourites per item,
+  the links that have toggled, more than 100 ids refused, nothing sent outside); e2e `toggles` (new,
+  3: Boost by keyboard with the first-use note and axe, a 422 changing Favourite back with its words
+  as text, a reload remembering the boost, Undo from Your activity; a boost the River has no record
+  of showing once the toggle is focused; Follow and Unfollow on a Following row).
 - 2026-11-15, hub repeats: unit `hubRepeats` (new, 9: civic.json `features.fediverse` kept and
   read again daily, an actor on another host ignored, repeat rules, the announced activity link);
   API db `hubRepeats` (new, 7: hub first and account first, folding among one process's items,

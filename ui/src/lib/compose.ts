@@ -70,7 +70,7 @@ export type Answer<T> = { ok: true; body: T } | { ok: false; refusal: Refusal };
 
 const OFFLINE: Refusal = { error: "network", message: "The River didn't answer. Check your connection; nothing was sent.", retryAt: null };
 
-async function call<T>(path: string, init?: RequestInit): Promise<Answer<T>> {
+export async function call<T>(path: string, init?: RequestInit): Promise<Answer<T>> {
   let res: Response;
   try {
     res = await fetch(path, { ...init, headers: { Accept: "application/json", ...(init?.body ? { "Content-Type": "application/json" } : {}) } });

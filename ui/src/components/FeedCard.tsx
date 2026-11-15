@@ -29,6 +29,7 @@ import { PostEmbed } from "./PostEmbed";
 import { type CardOpen, isHttpsUrl, openInNewTab } from "../lib/embed";
 import { CARD_INTERACTIVE, isNewTabClick, itemPath } from "../lib/reader";
 import { BoostIcon } from "./Icons";
+import { CardToggles, type CardTogglesProps } from "./CardToggles";
 import { SourceIcon } from "./SourceIcon";
 
 export interface FeedCardProps {
@@ -51,6 +52,11 @@ export interface FeedCardProps {
    * a link, and shown only on live fediverse cards (a boost card answers the boosted post).
    */
   onReply?: (itemId: string, trigger: HTMLButtonElement) => void;
+  /**
+   * Boost and Favourite as the member's default linked account (item 4): given only to members
+   * with a link, and shown only on live fediverse cards.
+   */
+  toggles?: Omit<CardTogglesProps, "itemId">;
 }
 
 /** The card's link to the embedded view: a plain click stays in the page, a modified one opens a tab. */
@@ -75,7 +81,7 @@ function originalLink(url: string) {
   return { href: url, target: "_blank", rel: "noopener noreferrer" } as const;
 }
 
-export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, open: opens, onOpen, earlier = [], onSource, onReply }: FeedCardProps) {
+export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleInfo, open: opens, onOpen, earlier = [], onSource, onReply, toggles }: FeedCardProps) {
   const titleId = `item-${item.id}-title`;
   const host = item.source === "live" ? linkHost(item.url) : undefined;
   const boosted = boostedPost(item);
@@ -314,6 +320,7 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
             Reply
           </button>
         )}
+        {toggles && item.source === "live" && item.space.adapter === "fediverse" && <CardToggles itemId={item.id} {...toggles} />}
         <button
           type="button"
           className="card-action"

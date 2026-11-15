@@ -29,6 +29,7 @@ import { FilterButton, FilterSheet, FilterSidebar, SearchField, type FilterState
 import { CLEARED, toggleCircle } from "./lib/filters";
 import { Composer } from "./components/Composer";
 import { loadLinkedAccounts } from "./lib/linkedAccounts";
+import { defaultAccount, loadAllRiverToggles, type RiverToggles } from "./lib/toggles";
 import { InfoDialog } from "./components/InfoDialog";
 import { NotFound } from "./components/NotFound";
 import { CirclesPanel } from "./components/CirclesPanel";
@@ -195,12 +196,18 @@ export function River() {
   const viewer = load.status === "ok" ? load.viewer : undefined;
   // Members with a linked fediverse account get Post and Reply (item 2).
   const [linked, setLinked] = useState(false);
+  // Boost and Favourite act as the default account (item 2.5: the one used last).
+  const [toggleAccount, setToggleAccount] = useState<{ id: string; handle: string } | null>(null);
   const hasLink = Boolean(viewer) && linked;
   useEffect(() => {
     if (!viewer) return;
     const controller = new AbortController();
     loadLinkedAccounts(controller.signal).then(
-      (result) => setLinked(result.status === "ok" && result.accounts.some((a) => a.status === "active")),
+      (result) => {
+        setLinked(result.status === "ok" && result.accounts.some((a) => a.status === "active"));
+        const account = result.status === "ok" ? defaultAccount(result.accounts) : undefined;
+        setToggleAccount(account ? { id: account.id, handle: account.handle } : null);
+      },
       () => undefined,
     );
     return () => controller.abort();
@@ -486,6 +493,51 @@ export function River() {
     void signOut(everywhere).then(() => window.location.assign("/"));
   };
 
+  // Boost and Favourite start from what the River itself has done on these cards (A4; the server
+  // reports the rest when a toggle is sent). Asked again when the cards change.
+  const toggleIds =
+    load.status === "ok" && toggleAccount
+      ? load.items
+          .filter((i) => i.source === "live" && i.space.adapter === "fediverse")
+          .map((i) => i.id)
+          .join(",")
+      : "";
+  const [riverToggles, setRiverToggles] = useState<{ key: string; data: RiverToggles } | null>(null);
+  useEffect(() => {
+    if (toggleIds === "") return;
+    let live = true;
+    void loadAllRiverToggles(toggleIds.split(",")).then((data) => {
+      if (live) setRiverToggles({ key: toggleIds, data });
+    });
+    return () => {
+      live = false;
+    };
+  }, [toggleIds]);
+  const togglesFor = (itemId: string) => {
+    // Until the first answer the cards wait; after that a refresh keeps the last answer showing, so
+    // the buttons don't blink while the new one comes.
+    if (!toggleAccount || !riverToggles) return undefined;
+    const done = riverToggles.data.items[itemId];
+    return {
+      account: toggleAccount,
+      boosted: done?.boost.includes(toggleAccount.id) ?? false,
+      favourited: done?.favourite.includes(toggleAccount.id) ?? false,
+      noteShown: riverToggles.data.toggledLinks.includes(toggleAccount.id),
+      onToggled: (id: string, kind: "boost" | "favourite", on: boolean) =>
+        setRiverToggles((current) => {
+          if (!current) return current;
+          const entry = current.data.items[id] ?? { boost: [], favourite: [] };
+          const links = entry[kind].filter((l) => l !== toggleAccount.id);
+          const items = { ...current.data.items, [id]: { ...entry, [kind]: on ? [...links, toggleAccount.id] : links } };
+          return { ...current, data: { ...current.data, items } };
+        }),
+      onFirstToggle: (linkId: string) =>
+        setRiverToggles((current) =>
+          current ? { ...current, data: { ...current.data, toggledLinks: [...current.data.toggledLinks, linkId] } } : current,
+        ),
+    };
+  };
+
   // Cards whose page might be framed ask the server as they come into view (ui-revisions-3 item 2).
   useVisibleFrameChecks(frames.request, load.status === "ok" ? load.items : null);
 
@@ -633,6 +685,7 @@ export function River() {
                         onMarkUnread={() => reads.markUnread(ids)}
                         onSampleInfo={(trigger) => setSampleTrigger(trigger)}
                         onReply={hasLink ? (itemId, trigger) => setCompose({ trigger, replyTo: itemId, key: Date.now() }) : undefined}
+                        toggles={hasLink ? togglesFor(group.lead.id) : undefined}
                         onSource={(source) => {
                           // A card's source name: only that source, from the top (ui-revisions-11 item 2).
                           setFilter({ source });

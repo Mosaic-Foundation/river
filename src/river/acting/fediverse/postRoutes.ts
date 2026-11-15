@@ -9,6 +9,8 @@
 //   POST /acts/:id/delete                          → DeleteResult (delete a post made from the River)
 //
 // Boost, favourite and follow (item 4, A4; toggles.ts), one click each, no preview:
+//   GET  /acts/fediverse/toggles?itemIds=a,b,…                   → the River's own boosts and favourites
+//                                                                  on those items (no server request)
 //   GET  /acts/fediverse/state?linkedAccountId=&itemId=          → { reblogged, favourited }
 //   POST /acts/fediverse/toggle  { linkedAccountId, itemId, verb: boost|unboost|favourite|unfavourite }
 //                                                                → ToggleResult
@@ -28,7 +30,7 @@ import type { Actor } from "../acts.js";
 import { deletePost } from "./deletes.js";
 import { fediverseGuard } from "./guard.js";
 import { composeInfo, PostError, previewPost, retryPost, sendPost, type PostInput } from "./posts.js";
-import { followSpace, relationship, statusState, togglePost, undoToggle } from "./toggles.js";
+import { followSpace, relationship, riverToggles, statusState, togglePost, undoToggle } from "./toggles.js";
 
 const STATUS: Record<PostError["code"], number> = {
   bad_input: 400,
@@ -117,6 +119,12 @@ export function postRoutes(): Router {
 
   /** A query parameter given once, or undefined. */
   const one = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined);
+
+  router.get(
+    "/acts/fediverse/toggles",
+    ...member,
+    handle(async (req, res) => riverToggles(actor(res), one(req.query.itemIds))),
+  );
 
   router.get(
     "/acts/fediverse/state",

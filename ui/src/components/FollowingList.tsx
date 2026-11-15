@@ -4,8 +4,10 @@
 // lists followed spaces with no new item in 90 days (never samples) and offers "Unfollow all quiet
 // spaces"; Ended lists stream rules whose process ended, cleared after 90 days. Each followed row
 // has a circles menu (ui-revisions-7) and a muted line saying where the follow came from (Adam,
-// 2026-10-26), none for one from before origins were kept.
-import { useId, useState } from "react";
+// 2026-10-26), none for one from before origins were kept. A fediverse space's row offers "On the
+// fediverse", following its account on the member's own server as a linked account (A4).
+import { useEffect, useId, useState } from "react";
+import { loadLinkedAccounts } from "../lib/linkedAccounts";
 import {
   groupSpaces,
   originLine,
@@ -20,6 +22,7 @@ import {
   type StreamView,
 } from "../lib/following";
 import { CirclesMenu } from "./CirclesMenu";
+import { ServerFollow, type ServerFollowAccount } from "./ServerFollow";
 import { SourceIcon } from "./SourceIcon";
 import { useLocalRun, type Run as SharedRun } from "./useFollowing";
 
@@ -40,6 +43,8 @@ interface Actions {
   busy: boolean;
   /** The page's own run(), for the circles menu: it shows its own errors (ui-revisions-7). */
   save: SharedRun;
+  /** The member's active linked fediverse accounts, for "On the fediverse" (A4, item 2.2). */
+  linked: readonly ServerFollowAccount[];
 }
 
 function StreamRow({ stream, actions }: { stream: StreamView; actions: Actions }) {
@@ -151,6 +156,9 @@ function SpaceRow({ space, page, actions }: { space: SpaceView; page: FollowingP
           </button>
         </div>
       </div>
+      {space.adapter === "fediverse" && actions.linked.length > 0 && (
+        <ServerFollow spaceId={space.id} spaceName={space.name} accounts={actions.linked} />
+      )}
       {open && (
         <ul className="stream-list" id={streamsId} aria-label={`Streams of ${space.name}`}>
           {space.streams.map((s) => (
@@ -188,7 +196,21 @@ function QuietBanner({ count, actions, onReview }: { count: number; actions: Act
 export function FollowingList({ page, run: shared, busy }: { page: FollowingPage; run: SharedRun; busy: boolean }) {
   const { run, error } = useLocalRun(shared);
   const [tab, setTab] = useState<TabId>("spaces");
-  const actions: Actions = { run, busy, save: shared };
+  // The member's linked fediverse accounts, once per page, for "On the fediverse" (A4).
+  const [linked, setLinked] = useState<ServerFollowAccount[]>([]);
+  const hasFediverse = page.spaces.some((s) => s.adapter === "fediverse");
+  useEffect(() => {
+    if (!hasFediverse) return;
+    const controller = new AbortController();
+    loadLinkedAccounts(controller.signal).then(
+      (result) => {
+        if (result.status === "ok") setLinked(result.accounts.filter((a) => a.status === "active").map((a) => ({ id: a.id, handle: a.handle })));
+      },
+      () => undefined,
+    );
+    return () => controller.abort();
+  }, [hasFediverse]);
+  const actions: Actions = { run, busy, save: shared, linked };
   const quiet = page.spaces.filter((s) => page.quiet.includes(s.id));
   const tabs: Array<{ id: TabId; label: string; count: number }> = [
     { id: "spaces", label: "Spaces", count: page.spaces.length },

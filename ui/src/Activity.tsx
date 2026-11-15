@@ -1,9 +1,12 @@
 // Your activity at /activity (ADR-010 §7): everything the River sent in the member's name, newest
 // first, with how it went and a link to it. A post or reply sent from the River can be deleted
-// here (fediverse-posting-1 item 2.4); the other undos come with their acts (A4, B3). Members only; a visitor gets the sign-up prompt. Every value from the other
+// here (fediverse-posting-1 item 2.4), and a boost, favourite or follow undone (item 4, A4); the
+// space actions' undos come with B3. Members only; a visitor gets the sign-up prompt. Every value from the other
 // side is shown as text; links are https only (the API drops the rest).
 import { useCallback, useEffect, useState } from "react";
 import { DeleteControl } from "./components/DeleteControl";
+import { UndoControl } from "./components/UndoControl";
+import { canUndo } from "./lib/toggles";
 import { signOut, type Viewer } from "./lib/api";
 import { canDelete, deletePost, loadActivity, statusText, targetText, verbLabel, type ActivityEntry } from "./lib/activity";
 import { fullDateTime, relativeTime } from "./lib/format";
@@ -51,6 +54,7 @@ function Entry({ entry, onDeleted }: { entry: ActivityEntry; onDeleted: (message
         )}
       </p>
       {canDelete(entry) && <DeleteControl entry={entry} remove={deletePost} onDeleted={onDeleted} />}
+      {canUndo(entry) && <UndoControl entry={entry} onUndone={onDeleted} />}
     </li>
   );
 }

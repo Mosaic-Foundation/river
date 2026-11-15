@@ -485,3 +485,49 @@ export async function undoToggle(guard: FetchGuard, actor: Actor, originalId: st
     at,
   );
 }
+
+// ---------------------------------------------------------------------------------------------
+// What the River itself has done, for the cards (no request to any server)
+// ---------------------------------------------------------------------------------------------
+
+export const MAX_TOGGLE_ITEMS = 100;
+
+export interface RiverToggles {
+  /** Per item: the links that boosted or favourited it from the River and haven't undone it. */
+  items: Record<string, { boost: string[]; favourite: string[] }>;
+  /** Links that have made a toggle or follow before: item 4's note has been shown for them. */
+  toggledLinks: string[];
+}
+
+/**
+ * The cards' starting state: the River's own sent boosts and favourites on these items. Anything
+ * done on the member's server itself shows once they toggle (the server's answer) or read the
+ * state (`statusState`). Read only, from the River's rows.
+ */
+export async function riverToggles(actor: Actor, itemIds: unknown): Promise<RiverToggles> {
+  const ids =
+    typeof itemIds === "string" && itemIds !== ""
+      ? [...new Set(itemIds.split(","))].filter((id) => UUID.test(id))
+      : [];
+  if (ids.length > MAX_TOGGLE_ITEMS) throw new PostError("bad_input", `Ask for at most ${MAX_TOGGLE_ITEMS} items.`);
+  return forAccount(actor.instanceId, actor.accountId, async (db) => {
+    const items: RiverToggles["items"] = {};
+    if (ids.length > 0) {
+      const { rows } = await db.query<{ item_id: string; verb: "boost" | "favourite"; linked_account_id: string }>(
+        `SELECT DISTINCT item_id, verb, linked_account_id FROM river.member_actions
+          WHERE item_id = ANY($1::uuid[]) AND channel = 'fediverse' AND verb IN ('boost', 'favourite')
+            AND status = 'sent' AND linked_account_id IS NOT NULL`,
+        [ids],
+      );
+      for (const row of rows) {
+        const entry = (items[row.item_id] ??= { boost: [], favourite: [] });
+        entry[row.verb].push(row.linked_account_id);
+      }
+    }
+    const { rows: toggled } = await db.query<{ linked_account_id: string }>(
+      `SELECT DISTINCT linked_account_id FROM river.member_actions
+        WHERE channel = 'fediverse' AND limit_kind IN ('toggle', 'follow') AND status <> 'previewed' AND linked_account_id IS NOT NULL`,
+    );
+    return { items, toggledLinks: toggled.map((r) => r.linked_account_id) };
+  });
+}
