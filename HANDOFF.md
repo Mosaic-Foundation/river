@@ -228,27 +228,6 @@ and no identity function or job names river), `emailReservation` (calls `identit
 ### Follow-ups
 - Part 2 (separate migration histories) waits on Adam's review of its plan.
 
-## Identity move, part 2: the plan for a migration history of its own — 2026-10-27
-
-- Branch / PR: claude/trusting-carson-y03109-history → PR (needs-adam: plan review before any
-  history change)
-- Migrations: none
-
-**What it does.** `docs/identity-migrations-plan.md` plans how identity migrations get their own
-folder (`supabase/identity/migrations/`) and their own history (`identity.schema_migrations`), so
-a second repository can apply them without Supabase's single history table. A small runner applies
-each file in one transaction with its record, under an advisory lock, with checksums. On river-dev
-and on local stacks it adopts a baseline of the current identity schema without running it, after
-checking the schema matches. The existing migrations stay where they are, and nothing is re-run or
-deleted.
-
-**Keys.** None yet (step 1 would add `IDENTITY_MIGRATIONS_DATABASE_URL`).
-
-**Tests.** None (docs only).
-
-### Follow-ups
-- Steps 1 and 2 wait on Adam's review of the plan and its four open points.
-
 ## Identity move, part 3: what Mosaic ID shares with the River — 2026-10-27
 
 - Branch / PR: claude/trusting-carson-y03109-shared → PR
@@ -270,6 +249,27 @@ choice, npm, moving its tests and vectors. One finding: `identity/api/index.ts` 
 - A small PR giving the identity side its own `createApp` and a test that nothing under
   `src/river/` is reachable from `identity/api/index.ts` (proposed in section 1.1).
 - The space-actions package needs an ADR from Adam first.
+
+## Identity move, part 2: the plan for a migration history of its own — 2026-10-27
+
+- Branch / PR: claude/trusting-carson-y03109-history → PR (needs-adam: plan review before any
+  history change)
+- Migrations: none
+
+**What it does.** `docs/identity-migrations-plan.md` plans how identity migrations get their own
+folder (`supabase/identity/migrations/`) and their own history (`identity.schema_migrations`), so
+a second repository can apply them without Supabase's single history table. A small runner applies
+each file in one transaction with its record, under an advisory lock, with checksums. On river-dev
+and on local stacks it adopts a baseline of the current identity schema without running it, after
+checking the schema matches. The existing migrations stay where they are, and nothing is re-run or
+deleted.
+
+**Keys.** None yet (step 1 would add `IDENTITY_MIGRATIONS_DATABASE_URL`).
+
+**Tests.** None (docs only).
+
+### Follow-ups
+- Steps 1 and 2 wait on Adam's review of the plan and its four open points.
 
 ## A2 linking, part 1: the stand-in Mastodon and GoToSocial server — 2026-10-27
 
