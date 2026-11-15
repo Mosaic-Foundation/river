@@ -259,6 +259,12 @@ export function FeedCard({ item, read, now, onMarkRead, onMarkUnread, onSampleIn
         </ul>
       )}
 
+      {item.alsoOn && (
+        <p className="card-also" data-testid="card-also">
+          Also posted by {item.alsoOn.handle ?? "the hub's fediverse account"}
+        </p>
+      )}
+
       {earlier.length > 0 && (
         <details className="card-group" data-testid="card-group">
           <summary className="card-group-summary">

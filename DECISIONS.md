@@ -410,6 +410,25 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-11-15 — A hub followed two ways: repeats are decided when the feed is read
+- Decision (`src/river/feed/repeats.ts`; civic-hub `docs/FEDIVERSE.md` "Following a hub both ways"):
+  - The hub's account comes from civic.json `features.fediverse.actor`, accepted only on the hub's
+    own origin, and is matched to a followed fediverse space by `actor_id`. No item column: items
+    are shared between readers, so the decision is per reader, in the feed query (`NOT EXISTS` over
+    the reader's rules), which also keeps paging exact and makes arrival order not matter.
+  - A whole-hub follow hides every post from the account, roundups included (the contract's
+    "simplest rule"). Single-process follows hide only posts whose `context` is one of them.
+  - Folding marks the hub card ("Also posted by @handle"): the Note's `application/activity+json`
+    url equals the item's source id; a post without one goes to the same process's item nearest in
+    time, within a day. No link: the Note's page is the hub item's page, which Open already reaches.
+  - Boosts of hub posts by other accounts stay: they are that person's own act (Adam, 2026-11-15).
+  - River reads the hub account's outbox, so a Note arrives whole; no fetch by `uri` is needed.
+- Why: the hub contract asks for one item per event and nothing hidden for an account-only reader.
+- Alternatives: a `canonical_key` column from normalized item URLs (hub item URLs are process pages
+  shared by several activities, so it would over-match); hiding at write time (wrong for readers
+  who follow only the account).
+- Thread / PR: claude/hub-repeats
+
 ## 2026-11-15 — Boost, favourite and follow: one click, resolved first, undone by the same id (A4)
 - Decision (`src/river/acting/fediverse/toggles.ts`; routes in `postRoutes.ts`):
   - A toggle resolves its target on the member's server first (`search` with `resolve=true`,

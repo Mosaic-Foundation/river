@@ -127,6 +127,11 @@ export async function markNotModified(db: Db, spaceId: string): Promise<void> {
   );
 }
 
+/** A new manifest on its own (a hub's civic.json read again); nothing else about the space changes. */
+export async function setManifest(db: Db, spaceId: string, manifest: Record<string, unknown>): Promise<void> {
+  await db.query("UPDATE river.spaces SET manifest = $2::jsonb WHERE id = $1", [spaceId, JSON.stringify(manifest)]);
+}
+
 /** A failed refresh: a quiet note the Following page shows (spec F6 wording), never thrown. */
 export async function recordFetchError(
   db: Db,

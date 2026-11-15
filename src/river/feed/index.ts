@@ -25,6 +25,7 @@ import {
 } from "./query.js";
 import { memberView } from "./member.js";
 import { refreshFollowed, refreshSpaces, type RefreshDeps, type RefreshReport } from "./refresh.js";
+import { repeatNotice } from "./repeats.js";
 import { findSpaces } from "./spaces.js";
 import { parseMode, scopeFor, visitorView, type Mode } from "./visitor.js";
 
@@ -111,6 +112,15 @@ async function viewSurfaces(
   return surfaces;
 }
 
+/**
+ * The empty view's sentence. A hub's fediverse account shown on its own says where its posts went
+ * when the reader follows the hub too (repeats.ts).
+ */
+function emptyMessageFor(scope: FeedScope, spaceId: string | undefined): string {
+  const rule = spaceId ? scope.repeats?.find((r) => r.spaceId === spaceId) : undefined;
+  return rule ? repeatNotice(rule) : EMPTY_MESSAGE;
+}
+
 /** The Source filter: a space id, or none. A source outside the reader's scope just shows nothing. */
 function parseSource(raw: string | undefined): string | undefined {
   if (raw === undefined || raw === "") return undefined;
@@ -176,7 +186,7 @@ export async function visitorFeed(
         items: page.items,
         nextCursor: page.nextCursor,
         empty,
-        emptyMessage: empty ? EMPTY_MESSAGE : null,
+        emptyMessage: empty ? emptyMessageFor(scope, filter.spaceId) : null,
         refresh: { claimed: refresh.claimed, pending: refresh.pending },
         viewer: null,
       };
@@ -261,7 +271,7 @@ export async function memberFeed(
       items: page.items,
       nextCursor: page.nextCursor,
       empty,
-      emptyMessage: empty ? EMPTY_MESSAGE : null,
+      emptyMessage: empty ? emptyMessageFor(scope, filter.spaceId) : null,
       refresh,
       viewer: { did: viewer.did, displayName: viewer.displayName },
     };
