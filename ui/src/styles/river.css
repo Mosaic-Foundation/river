@@ -751,6 +751,13 @@ main.feed:focus {
   height: var(--font-size-base);
 }
 
+/* A hub item its fediverse account also posted (src/river/feed/repeats.ts). */
+.card-also {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
 .card-title {
   margin: 0;
   font-size: var(--font-size-xl);

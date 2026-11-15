@@ -79,6 +79,11 @@ export interface FeedItem {
   event?: { startTime?: string; location?: string };
   /** A Bluesky post's link card or quoted post. */
   embed?: ItemEmbed;
+  /**
+   * A hub item its fediverse account also posted, when the reader follows both. The account's
+   * post is hidden; its page is this item's own hub page, so the card's Open link covers it.
+   */
+  alsoOn?: { handle: string | null; spaceId: string };
   source: "live" | "sample";
   space: {
     id: string;

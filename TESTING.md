@@ -75,6 +75,11 @@ Newest first: date, slice, tests added, counts.
   3: Boost by keyboard with the first-use note and axe, a 422 changing Favourite back with its words
   as text, a reload remembering the boost, Undo from Your activity; a boost the River has no record
   of showing once the toggle is focused; Follow and Unfollow on a Following row).
+- 2026-11-15, hub repeats: unit `hubRepeats` (new, 9: civic.json `features.fediverse` kept and
+  read again daily, an actor on another host ignored, repeat rules, the announced activity link);
+  API db `hubRepeats` (new, 7: hub first and account first, folding among one process's items,
+  roundups, account-only readers, other accounts and boosts, single-process follows, the Source
+  filter). DERIVED: the recorded hubs don't post to the fediverse yet.
 - 2026-11-15, A4 toggles (server): unit `standInMastodon` (new describe, 3: boosts and favourites
   per account in search, scopes and 404, accounts resolved with locked and missing, follow,
   requested, relationships, unfollow); API db `fediverseToggles` (new, 18: boost with a public

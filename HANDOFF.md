@@ -43,6 +43,31 @@ gets "On the fediverse": Follow, Unfollow or Requested per active link. Your act
 - No per-card account menu yet (item 2.5's "offer the others"): toggles use the default account.
 - No Follow in a card's source menu (item 2.2): cards have no source menu to put it in.
 
+## Hub repeats: a hub followed directly and through its fediverse account shows each item once — 2026-11-15
+
+- Branch / PR: claude/hub-repeats → PR (see the PR list)
+- Migrations: none (the hub's account is kept in `spaces.manifest`)
+
+**What it does.** Follows civic-hub `docs/FEDIVERSE.md` "Following a hub both ways" (on civic-hub's
+`dev` branch for now). A hub's civic.json `features.fediverse` (actor, handle) is kept in the hub
+space's manifest at follow time and read again at most once a day on refresh. When a reader follows
+both the hub and the fediverse space whose `actor_id` is that actor, the feed leaves out the
+account's posts (all of them for a whole-hub follow, only those whose `context` is a followed
+process for single-stream follows) and the hub card says "Also posted by @handle" when a post's
+alternate activity link is its id (else same process, nearest within a day). Nothing is hidden
+for someone who follows only the account; other accounts and their boosts are left alone.
+
+**Keys.** None.
+
+**Tests.** Unit `hubRepeats` (9). API db `hubRepeats` (7: both orders, several items of one
+process, roundups, account only, other accounts and boosts, single-process follows, the Source
+filter). `npm run check`: 67 files, 1020 tests passed; UI built.
+
+### Follow-ups
+- The hidden account's own view shows a sentence saying where its posts went (feed
+  `emptyMessage`). The "Also posted by" line has no link: the post's page is the hub item's own page.
+- Bluesky copies through Bridgy Fed (match on the bridged account), per the hub contract's "Later".
+
 ## A4 part 1: boost, favourite and follow, and their undo, on the server — 2026-11-15
 
 - Branch / PR: claude/a4-toggles → PR (needs-adam: new outbound requests with members' tokens,
