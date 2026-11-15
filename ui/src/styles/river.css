@@ -1850,3 +1850,16 @@ a.button {
   color: var(--color-text-muted);
   max-width: var(--layout-panel);
 }
+
+/* Boost and Favourite on fediverse cards (fediverse-posting-1 item 4): pressed reads as on. */
+.card-toggle[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.card-toggle-message {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
