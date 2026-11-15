@@ -26,6 +26,11 @@ The dev server for API and e2e runs needs, in `.env`, `FETCH_FIXTURES_DIR=tests/
 and `TEST_CLOCK_NOW=2026-10-21T00:00:00.000Z` (the hub recordings' clock), as CI writes them. The
 first `GET /api/feed` resolves and fetches every seed follow from the recordings.
 
+Linking fediverse accounts (A2) needs, in `.env`, `TEST_STAND_IN_FEDIVERSE=1` (the dev server
+talks to the SYNTHETIC stand-in server in `tests/support/standInMastodon/` instead of members'
+servers; with `TEST_ROUTES=1` its routes under `/api/test/stand-in-fediverse/` drive it) and a
+`RIVER_TOKEN_KEY` (`openssl rand -base64 32`), as CI writes them.
+
 Sign-in (M8) also needs, in `.env`: `RIVER_PUBLIC_ORIGIN` equal to the UI's origin
 (`http://localhost:5173` for `npm run test:e2e`, `http://localhost:4173` against `vite preview`,
 as CI runs it), `TRUSTED_DID_HOSTS=localhost:3001,localhost:3005` (the identity dev server, and
@@ -64,6 +69,50 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-10-27, A3 delete: API db `fediversePosts` (new, 5: DELETE with the token and the text erased,
+  unknown then 404 counted as deleted, a refused redirect reaching nothing, the delete limit, another
+  member); unit `ui/activity` (`canDelete`); e2e `composer` (new: post, then delete from Your
+  activity by keyboard with axe). The stand-in serves `DELETE /api/v1/statuses/:id`, and rules can
+  answer 404.
+- 2026-10-27, A3 composer: unit `ui/compose` (new: the counter's link, mention and warning rules,
+  the reply's start, the exact request, times in the member's clock); e2e `composer` (new: Reply
+  only on live fediverse cards after linking, preview with the exact request, sent by keyboard,
+  Your activity's entry, visibility defaults, the counter and Preview over the limit, a 422 as
+  text keeping the post, a visitor). `tests/e2e/fediverseHelpers.ts` now holds the sign-up, stand-in
+  and linking steps `linkedAccounts` used.
+- 2026-10-27, A3 posts and replies (server): unit `standInMastodon` (new: search, statuses,
+  Mastodon's one-hour Idempotency-Key, GoToSocial without it, character counting, a slow answer);
+  API db `fediversePosts` (new, 17: compose, a reply resolved and sent once with its key, a boost
+  card's target, a post not found, 422 as text, 403, 401 revoking the link, 504 and a timeout as
+  unknown with Try again keeping one post, an hour later and GoToSocial with Check on only, refused
+  redirects, a refused connection, the 31st post, Sign out everywhere, another member's preview).
+  `tests/api/helpers/linkFediverse.ts` links an account through the real flow. The timeout test
+  waits out the guard's 6 s.
+- 2026-10-27, A3 guard DELETE: unit `fetchGuard` (new case: DELETE is sent, and 301 to 308 on a
+  DELETE are refused without the option, nothing reaching the target). Unit 999.
+- 2026-10-27, A2 UI: unit `ui/linkedAccounts` (new: the explainer, every callback result, the
+  unlink sentences); e2e `linkedAccounts` (new: link and unlink by keyboard with axe at each step,
+  GoToSocial, another account than the one named, a server's name as text, Akkoma refused, a
+  visitor, the phone's You tab). The e2e test answers the browser's visit to the stand-in's
+  authorize page with `page.route`, approving through the stand-in's test route.
+- 2026-10-27, A2 unlink: API db `fediverseLink` (new: the list without credentials and per member,
+  unlink revoking with the token and app credentials, the server down, a refused redirect,
+  another member's id, a link already revoked). 29 tests.
+- 2026-10-27, A2 callback: API db `fediverseLink` (new: the callback: Mastodon and GoToSocial
+  links with their stored fields and the token absent from the stored bytes, state cookie
+  refusals that spend nothing, used and other members' attempts, another account revoked,
+  denial, redirects refused on token-carrying requests reaching nothing, re-linking, a forgotten
+  app, a visitor). 23 tests.
+- 2026-10-27, A2 start: API db `fediverseLink` (moved from `tests/api/`, since it now forgets the
+  stand-in hosts' app registrations as postgres before each test and reads stored bytes; new:
+  `POST /api/linked-accounts/fediverse/start`: the authorize URL, the state cookie, one
+  registration per server, GoToSocial's scopes, refusals, 429 and redirect on registration, the
+  three-account limit). Stand-in rules in API tests carry no Retry-After (the dev server's guard
+  would keep refusing that host).
+- 2026-10-27, A2 discovery: unit `fediverseLinkServer` (new: handles and profile URLs, WebFinger,
+  NodeInfo, discovery, instance, the refusals), `env` (`TEST_STAND_IN_FEDIVERSE` refused on Vercel
+  and in production); API `fediverseLink` (new: `POST /api/linked-accounts/fediverse/check`
+  against the stand-in through the dev server).
 - 2026-10-27, identity move part 4: unit `health` (`/health/db` 503 without a database),
   `workflows` (keep-alive has no checkout, token or secret); API `health` (new; both dev servers'
   `/health/db` answer 200, no-store).
