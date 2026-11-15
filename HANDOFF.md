@@ -38,7 +38,7 @@ follow item 7's table, and a 401 revokes the link. The stand-in gains the toggle
 
 **Keys.** None. New in-memory route limits `actToggle` and `actState`.
 
-**Tests.** Unit `standInMastodon` (3 new). API db `fediverseToggles` (new, 15). `npm run check`:
+**Tests.** Unit `standInMastodon` (3 new). API db `fediverseToggles` (new, 18). `npm run check`:
 67 files, 1035 tests passed; UI built.
 
 ### Follow-ups
