@@ -22,7 +22,7 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 ## Clear filters stays in reach while the filters scroll — 2026-11-15
 
-- Branch / PR: claude/sticky-clear-filters → PR (merged when CI is green; no needs-adam trigger)
+- Branch / PR: claude/sticky-clear-filters → #97 (merged when CI is green; no needs-adam trigger)
 - Migrations: none
 
 **What it does.** On a desktop, search and "Clear the filter" stay pinned to the top of the filter
