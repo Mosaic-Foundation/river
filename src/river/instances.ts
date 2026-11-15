@@ -131,6 +131,14 @@ export async function instanceForHost(
   return instance;
 }
 
+/**
+ * For the keep-alive (GET /health/db): one uncached read of river.instances, so the database sees
+ * activity and the free Supabase project isn't paused. Throws when the database doesn't answer.
+ */
+export async function databaseAnswers(source?: ClientSource): Promise<void> {
+  await forHost((db) => db.query("SELECT count(*) FROM river.instances"), source);
+}
+
 /** Express middleware: puts the request's instance in res.locals.instance, or answers 404. */
 export function requireInstance() {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {

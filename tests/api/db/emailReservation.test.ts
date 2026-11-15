@@ -166,7 +166,7 @@ describe("the confirm page", () => {
   });
 });
 
-describe("the daily job releases unverified addresses", () => {
+describe("identity.daily_job releases unverified addresses", () => {
   it("clears an address still unverified 24 hours after sign-up, and never a verified one", async () => {
     const idle = await signUp(address("idle"));
     const kept = await signUp(address("kept"));
@@ -175,7 +175,7 @@ describe("the daily job releases unverified addresses", () => {
     try {
       await client.query("BEGIN");
       const at = (await client.query<{ at: Date }>("SELECT now() + interval '25 hours' AS at")).rows[0]!.at;
-      const summary = (await client.query<{ r: Record<string, number> }>("SELECT river.daily_job($1) AS r", [at])).rows[0]!.r;
+      const summary = (await client.query<{ r: Record<string, number> }>("SELECT identity.daily_job($1) AS r", [at])).rows[0]!.r;
       expect(summary.released_addresses).toBeGreaterThanOrEqual(1);
       const rows = (
         await client.query<{ id: string; email: string | null }>("SELECT id, email FROM identity.people WHERE id = ANY($1)", [[idle.person.id, kept.person.id]])
@@ -197,7 +197,7 @@ describe("the daily job releases unverified addresses", () => {
     const client = await admin.connect();
     try {
       await client.query("BEGIN");
-      await client.query("SELECT river.daily_job(now() + interval '23 hours')");
+      await client.query("SELECT identity.daily_job(now() + interval '23 hours')");
       expect((await client.query("SELECT email FROM identity.people WHERE id = $1", [fresh.person.id])).rows[0].email).toBe(fresh.person.email);
     } finally {
       await client.query("ROLLBACK");

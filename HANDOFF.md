@@ -229,6 +229,76 @@ identity files need the identity dev server and weren't run.
 ### Follow-ups
 - Part 3 registers the app and sends the member to the server's authorize page.
 
+## Identity move, part 5: the runbook for moving the identity schema to its own project — 2026-10-27
+
+- Branch / PR: claude/trusting-carson-y03109-runbook → PR (held for Adam: it depends on parts 1
+  and 2, which wait on him)
+- Migrations: none
+
+**What it does.** `docs/identity-database-move.md` gives Adam the steps to move the identity schema
+from river-dev to its own Supabase project:
+- Preparation and a rehearsal, including the role, SSL, CA cert and pg_cron.
+- A short outage started by `ALTER ROLE identity_app NOLOGIN`.
+- `pg_dump -Fc --schema=identity --no-owner` and a single-transaction `pg_restore`.
+- Re-scheduling `identity-daily`, then checks for row counts, RLS, policies, the role and API-role
+  grants.
+- The new pooler URL and CA cert in Vercel, with a redeploy; then a smoke test.
+- Rollback before and after new writes, and clean-up.
+
+The dump and restore commands were rehearsed on the local stack into a scratch database.
+
+**Keys.** None.
+
+**Tests.** None (docs only). Rehearsal: RLS on and forced on 7 tables, 7 policies, grants and
+SECURITY DEFINER owners restored; `identity_app` sees 0 people and the lookups answer.
+
+### Follow-ups
+- Revisit after part 2's plan is settled (the runbook assumes `identity.schema_migrations`).
+
+## Identity move, part 1: Mosaic ID's daily job is its own — 2026-10-27
+
+- Branch / PR: claude/trusting-carson-y03109 → PR (needs-adam: a migration that replaces
+  `river.daily_job`, and a new pg_cron job)
+- Migrations: `20261027170000_identity_daily_job.sql`, `20261027170100_river_daily_job_river_only.sql`
+
+**What it does.** First of five slices preparing Mosaic ID to leave this repo and later this
+database. `identity.daily_job()` and its pg_cron job `identity-daily` (04:23 UTC) now purge
+`identity.auth_requests` and release unverified addresses; `river.daily_job` (from its #72
+version) does neither, and its summary drops `deleted_auth_requests` and `released_addresses`.
+A new unit test fails if a new migration names both schemas, River code names `identity.` or
+`identity_app`, or identity code names `river.` or `river_app`.
+
+**Keys.** None.
+
+**Tests.** Unit `schemaBoundaries` (new; checked to fail on a copied mixed migration and on a River
+file naming `identity.people`). API db `identityDailyJob` (new: schedule, identity_app can't run it,
+the purge), `dailyJob` (the identity steps moved out; no river function or job names identity,
+and no identity function or job names river), `emailReservation` (calls `identity.daily_job`).
+`npm run test:api`: 27 files, 252 tests passed. `npm run check`: see the PR.
+
+### Follow-ups
+- Part 2 (separate migration histories) waits on Adam's review of its plan.
+
+## Identity move, part 4: a daily keep-alive for the shared Supabase project — 2026-10-27
+
+- Branch / PR: claude/trusting-carson-y03109-keepalive → PR (needs-adam: a new workflow in `.github/`)
+- Migrations: none
+
+**What it does.** `GET /health/db` on the River (`/api/health/db` on Vercel) and on Mosaic ID each
+make one read that returns no data, and answer `{ ok, app, database }` (503 when the database
+doesn't answer). `.github/workflows/keep-alive.yml` requests both once a day at 10:41 UTC, so the
+free project both apps share doesn't pause. It has no checkout, token or secret, and is skipped
+until Adam sets the two origin variables (`docs/deploy.md`, Before).
+
+**Keys.** Repository variables `KEEPALIVE_RIVER_ORIGIN`, `KEEPALIVE_IDENTITY_ORIGIN` (not app env).
+
+**Tests.** Unit `health` (503 with no database, per app), `workflows` (keep-alive: no checkout,
+`permissions: {}`, no secrets). API `health` (new: 200 and no-store from both dev servers).
+`npm run check`: 62 files, 965 tests passed; UI built.
+
+### Follow-ups
+- When Mosaic ID has its own Supabase project, its keep-alive moves to its repository.
+
 ## Identity move, part 3: what Mosaic ID shares with the River — 2026-10-27
 
 - Branch / PR: claude/trusting-carson-y03109-shared → PR
@@ -250,6 +320,27 @@ choice, npm, moving its tests and vectors. One finding: `identity/api/index.ts` 
 - A small PR giving the identity side its own `createApp` and a test that nothing under
   `src/river/` is reachable from `identity/api/index.ts` (proposed in section 1.1).
 - The space-actions package needs an ADR from Adam first.
+
+## Identity move, part 2: the plan for a migration history of its own — 2026-10-27
+
+- Branch / PR: claude/trusting-carson-y03109-history → PR (needs-adam: plan review before any
+  history change)
+- Migrations: none
+
+**What it does.** `docs/identity-migrations-plan.md` plans how identity migrations get their own
+folder (`supabase/identity/migrations/`) and their own history (`identity.schema_migrations`), so
+a second repository can apply them without Supabase's single history table. A small runner applies
+each file in one transaction with its record, under an advisory lock, with checksums. On river-dev
+and on local stacks it adopts a baseline of the current identity schema without running it, after
+checking the schema matches. The existing migrations stay where they are, and nothing is re-run or
+deleted.
+
+**Keys.** None yet (step 1 would add `IDENTITY_MIGRATIONS_DATABASE_URL`).
+
+**Tests.** None (docs only).
+
+### Follow-ups
+- Steps 1 and 2 wait on Adam's review of the plan and its four open points.
 
 ## A2 linking, part 1: the stand-in Mastodon and GoToSocial server — 2026-10-27
 
@@ -414,7 +505,7 @@ which can merge without this one. The build plan's A1 row
 
 ## Space actions B1.5: the stand-in space — 2026-10-27
 
-- Branch / PR: claude/practical-curie-3emib5 → PR (merged)
+- Branch / PR: claude/practical-curie-3emib5 → #78 (merged)
 - Migrations: none
 
 **What it does.** Last PR of B1 (spec section 8). `tests/support/standInSpace/` is a small Mosaic
