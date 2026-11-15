@@ -629,6 +629,19 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   its own exception); a SECURITY DEFINER function the River's job calls (still cross-schema).
 - Thread / PR: claude/trusting-carson-y03109 (identity move, part 1)
 
+## 2026-10-27 — The keep-alive reads the database through GET /health/db on each app (identity move, part 4)
+- Decision: each app gets `GET /health/db` (the River's is `/api/health/db` on Vercel): one
+  uncached read (`count(*)` of `river.instances` through `forHost()`; of `identity.people` through
+  `forIdentity({})`, which row-level security answers with 0), `{ ok, app, database }`, 503 when
+  the database doesn't answer, logging only the error's code. `.github/workflows/keep-alive.yml`
+  requests both daily at 10:41 UTC, with the origins in repository variables.
+- Why: `/health` must keep answering without a database (M0), so it can't be the keep-alive. A
+  read that returns no data leaves nothing to leak; existing endpoints that touch the database
+  (the feed, did.jsonl) either refresh sources or answer 404.
+- Alternatives: the visitor feed (starts outbound refreshes); a scheduled job inside Supabase
+  (activity from inside the project may not count against pausing).
+- Thread / PR: claude/trusting-carson-y03109-keepalive (identity move, part 4)
+
 ## 2026-10-27 — revoke-links: a dry run first, redirects refused per request, app registrations deleted (A1)
 - Decision (`npm run revoke-links`, `src/river/acting/revoke.ts`; runbook in `docs/deploy.md`):
   - It is a dry run unless given `--apply`. The dry run opens each credential with the
