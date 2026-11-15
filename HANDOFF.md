@@ -20,6 +20,29 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A4 part 2: Boost, Favourite, Follow and Undo in the UI — 2026-11-15
+
+- Branch / PR: claude/a4-toggles-ui → PR (merged when CI is green; no needs-adam trigger)
+- Migrations: none
+
+**What it does.** Live fediverse cards get Boost and Favourite as the member's default linked
+account (the active one used last), named in each button's accessible name. A card starts from the
+River's own record (new read-only `GET /api/acts/fediverse/toggles`, 100 items per ask) and asks
+the member's server for the real state the first time a toggle is pointed at or focused; a click
+waits for that answer. The first toggle shows item 4's note. A fediverse space's row on Following
+gets "On the fediverse": Follow, Unfollow or Requested per active link. Your activity offers
+"Undo this boost", "Undo this favourite" and "Unfollow".
+
+**Keys.** None.
+
+**Tests.** Unit `ui/toggles` (new, 3). API db `fediverseToggles` (19, 1 new). E2e `toggles` (new,
+3). `npm run check`: 68 files, 1038 tests passed; UI built. E2e `toggles`, `composer`,
+`following`, `activity`, `linkedAccounts`, `feed`, `circlesMenu` passed locally.
+
+### Follow-ups
+- No per-card account menu yet (item 2.5's "offer the others"): toggles use the default account.
+- No Follow in a card's source menu (item 2.2): cards have no source menu to put it in.
+
 ## A4 part 1: boost, favourite and follow, and their undo, on the server — 2026-11-15
 
 - Branch / PR: claude/a4-toggles → PR (needs-adam: new outbound requests with members' tokens,

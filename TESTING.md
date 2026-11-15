@@ -69,6 +69,12 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-11-15, A4 toggles (UI): unit `ui/toggles` (new, 3: default account, labels, which entries
+  can be undone); API db `fediverseToggles` (1 new: the River's own boosts and favourites per item,
+  the links that have toggled, more than 100 ids refused, nothing sent outside); e2e `toggles` (new,
+  3: Boost by keyboard with the first-use note and axe, a 422 changing Favourite back with its words
+  as text, a reload remembering the boost, Undo from Your activity; a boost the River has no record
+  of showing once the toggle is focused; Follow and Unfollow on a Following row).
 - 2026-11-15, A4 toggles (server): unit `standInMastodon` (new describe, 3: boosts and favourites
   per account in search, scopes and 404, accounts resolved with locked and missing, follow,
   requested, relationships, unfollow); API db `fediverseToggles` (new, 18: boost with a public

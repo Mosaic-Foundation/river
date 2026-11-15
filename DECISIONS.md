@@ -410,6 +410,25 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-11-15 — Toggles in the UI: River's record first, the server's state on first touch (A4)
+- Decision (`ui/src/components/CardToggles.tsx`, `ServerFollow.tsx`, `UndoControl.tsx`;
+  `GET /acts/fediverse/toggles` in `postRoutes.ts`):
+  - A card's Boost and Favourite start from the River's own sent acts (one read for the visible
+    cards, 100 ids per ask). The first time the member points at or focuses either toggle, the card
+    asks `GET /acts/fediverse/state` once and takes the server's `reblogged` and `favourited`
+    (item 4); a click waits for that answer, so a boost made on the server itself isn't sent twice.
+  - Toggles act as one account: the active link used last, else the one linked last. Item 2.5's
+    menu naming the account and offering the others is left for later; the account is named in each
+    button's accessible name.
+  - Follow on the server lives on a fediverse space's Following row ("On the fediverse"), one line
+    per active link, reading `relationship` when opened. Item 2.2 also names a card's source menu;
+    cards have no such menu yet, so that entry point is left for when one exists.
+- Why: reading the server's state for every card on every load would search the member's server
+  once per card; asking on first touch costs one search per card the member actually acts on.
+- Alternatives: the River's record only (wrong for anything done on the server itself, as the A4
+  server entry says); a search per card on load.
+- Thread / PR: claude/a4-toggles-ui (A4, part 2)
+
 ## 2026-11-15 — Boost, favourite and follow: one click, resolved first, undone by the same id (A4)
 - Decision (`src/river/acting/fediverse/toggles.ts`; routes in `postRoutes.ts`):
   - A toggle resolves its target on the member's server first (`search` with `resolve=true`,
