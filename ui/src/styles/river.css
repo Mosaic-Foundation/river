@@ -240,6 +240,28 @@ main.feed:focus {
   box-shadow: var(--shadow-card);
 }
 
+/* Search and the clear button stay pinned while the filter column or the phone sheet scrolls, so
+   clearing is always in reach. The negative inline margin, given back as padding, lets the
+   background cover the full width so pills scroll out of sight beneath it. */
+.filter-top {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin: calc(var(--space-md) * -1) calc(var(--space-md) * -1) 0;
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  border-radius: var(--radius-xl, var(--radius-lg)) var(--radius-xl, var(--radius-lg)) 0 0;
+  background: var(--color-surface);
+}
+
+.filter-sheet-top {
+  margin-top: 0;
+  padding-top: var(--space-sm);
+  border-radius: 0;
+}
+
 .search {
   position: relative;
   display: flex;

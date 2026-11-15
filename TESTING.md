@@ -69,6 +69,9 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-11-15, sticky Clear filters: e2e `filterClear` (2 new: the column at 1440×480 and the
+  phone sheet at 390×600 scrolled to the end, the clear button still in view, pinned to the top,
+  and clearing); the first test's order check now reads inside `sidebar-top`.
 - 2026-11-15, A4 toggles (UI): unit `ui/toggles` (new, 3: default account, labels, which entries
   can be undone); API db `fediverseToggles` (1 new: the River's own boosts and favourites per item,
   the links that have toggled, more than 100 ids refused, nothing sent outside); e2e `toggles` (new,

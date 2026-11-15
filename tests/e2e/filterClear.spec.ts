@@ -35,8 +35,10 @@ test.describe("Clear the filter in the filter column", () => {
     const circlesBox = (await sidebar.getByRole("navigation", { name: "Circles" }).boundingBox())!;
     expect(clearBox.y).toBeGreaterThan(searchBox.y + searchBox.height);
     expect(clearBox.y + clearBox.height).toBeLessThan(circlesBox.y);
-    // Search, then the button: no title above them (ui-revisions-10 item 1).
-    expect(await sidebar.evaluate((el) => el.children[1]?.getAttribute("data-testid"))).toBe("sidebar-filter-action");
+    // Search, then the button, first in the column: no title above them (ui-revisions-10 item 1).
+    const top = sidebar.getByTestId("sidebar-top");
+    expect(await sidebar.evaluate((el) => el.children[0]?.getAttribute("data-testid"))).toBe("sidebar-top");
+    expect(await top.evaluate((el) => el.children[1]?.getAttribute("data-testid"))).toBe("sidebar-filter-action");
     await expect(sidebar.getByRole("heading", { level: 2 })).toHaveCount(0);
 
     await clear.click();
@@ -72,5 +74,59 @@ test.describe("Clear the filter in the filter column", () => {
     await expect(page).toHaveURL(/\/\?mode=civic$/);
     await expect(page.locator("html")).toHaveAttribute("data-theme", "civic");
     await expect(clear).toHaveCount(0);
+  });
+});
+
+test.describe("Clear stays in reach while the filters scroll", () => {
+  test("desktop: scrolled to its last control, the column still shows Clear the filter under search, and it clears", async ({ page }) => {
+    // Short enough that the column scrolls on its own (filterColumn.spec.ts).
+    await page.setViewportSize({ width: 1440, height: 480 });
+    await page.goto("/?type=civic");
+    await expect(page.getByTestId("feed-card").first()).toBeVisible({ timeout: 30_000 });
+    const column = page.locator(".filter-column");
+    const sidebar = page.getByRole("complementary", { name: "Filters" });
+    const clear = sidebar.getByRole("button", { name: "Clear the filter" });
+    await expect(clear).toBeVisible();
+
+    await column.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    await expect.poll(() => column.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await expect(sidebar.getByRole("combobox", { name: "Show posts from" })).toBeInViewport();
+    await expect(clear).toBeInViewport();
+    await expect(sidebar.getByRole("searchbox", { name: "Search your River" })).toBeInViewport();
+    // Pinned to the column's top edge, above the pills scrolling beneath it.
+    const columnBox = (await column.boundingBox())!;
+    const clearBox = (await clear.boundingBox())!;
+    expect(clearBox.y).toBeGreaterThanOrEqual(columnBox.y);
+    expect(clearBox.y + clearBox.height).toBeLessThan(columnBox.y + columnBox.height / 2);
+    await clear.click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(sidebar.getByTestId("sidebar-filter-action")).toHaveText("Filter your River");
+  });
+
+  test("phone: scrolled to the end of the sheet, Clear all is still at the top and clears", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 600 });
+    await page.goto("/?type=civic");
+    await expect(page.getByTestId("feed-card").first()).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId("filter-button").click();
+    const sheet = page.getByTestId("filter-sheet");
+    await expect(sheet).toBeVisible();
+    const body = sheet.locator(".filter-sheet-body");
+    const clear = sheet.getByTestId("sheet-clear");
+    await expect(clear).toBeVisible();
+
+    const sizes = await body.evaluate((el) => ({ scroll: el.scrollHeight, client: el.clientHeight }));
+    expect(sizes.scroll).toBeGreaterThan(sizes.client);
+    await body.evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    await expect.poll(() => body.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    await expect(sheet.getByRole("combobox", { name: "Show posts from" })).toBeInViewport();
+    await expect(clear).toBeInViewport();
+    const bodyBox = (await body.boundingBox())!;
+    const clearBox = (await clear.boundingBox())!;
+    expect(clearBox.y).toBeGreaterThanOrEqual(bodyBox.y);
+    expect(clearBox.y + clearBox.height).toBeLessThan(bodyBox.y + bodyBox.height / 2);
+    await clear.click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(clear).toHaveCount(0);
+    await expect(sheet).toBeVisible();
   });
 });

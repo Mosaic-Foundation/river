@@ -20,6 +20,27 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Clear filters stays in reach while the filters scroll — 2026-11-15
+
+- Branch / PR: claude/sticky-clear-filters → #97 (merged when CI is green; no needs-adam trigger)
+- Migrations: none
+
+**What it does.** On a desktop, search and "Clear the filter" stay pinned to the top of the filter
+column while it scrolls on its own (short windows). In the phone's filter sheet, search and "Clear
+all" stay pinned to the top of the sheet's scrolling body; the sheet's title scrolls away. The
+pills scroll beneath them on the surface colour. Small UI follow-up from Adam's handoff (step 5).
+
+**Keys.** None.
+
+**Tests.** E2e `filterClear` (2 new: desktop at 1440×480 and phone at 390×600, each scrolled to its
+last control with the clear button still in view and working; both fail without the CSS). The
+existing order check now looks inside the pinned block. `npm run check`: 69 files, 1047 tests
+passed; UI built. E2e `filterClear`, `filterColumn`, `revisions`, `revisions4`, `modes`, `themes`,
+`river` passed locally.
+
+### Follow-ups
+- None.
+
 ## A4 part 2: Boost, Favourite, Follow and Undo in the UI — 2026-11-15
 
 - Branch / PR: claude/a4-toggles-ui → #96 (merged when CI is green; no needs-adam trigger)

@@ -6,6 +6,7 @@
 // that opens a bottom sheet with the same content as wrapping pills (ui-revisions-6). In the column,
 // one wide button under search reads "Filter your River", then "Clear the filter" once a filter is
 // on (ui-revisions-10 item 1); the sheet keeps its title and compact "Clear all" (ui-revisions-4).
+// Both keep search and their clear button pinned to the top while the filters scroll.
 import { useEffect, useId, useRef, useState } from "react";
 import type { FeedCircle, FeedSource } from "../lib/api";
 import { activeFilterCount, filterSummary, hasActiveFilter, type FilterState } from "../lib/filters";
@@ -229,19 +230,23 @@ export function FilterSidebar({
   const circlesScroll = useOverflows(circleScroll, circles.length);
   return (
     <aside className="sidebar" aria-label="Filters" ref={asideRef}>
-      <SearchField id="search-desktop" value={value.q} onSearch={onSearch} />
-      <FilterAction
-        active={hasActiveFilter(value)}
-        // The button stays, now reading "Filter your River", and keeps focus.
-        onClear={onClearAll}
-        onStart={() => {
-          // Open any collapsed section, then go to the first filter (Circles' first pill).
-          for (const toggle of asideRef.current?.querySelectorAll<HTMLButtonElement>(".filter-toggle[aria-expanded=false]") ?? []) {
-            toggle.click();
-          }
-          window.setTimeout(() => asideRef.current?.querySelector<HTMLButtonElement>(".filter-group .pill")?.focus(), 0);
-        }}
-      />
+      {/* Search and the filter button stay at the top while the column scrolls, so Clear is
+          always in reach. */}
+      <div className="filter-top" data-testid="sidebar-top">
+        <SearchField id="search-desktop" value={value.q} onSearch={onSearch} />
+        <FilterAction
+          active={hasActiveFilter(value)}
+          // The button stays, now reading "Filter your River", and keeps focus.
+          onClear={onClearAll}
+          onStart={() => {
+            // Open any collapsed section, then go to the first filter (Circles' first pill).
+            for (const toggle of asideRef.current?.querySelectorAll<HTMLButtonElement>(".filter-toggle[aria-expanded=false]") ?? []) {
+              toggle.click();
+            }
+            window.setTimeout(() => asideRef.current?.querySelector<HTMLButtonElement>(".filter-group .pill")?.focus(), 0);
+          }}
+        />
+      </div>
 
       <FilterSection title="Circles">
         <div
@@ -446,17 +451,20 @@ export function FilterSheet({
           <h2 className="sidebar-title" id={titleId}>
             Filter your River
           </h2>
-          <SearchField id="search-sheet" value={value.q} onSearch={onSearch} />
-          {hasActiveFilter(value) && (
-            <ClearAll
-              testId="sheet-clear"
-              onClear={() => {
-                onClearAll();
-                // The sheet stays open; focus moves to its search field as the button goes.
-                window.setTimeout(() => ref.current?.querySelector<HTMLInputElement>("input[type=search]")?.focus(), 0);
-              }}
-            />
-          )}
+          {/* Search and Clear all stay at the top while the sheet scrolls. */}
+          <div className="filter-top filter-sheet-top" data-testid="sheet-top">
+            <SearchField id="search-sheet" value={value.q} onSearch={onSearch} />
+            {hasActiveFilter(value) && (
+              <ClearAll
+                testId="sheet-clear"
+                onClear={() => {
+                  onClearAll();
+                  // The sheet stays open; focus moves to its search field as the button goes.
+                  window.setTimeout(() => ref.current?.querySelector<HTMLInputElement>("input[type=search]")?.focus(), 0);
+                }}
+              />
+            )}
+          </div>
 
           <FilterSection title="Circles">
             <ul className="pill-list">
