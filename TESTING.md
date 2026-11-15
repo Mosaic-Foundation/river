@@ -69,6 +69,11 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-11-15, hub repeats: unit `hubRepeats` (new, 9: civic.json `features.fediverse` kept and
+  read again daily, an actor on another host ignored, repeat rules, the announced activity link);
+  API db `hubRepeats` (new, 7: hub first and account first, folding among one process's items,
+  roundups, account-only readers, other accounts and boosts, single-process follows, the Source
+  filter). DERIVED: the recorded hubs don't post to the fediverse yet.
 - 2026-10-27, A3 delete: API db `fediversePosts` (new, 5: DELETE with the token and the text erased,
   unknown then 404 counted as deleted, a refused redirect reaching nothing, the delete limit, another
   member); unit `ui/activity` (`canDelete`); e2e `composer` (new: post, then delete from Your
