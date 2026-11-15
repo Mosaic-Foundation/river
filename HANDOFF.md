@@ -22,7 +22,7 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 ## A5 part 1: the Mastodon posting recorder — 2026-11-15
 
-- Branch / PR: claude/a5-fediverse-recorder → PR (merged when CI is green; no needs-adam trigger:
+- Branch / PR: claude/a5-fediverse-recorder → #98 (merged when CI is green; no needs-adam trigger:
   a recorder script and a test-only stand-in route, no app code or outbound host)
 - Migrations: none
 
