@@ -198,6 +198,23 @@ describe("boost and favourite", () => {
     expect(link.rows[0]).toMatchObject({ status: "revoked", token_ciphertext: null });
   });
 
+  it("a 401 on the reblog itself fails the act, revokes the link and deletes its token (check 11)", async () => {
+    const l = await linked();
+    await standIn.rules([{ path: "/api/v1/statuses/", method: "POST", answer: 401 }]);
+    const { body } = await toggle(l, "boost");
+    expect(body).toMatchObject({ status: "failed", error: "revoked", message: "Your link to @ana@mastodon.stand-in.example stopped working. Link it again." });
+    expect(await act(body.id!)).toMatchObject({ status: "failed", error_code: "revoked" });
+    const link = await admin.query("SELECT status, token_ciphertext FROM river.linked_accounts WHERE id = $1", [l.linkId]);
+    expect(link.rows[0]).toMatchObject({ status: "revoked", token_ciphertext: null });
+  });
+
+  it("after Sign out everywhere, a toggle from the old session is refused and nothing is sent (check 16)", async () => {
+    const l = await linked();
+    expect((await post("/auth/signout-everywhere", l.who)).status).toBe(204);
+    expect((await toggle(l, "boost")).res.status).toBe(401);
+    expect(await toggleRequests()).toEqual([]);
+  });
+
   it("a reblog that times out is unknown, not failed: the server may have got it", async () => {
     const l = await linked();
     await standIn.rules([{ path: "/api/v1/statuses/", method: "POST", answer: "slow" }]);
@@ -228,6 +245,14 @@ describe("follow on the server", () => {
     const rel = await fetch(`${API}/acts/fediverse/relationship?linkedAccountId=${l.linkId}&spaceId=${spaceId}`, { headers: { cookie: l.who.cookie } });
     expect(await rel.json()).toEqual({ following: true, requested: false });
     expect((await admin.query("SELECT count(*)::int AS n FROM river.follows")).rows[0].n).toBe(before.rows[0].n);
+  });
+
+  it("following a space in the River sends nothing to the member's server (check 9, the other way round)", async () => {
+    const l = await linked();
+    const before = (await standIn.requests()).length;
+    const res = await post("/follows", l.who, { input: "@w3c@w3c.social", circleIds: [] });
+    expect(res.status).toBe(201);
+    expect((await standIn.requests()).slice(before)).toEqual([]);
   });
 
   it("a locked account reads Requested; unfollow undoes the follow and marks it undone (check 9)", async () => {
