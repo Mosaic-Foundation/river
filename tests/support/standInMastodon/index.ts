@@ -23,7 +23,11 @@
 // each `Idempotency-Key` for an hour per account on Mastodon (and ignores it on GoToSocial, whose
 // support isn't checked), counts characters as the server's limit does, and records each post;
 // and `DELETE /api/v1/statuses/:id` for the member's own posts.
-// A4 adds the toggles.
+// For boost, favourite and follow (A4, item 4): `POST /api/v1/statuses/:id/{reblog,unreblog,
+// favourite,unfavourite}`, `GET /api/v2/search` with `type=accounts` (resolving any https actor URI
+// to a remote account, locked when its path contains `/locked`, none when it contains `/missing`),
+// `POST /api/v1/accounts/:id/{follow,unfollow}` and `GET /api/v1/accounts/relationships`. Search
+// answers carry the token's account's `reblogged` and `favourited`, as Mastodon's do.
 //
 // It records every request it receives (headers and bodies included: tests look for tokens in
 // them), checks client credentials, PKCE, tokens and scopes as Mastodon does, and has rules that
@@ -130,6 +134,8 @@ export interface StandInRule {
   retryAfter?: number;
 }
 
+type StatusToggleSegment = "reblog" | "unreblog" | "favourite" | "unfavourite";
+
 /** How late a "slow" answer comes. */
 export const SLOW_MS = 8_000;
 
@@ -148,6 +154,14 @@ export interface StandInStatus {
   language: string | null;
   idempotencyKey?: string;
   createdAt: number;
+}
+
+/** A remote account the stand-in resolved by search. */
+export interface StandInRemoteAccount {
+  id: string;
+  host: string;
+  uri: string;
+  locked: boolean;
 }
 
 export interface StandInApp {
@@ -201,6 +215,13 @@ export class StandInFediverse {
   readonly statuses = new Map<string, StandInStatus>();
   /** Statuses deleted through `DELETE /api/v1/statuses/:id`, in order. */
   readonly deleted: StandInStatus[] = [];
+  /** Remote accounts resolved by search, by id. */
+  readonly remoteAccounts = new Map<string, StandInRemoteAccount>();
+  /** `{host}|{username}|{status id}` for each boost and favourite. */
+  readonly reblogs = new Set<string>();
+  readonly favourites = new Set<string>();
+  /** `{host}|{username}|{account id}` → following, or requested (a locked account). */
+  readonly follows = new Map<string, "following" | "requested">();
   /** The clock for idempotency keys, in ms (tests may move it). */
   now: () => number = Date.now;
   private nextStatusId = 110_000_000_000_000_000n;
@@ -215,6 +236,10 @@ export class StandInFediverse {
     this.codes.clear();
     this.statuses.clear();
     this.deleted.length = 0;
+    this.remoteAccounts.clear();
+    this.reblogs.clear();
+    this.favourites.clear();
+    this.follows.clear();
     this.now = Date.now;
   }
 
@@ -329,11 +354,18 @@ export class StandInFediverse {
         return this.search(host, url, request);
       case "POST /api/v1/statuses":
         return this.postStatus(host, server, request);
-      default:
+      case "GET /api/v1/accounts/relationships":
+        return this.relationships(host, url, request);
+      default: {
         if (method === "DELETE" && /^\/api\/v1\/statuses\/[^/]+$/.test(url.pathname)) {
           return this.deleteStatus(host, url.pathname.split("/").pop() ?? "", request);
         }
+        const toggle = /^\/api\/v1\/statuses\/([^/]+)\/(reblog|unreblog|favourite|unfavourite)$/.exec(url.pathname);
+        if (method === "POST" && toggle) return this.toggleStatus(host, toggle[1] ?? "", toggle[2] as StatusToggleSegment, request);
+        const follow = /^\/api\/v1\/accounts\/([^/]+)\/(follow|unfollow)$/.exec(url.pathname);
+        if (method === "POST" && follow) return this.toggleFollow(host, follow[1] ?? "", follow[2] === "follow", request);
         return json(404, { error: "Record not found" });
+      }
     }
   }
 
@@ -483,7 +515,9 @@ export class StandInFediverse {
     if ("status" in token) return token;
     const q = url.searchParams.get("q") ?? "";
     const empty = json(200, { accounts: [], statuses: [], hashtags: [] });
-    if (url.searchParams.get("type") !== "statuses" || url.searchParams.get("resolve") !== "true") return empty;
+    if (url.searchParams.get("resolve") !== "true") return empty;
+    if (url.searchParams.get("type") === "accounts") return this.searchAccount(host, q, empty);
+    if (url.searchParams.get("type") !== "statuses") return empty;
     let target: URL;
     try {
       target = new URL(q);
@@ -507,7 +541,111 @@ export class StandInFediverse {
       };
       this.statuses.set(status.id, status);
     }
-    return json(200, { accounts: [], statuses: [statusJson(status, host)], hashtags: [] });
+    return json(200, { accounts: [], statuses: [this.statusFor(status, host, token.account)], hashtags: [] });
+  }
+
+  /** A status as the token's account sees it: with its own boost and favourite. */
+  private statusFor(status: StandInStatus, host: string, account: StandInAccount): Record<string, unknown> {
+    const key = `${host}|${account.username}|${status.id}`;
+    return { ...statusJson(status, host), reblogged: this.reblogs.has(key), favourited: this.favourites.has(key) };
+  }
+
+  /** `type=accounts`: resolves an https actor URI to a remote account (locked if its path says so). */
+  private searchAccount(host: string, q: string, empty: StandInAnswer): StandInAnswer {
+    let target: URL;
+    try {
+      target = new URL(q);
+    } catch {
+      return empty;
+    }
+    if (target.protocol !== "https:" || target.pathname.includes("/missing")) return empty;
+    let account = [...this.remoteAccounts.values()].find((a) => a.host === host && a.uri === q);
+    if (!account) {
+      account = { id: this.nextId(), host, uri: q, locked: target.pathname.includes("/locked") };
+      this.remoteAccounts.set(account.id, account);
+    }
+    const name = target.pathname.split("/").filter(Boolean).pop() ?? "someone";
+    return json(200, {
+      accounts: [{ id: account.id, username: name, acct: `${name}@${target.host}`, url: q, uri: q, locked: account.locked }],
+      statuses: [],
+      hashtags: [],
+    });
+  }
+
+  /** `POST /api/v1/statuses/:id/{reblog,unreblog,favourite,unfavourite}`. */
+  private toggleStatus(host: string, id: string, segment: StatusToggleSegment, request: StandInRequest): StandInAnswer {
+    const favourite = segment === "favourite" || segment === "unfavourite";
+    const token = this.bearer(host, request, favourite ? ["write:favourites", "write"] : ["write:statuses", "write"]);
+    if ("status" in token) return token;
+    const status = this.statuses.get(id);
+    if (!status || status.host !== host) return json(404, { error: "Record not found" });
+    const key = `${host}|${token.account.username}|${id}`;
+    if (segment === "reblog") {
+      const visibility = readParams(request).get("visibility") ?? "public";
+      if (!["public", "unlisted", "private"].includes(visibility)) return json(422, { error: "Validation failed: Visibility is not included in the list" });
+      this.reblogs.add(key);
+      // The answer is the new boost, wrapping the boosted post.
+      const original = this.statusFor(status, host, token.account);
+      return json(200, {
+        id: this.nextId(),
+        uri: `https://${host}/users/${token.account.username}/statuses/${id}/activity`,
+        url: null,
+        visibility,
+        reblogged: true,
+        favourited: false,
+        reblog: original,
+        account: { id: token.account.id, acct: token.account.username, url: `https://${host}/@${token.account.username}` },
+      });
+    }
+    if (segment === "unreblog") this.reblogs.delete(key);
+    if (segment === "favourite") this.favourites.add(key);
+    if (segment === "unfavourite") this.favourites.delete(key);
+    return json(200, this.statusFor(status, host, token.account));
+  }
+
+  private relationshipJson(host: string, username: string, account: StandInRemoteAccount): Record<string, unknown> {
+    const state = this.follows.get(`${host}|${username}|${account.id}`);
+    return {
+      id: account.id,
+      following: state === "following",
+      requested: state === "requested",
+      showing_reblogs: state === "following",
+      notifying: false,
+      followed_by: false,
+      blocking: false,
+      blocked_by: false,
+      muting: false,
+      muting_notifications: false,
+      domain_blocking: false,
+      endorsed: false,
+      note: "",
+    };
+  }
+
+  /** `POST /api/v1/accounts/:id/{follow,unfollow}`: a locked account answers "requested". */
+  private toggleFollow(host: string, id: string, follow: boolean, request: StandInRequest): StandInAnswer {
+    const token = this.bearer(host, request, ["write:follows", "write", "follow"]);
+    if ("status" in token) return token;
+    const account = this.remoteAccounts.get(id);
+    if (!account || account.host !== host) return json(404, { error: "Record not found" });
+    const key = `${host}|${token.account.username}|${id}`;
+    if (follow) this.follows.set(key, account.locked ? "requested" : "following");
+    else this.follows.delete(key);
+    return json(200, this.relationshipJson(host, token.account.username, account));
+  }
+
+  /** `GET /api/v1/accounts/relationships?id[]=…`. */
+  private relationships(host: string, url: URL, request: StandInRequest): StandInAnswer {
+    const token = this.bearer(host, request, ["read:follows", "read"]);
+    if ("status" in token) return token;
+    const ids = [...url.searchParams.getAll("id[]"), ...url.searchParams.getAll("id")];
+    return json(
+      200,
+      ids.flatMap((id) => {
+        const account = this.remoteAccounts.get(id);
+        return account && account.host === host ? [this.relationshipJson(host, token.account.username, account)] : [];
+      }),
+    );
   }
 
   /** `POST /api/v1/statuses`, with Mastodon's one-hour Idempotency-Key per account. */

@@ -24,6 +24,10 @@ export interface StandInHarness {
   readonly rules: unknown[];
   readonly tokens: Map<string, unknown>;
   readonly apps: Map<string, unknown>;
+  /** Boosts, favourites and follows it holds (A4). */
+  readonly reblogs: Set<string>;
+  readonly favourites: Set<string>;
+  readonly follows: Map<string, string>;
   posted(): unknown[];
   reset(): void;
   revokeAll(): void;

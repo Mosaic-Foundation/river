@@ -104,7 +104,7 @@ export async function loadLink(actor: Actor, linkedAccountId: string): Promise<L
 }
 
 /** A 401 from the server: the link is revoked there; forget its token here (ADR-010 §6). */
-async function markRevoked(actor: Actor, linkId: string): Promise<void> {
+export async function markRevoked(actor: Actor, linkId: string): Promise<void> {
   await forAccount(actor.instanceId, actor.accountId, (db) =>
     db.query(
       `UPDATE river.linked_accounts
@@ -148,19 +148,19 @@ export function postMessage(code: PostErrorCode | "unknown", host: string, handl
 }
 
 /** The other side's own words: plain text, at most 300 characters (ADR-010 §9). */
-function theirWords(body: unknown): string | undefined {
+export function theirWords(body: unknown): string | undefined {
   const error = isObject(body) ? str(body.error) : undefined;
   return error === undefined ? undefined : Array.from(error.replace(/\s+/g, " ").trim()).slice(0, 300).join("");
 }
 
-function retryAfter(res: Response, now: Date): Date | undefined {
+export function retryAfter(res: Response, now: Date): Date | undefined {
   const raw = res.headers.get("retry-after");
   if (!raw) return undefined;
   const seconds = /^\d+$/.test(raw.trim()) ? Number(raw) * 1000 : Date.parse(raw) - now.getTime();
   return Number.isFinite(seconds) && seconds > 0 ? new Date(now.getTime() + Math.min(seconds, 24 * 3_600_000)) : undefined;
 }
 
-async function readJson(res: Response): Promise<unknown> {
+export async function readJson(res: Response): Promise<unknown> {
   try {
     return JSON.parse(await res.text());
   } catch {
@@ -168,7 +168,7 @@ async function readJson(res: Response): Promise<unknown> {
   }
 }
 
-function httpsOrUndefined(value: unknown): string | undefined {
+export function httpsOrUndefined(value: unknown): string | undefined {
   if (typeof value !== "string" || value.length > 2048) return undefined;
   try {
     return new URL(value).protocol === "https:" ? value : undefined;
@@ -251,8 +251,37 @@ export async function replyTarget(instanceId: string, itemId: string): Promise<R
 
 /** `GET /api/v2/search?q={uri}&resolve=true&type=statuses&limit=1`: the post's id on the member's server. */
 export async function resolveOnServer(guard: FetchGuard, actor: Actor, link: Link, uri: string): Promise<string> {
+  return (await resolveStatus(guard, actor, link, uri)).id;
+}
+
+/** A post as the member's server knows it: its local id, and whether the member boosted or favourited it (item 4). */
+export interface ResolvedStatus {
+  id: string;
+  reblogged: boolean;
+  favourited: boolean;
+}
+
+/** A post's local id and the member's toggles on it, from one search. */
+export async function resolveStatus(guard: FetchGuard, actor: Actor, link: Link, uri: string): Promise<ResolvedStatus> {
+  const first = await searchOnServer(guard, actor, link, uri, "statuses");
+  const id = first ? str(first.id) : undefined;
+  if (!first || !id || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) throw new PostError("not_found", postMessage("not_found", link.host, link.handle));
+  return { id, reblogged: first.reblogged === true, favourited: first.favourited === true };
+}
+
+/**
+ * `GET /api/v2/search?q={uri}&resolve=true&type={type}&limit=1` with the member's token: the first
+ * status or account, which the member's server fetches if it hasn't yet. Throws item 7's errors.
+ */
+export async function searchOnServer(
+  guard: FetchGuard,
+  actor: Actor,
+  link: Link,
+  uri: string,
+  type: "statuses" | "accounts",
+): Promise<Record<string, unknown> | undefined> {
   const url = new URL(`https://${link.host}/api/v2/search`);
-  url.search = new URLSearchParams({ q: uri, resolve: "true", type: "statuses", limit: "1" }).toString();
+  url.search = new URLSearchParams({ q: uri, resolve: "true", type, limit: "1" }).toString();
   let res: Response;
   try {
     res = await guard.fetch(url.toString(), {
@@ -275,10 +304,7 @@ export async function resolveOnServer(guard: FetchGuard, actor: Actor, link: Lin
     throw new PostError("rate_limited", postMessage("rate_limited", link.host, link.handle), retryAfter(res, new Date()));
   }
   if (res.status !== 200) throw new PostError("unreachable", postMessage("unreachable", link.host, link.handle));
-  const first = isObject(body) ? asList(body.statuses).find(isObject) : undefined;
-  const id = first ? str(first.id) : undefined;
-  if (!id || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) throw new PostError("not_found", postMessage("not_found", link.host, link.handle));
-  return id;
+  return isObject(body) ? asList(body[type]).find(isObject) : undefined;
 }
 
 // ---------------------------------------------------------------------------------------------
