@@ -124,3 +124,18 @@ reserved `.example` TLD (RFC 2606) that can never be real. Every file carries a 
 Regenerate with `npx tsx scripts/synthetic-media-fixtures.ts`. Record real sources, once Adam
 picks them (DECISIONS.md, "Proposed real media seeds"), with
 `npm run record-fixtures -- --media <feed URL, page URL or @channel@server>`, then retire these.
+
+## Mastodon posting GETs (A5)
+
+Recorded on Adam's machine from the mastodon.social test account (fediverse-posting-1.md item 9),
+never in a thread, with a read-only token (`profile`, `read:search`, `read:follows`) set in the
+shell for one command:
+
+    RECORD_MASTODON_TOKEN=… npm run record-fixtures -- --fediverse-post @{handle}@mastodon.social
+
+`scripts/recorders/fediversePost.ts` sends the River's own linking and acting GETs (WebFinger,
+NodeInfo, the OAuth discovery document, `/api/v2/instance`, `verify_credentials`, the account's
+newest post, `search` for that post, a seed w3c post and the w3c account, and `relationships`).
+It never keeps the Authorization header, and writes nothing if any answer holds the token or a
+credential-shaped field (`scripts/recorders/secretScan.ts`); `tests/unit/fediversePostRecorder.test.ts`
+runs the same scan over every fixture here. Writes stay on the stand-in server.
