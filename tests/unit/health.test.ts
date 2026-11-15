@@ -28,6 +28,13 @@ describe.each<AppName>(["river", "identity"])("createApp(%s)", (kind) => {
     expect(await res.json()).toEqual({ ok: true, app: kind });
   });
 
+  it("answers /health/db with 503 when there is no database, and says nothing more", async () => {
+    const res = await fetch(`${base}/health/db`);
+    expect(res.status).toBe(503);
+    expect(res.headers.get("cache-control")).toMatch(/no-store/);
+    expect(await res.json()).toEqual({ ok: false, app: kind, database: false });
+  });
+
   it("serves only its own side's routes", async () => {
     const res = await fetch(`${base}/`);
     expect(res.status).toBe(200);

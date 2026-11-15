@@ -11,7 +11,11 @@ For Adam: the steps a thread can't take (they need the Vercel and Supabase dashb
 - [ ] On the hosted project, once, in the SQL editor: `ALTER ROLE river_app LOGIN PASSWORD '…'` and
       the same for `identity_app`, each with its own generated password (spec 3).
 - [ ] `pg_cron` is enabled and the daily job is listed (`SELECT * FROM cron.job`).
-- [ ] The project isn't paused (free projects pause after about a week idle).
+- [ ] The project isn't paused (free projects pause after about a week idle). The `keep-alive`
+      workflow requests `/api/health/db` (River) and `/health/db` (Mosaic ID) daily, which read the
+      database; set the repository variables `KEEPALIVE_RIVER_ORIGIN` and
+      `KEEPALIVE_IDENTITY_ORIGIN` (Settings > Secrets and variables > Actions > Variables) to the two
+      production origins, then run it once by hand (Actions > keep-alive > Run workflow).
 
 ## Previews
 
