@@ -170,6 +170,32 @@ export async function claimPreview(actor: Actor, actId: string, at = new Date(),
   );
 }
 
+/**
+ * Try again on an act whose outcome is `unknown` (ADR-010 §9): under the account's lock, the
+ * session must be at the account's epoch (and the act made at it), the act sent within
+ * `windowMs`, and its link still active. It isn't counted again: it is the same act, sent with
+ * the same Idempotency-Key. Returns the row, still `unknown`, for the caller to send again.
+ */
+export async function claimRetry(actor: Actor, actId: string, windowMs: number, at = new Date(), source?: ClientSource): Promise<ActRow> {
+  return forAccount(
+    actor.instanceId,
+    actor.accountId,
+    async (db) => {
+      const epoch = await lockAccount(db, actor.accountId);
+      if (epoch !== actor.sessionEpoch) throw new ActRefused("session_ended");
+      const { rows } = await db.query<ActRow>(`SELECT ${RETURNING} FROM river.member_actions WHERE id = $1`, [actId]);
+      const act = rows[0];
+      if (!act) throw new ActRefused("not_found");
+      if (act.status !== "unknown" || !act.sent_at) throw new ActRefused("already_sent");
+      if (act.session_epoch !== epoch) throw new ActRefused("session_ended");
+      if (at.getTime() - act.sent_at.getTime() >= windowMs) throw new ActRefused("preview_expired");
+      await useLink(db, act.linked_account_id ?? undefined, at);
+      return act;
+    },
+    source,
+  );
+}
+
 /** A toggle act (and every undo): written and claimed in one step, with no stored preview. */
 export async function startToggle(actor: Actor, input: ActInput, at = new Date(), source?: ClientSource): Promise<ActRow> {
   return forAccount(

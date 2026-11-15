@@ -410,6 +410,209 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-10-27 — Deleting a post from Your activity (A3)
+- Decision (`src/river/acting/fediverse/deletes.ts`; `POST /api/acts/:id/delete`;
+  `ui/src/components/DeleteControl.tsx`):
+  - Only a fediverse post or reply whose row reads `sent` (with the server's id) can be deleted, and
+    only through its own link while that link is active. A delete is its own act (verb `delete`,
+    `undoes_id` the original), written and claimed under the account's lock like a toggle, so it is
+    counted against ADR-010 §9's 30 deletes in 30 minutes; there is no preview, as the original is on
+    screen (ADR-010 §8). The page asks for a confirmation in place, with item 4's sentence.
+  - `DELETE https://{server}/api/v1/statuses/{id}` with the member's token. A 200, or a 404 (the post
+    is already gone there, which is what the member asked for), marks the original `undone` and sets
+    its stored request, the member's text, to NULL at once (ADR-010 §7). The answer's body, which
+    on Mastodon holds the deleted text, is dropped unread. Timeouts and 502 to 504 are `unknown` and
+    leave the original as it was; the member can delete again. A 401 revokes the link as for posts.
+  - The original keeps its `subject_title` (the item it answered, not the member's words), so Your
+    activity still says what was deleted.
+- Thread / PR: A3 delete PR
+
+## 2026-10-27 — The composer (A3)
+- Decision (`ui/src/components/Composer.tsx`, `ui/src/lib/compose.ts`):
+  - One modal dialog for posts and replies, in three steps: write, preview, result. "Post" sits in
+    the top bar beside Follow (and in the phone's You tab); "Reply" sits in the footer of live
+    fediverse cards beside Open ↗. Both show only to members with an active link, which the page
+    learns from `GET /api/linked-accounts` once per load.
+  - The reply starts with the author's `@user@domain` when the River knows it (the card's author
+    handle) and with the original's content warning. The counter counts the warning too, and on
+    Mastodon counts links as `characters_reserved_per_url` and mentions as `@user`. Over the limit
+    the counter turns red, reads "(too long)", and Preview is disabled.
+  - The language sent is the account's own default; there is no language picker in v1 (item 3.4
+    says "the account's source.language when present, else none").
+  - A failed Send goes back to the write step with the text kept and the error beside Preview
+    (ADR-010 §9). An unknown one shows "Check on {server} ↗" and, while it is safe, Try again.
+    Times (the River's limit, a server's wait) are shown in the member's own clock.
+  - Several linked accounts: "Post as" picks one, defaulting to the one used last (item 2.5).
+- Thread / PR: A3 composer PR
+
+## 2026-10-27 — Posts and replies: preview, Send, Try again (A3)
+- Decision (`src/river/acting/fediverse/posts.ts`, `postRoutes.ts`, `instance.ts`; `claimRetry()` in
+  `acts.ts`):
+  - A reply's post is resolved on the member's server when the member previews, not at Send, so
+    the stored request names that server's local id and Send sends exactly what was shown. If
+    resolving fails (not found, 401, 403, 429, unreachable, a refused redirect), the preview is
+    refused with item 7's sentence and no row is stored: nothing was sent, so there is no act to
+    list. Item 7's "failure on the search" row is read that way.
+  - What a River item's post is: a boost card's `boost_of.objectId`; a Create's object id; a bare
+    object's id; else the item's URL. Only live, shown items of `fediverse` spaces can be answered
+    (samples, hubs, feeds and Bluesky can't).
+  - The request is stored as `{ method, url, body }` and sent as JSON with
+    `Idempotency-Key: {act id}`. Send checks again that the stored URL is the link's own server's
+    `/api/v1/statuses`, so no row can send the token anywhere else.
+  - Outcomes: 200 `sent` (remote id and https URL); 401 `failed` and the link marked revoked, its
+    token deleted; 403, 404, 422 (the server's words, plain text, 300 characters), 429 (Retry-After)
+    `failed`; timeout, 502, 503, 504 `unknown`; other 5xx, refused connections, DNS and a refused
+    redirect `failed`. Send and Try again answer 200 with what happened (the act was recorded);
+    refusals before sending answer 4xx with `{ error, message, retryAt }`. Times are returned as
+    ISO dates and the page words them in the member's time zone.
+  - Try again: only an `unknown` post or reply, on Mastodon, within an hour of when it was sent,
+    from a session at the act's epoch, with the link still active. It isn't counted against the
+    limits again (it is the same act, with the same key). GoToSocial gets Check on only.
+    "Check on example.social" links to the account's profile (`https://{server}/@{name}`).
+  - The composer's facts come from `GET /api/acts/fediverse/compose`: active links (most recently
+    used first) with their default visibility and language and the server's character limit
+    (`/api/v2/instance`, kept an hour in memory; defaults if it fails), and the post being answered
+    (its warning, its link, and the `@user@domain` to mention when the River knows it).
+  - Previews are rate-limited in memory to 60 per account in 10 minutes (A1's follow-up).
+  - Not done: item 3.3's "a reply to a Quiet public post defaults to Quiet public". The fediverse
+    adapter shows only posts addressed to Public in `to` (spec 4.3), so every post a member can
+    answer is Public. And item 7's "server's software changed to an unsupported one" isn't
+    checked at Send (it would cost a NodeInfo read per act); the next link refuses it.
+- Thread / PR: A3 posts PR
+
+## 2026-10-27 — The fetch guard's DELETE never follows a redirect (A3)
+- Decision (`src/shared/fetch/guard.ts`): `DELETE` joins `GET`, `HEAD` and `POST`, as ADR-011
+  item 7 says. Any 3xx answer to a `DELETE` is the failure `redirect_refused`, whether or not the
+  caller passed `redirect: "error"`, and nothing is sent to the redirect's target. Every other limit
+  is unchanged (address checks, https, 6 s, 2 MB, 2 per host, Retry-After).
+- Why: the only `DELETE` the River sends is deleting a member's post with their token (ADR-011
+  item 4). A 307 or 308 would re-send the method and the `Authorization` header to another host,
+  and a forgotten option shouldn't be able to allow that.
+- Alternatives: rely on each caller passing `redirect: "error"` (as POSTs with credentials do).
+- Thread / PR: A3 guard PR
+
+## 2026-10-27 — Settings → Linked accounts is a page (A2)
+- Decision: Settings is a dialog (the light/dark switch), too small for a form, a list and an
+  explainer. Linked accounts is a page at `/linked-accounts` (the Following page's layout). For
+  members, the Settings dialog has a "Linked accounts" section linking to it, and the phone's You
+  tab has the link too. The page has three steps: type and Check; read the explainer (item 1.3,
+  word for word) and "Continue to {server}"; approve on the server and come back with a notice.
+  The callback's result is read once from `?link=` and then removed from the address. Avatars
+  aren't shown: they would be the page's only image from a member's server, and the name and
+  handle say enough. Unlink asks for a confirmation in place, and when the server didn't confirm
+  it shows ADR-010 §6's "also remove it there" sentence. A link the server revoked (or one that
+  lapsed) shows its note with "Link it again", which puts the handle back in the box.
+- Why: fediverse-posting-1 item 1.1 says "Settings → Linked accounts", but the Settings dialog
+  has no room for this.
+- Thread / PR: A2 UI PR
+
+## 2026-10-27 — The linked accounts list and unlinking (A2)
+- Decision (`GET /api/linked-accounts`, `POST /api/linked-accounts/:id/unlink`;
+  `src/river/acting/fediverse/accounts.ts`):
+  - The list shows a member's fediverse links that are `active`, `revoked` (the server refused
+    the token: "Link it again") or `lapsed` (180 idle days), oldest first, with handle, server,
+    name, avatar, software, granted scopes and dates. `unlinked` rows stay in the table for Your
+    activity but aren't listed. Mosaic ID grants join the list in B2.
+  - Unlinking is a POST (Origin-checked) rather than a DELETE, because the row is kept. It opens the
+    token, revokes it at the server with the app's credentials (redirects refused), then clears
+    the ciphertext and marks the row `unlinked`. No database transaction is held while the
+    server answers. `revokedThere` is true only for a 200. A link already `revoked` or `lapsed`
+    holds no token, so it is marked `unlinked` without a request.
+  - Another member's id, an unknown id or one already unlinked answers 404, and nothing changes.
+- Why: item 1.7 and ADR-010 §6 give the order (revoke, then delete whatever the answer); the
+  rest wasn't specified.
+- Thread / PR: A2 unlink PR
+
+## 2026-10-27 — The link callback (A2)
+- Decision (`GET /api/auth/fediverse/callback`; `src/river/acting/fediverse/link.ts`, `oauth.ts`):
+  - It always answers a 303 to `/linked-accounts?link={result}` at once, with `Cache-Control:
+    no-store` and `Referrer-Policy: no-referrer`, never a page of its own. Results: `linked`,
+    `denied`, `expired`, `different_account`, `too_many`, `busy`, `unreachable`, `failed`,
+    `signed_out`; the Linked accounts page words them (A2 part 6). Refusals log the result name only.
+  - The state in the query must equal the signed cookie's before the attempt is touched, so a
+    request without the cookie (or with another tab's) spends nothing; the right one still works.
+    The attempt is then consumed with one `UPDATE … WHERE used_at IS NULL AND created_at > now() -
+    10 minutes RETURNING`, under the member's own row security (another member's state finds
+    nothing). The cookie is cleared only when its own attempt was the one tried.
+  - A visitor (no session, or one ended by Sign out everywhere) is sent to the page with
+    `signed_out` and nothing is spent or exchanged.
+  - Matching the account: the token's `acct` must be the named account's name (or `name@domain`),
+    and its actor must be on the server the attempt went to: Mastodon's `uri`, or WebFinger on the
+    named handle when there's no `uri` (the GoToSocial stand-in has none). Otherwise the token is
+    revoked at once and nothing is stored.
+  - What is stored: `acct` is the handle as named, without the `@` (`ana@example.social`, not the
+    server's local `ana`); the display name as text (the page escapes it); the avatar only if
+    https; the scopes the token answer granted; `source.privacy` if it is public, unlisted or
+    private, and `source.language` if it looks like a language tag.
+  - Linking an account again (same actor) reuses its row, so Your activity keeps pointing at it.
+    The account's row lock is taken first, so two callbacks can't both take the third place.
+  - The token exchange, verify_credentials and revoke all refuse redirects. A refused redirect
+    counts as a refusal (`failed`), not as `unreachable`. Any token obtained but not stored is
+    revoked. An `invalid_client` from the token endpoint deletes the stored app registration, so
+    the next link registers again.
+- Why: item 1.6 gives the steps, not these details.
+- Thread / PR: A2 callback PR
+
+## 2026-10-27 — App registration and the start of a link (A2)
+- Decision (`src/river/acting/fediverse/apps.ts`, `link.ts`; `POST /api/linked-accounts/fediverse/start`):
+  - `POST /api/v1/apps` is form-encoded with `redirect_uris[]`, `scopes` space-separated and
+    `website` set to `RIVER_PUBLIC_ORIGIN`. It refuses redirects (`redirect: "error"`) like every
+    credential-carrying request: it carries none, but its answer is the client secret.
+  - A stored registration is reused while its redirect URI, scopes and software still match and
+    its secret opens; otherwise a new app is registered and replaces the row. Two members racing
+    to register on one server: the first row stored wins (`ON CONFLICT DO NOTHING`), and the
+    loser's app stays unused on the server, holding no one's authorization.
+  - A 429 on registration reads "{host} is busy; try again in a few minutes." (ADR-011 item 2);
+    any other refusal "{host} didn't let the River register. Try again later." (502).
+  - The start finds the server again from the input; nothing the browser kept from the check is
+    trusted. The attempt stores the handle as typed (`requested`), the actor's host, `return_to`
+    `/linked-accounts`, and the PKCE verifier (32 random bytes, base64url) sealed with purpose
+    `pkce_verifier` to the attempt's own row. The state is 32 random bytes, base64url.
+  - The state cookie is `__Host-river-link`, signed with its own purpose (`link-state`), 10 minutes,
+    like the sign-in cookie. One per browser: a second link started in another tab replaces it,
+    and the first tab's callback is then refused.
+  - Three active fediverse links per member (item 1.1); linking one of them again is always
+    allowed (409 "You've linked 3 accounts, the most the River allows. Unlink one to link
+    another.").
+- Why: items 1.4 and 1.5 give the requests, not these details.
+- Thread / PR: A2 start PR
+
+## 2026-10-27 — Finding the server before linking, and the stand-in in the dev server (A2)
+- Decision (`src/river/acting/fediverse/server.ts`, `guard.ts`, `routes.ts`):
+  - The box takes `@name@domain` (or `acct:`) or a profile URL whose path names the account
+    (`/@ana`, `/users/ana`, …); a URL's host is the domain. A bare `name@domain` is refused, as in
+    the follow box (it reads like an email address). WebFinger runs on the domain; the server is
+    the host of the actor URL it returns.
+  - NodeInfo is read strictly: its document must be https on the same host as the server (its
+    answer decides what the River sends there). No NodeInfo, or an unreadable one, is refused
+    ("The River can't tell which software {host} runs, so it can't post through it yet.").
+  - Versions compare `major.minor` from the start of NodeInfo's string (`4.4.0-nightly…`,
+    `0.19.1 git-…` and a leading `v` read fine; anything else is too old). Mastodon also needs
+    its discovery document to list `S256` and, when it lists `scopes_supported`, every scope the
+    River asks for; either missing reads "this version of Mastodon".
+  - The River uses the fixed paths ADR-011 lists (`/oauth/authorize`, `/oauth/token`,
+    `/oauth/revoke`), never the endpoints the discovery document names, so no answer can send a
+    request or a member to another host.
+  - `/api/v2/instance` that fails or lacks the numbers falls back to each software's default
+    (500 or 5,000 characters, 23 per link); the server has the last word on length anyway (a 422).
+    Nothing stores the limit (A2 adds no column): the composer (A3) reads it again.
+  - `POST /api/linked-accounts/fediverse/check` does this before the explainer, so the member
+    learns early that their server can't be linked. It and the start (next PR) share a limit of
+    30 per account in 10 minutes, in memory like the other per-account limits.
+  - A 429 or a guard `retry_later` reads "{host} is busy; try again in a few minutes."; any other
+    guard failure "We couldn't reach {host}. Try again in a few minutes."
+  - Tests: with `TEST_STAND_IN_FEDIVERSE=1` (test-only, refused on Vercel) the dev server's
+    fediverse guard is a second guard whose dispatcher sends the stand-in hosts to
+    `tests/support/standInMastodon/` (loaded with a dynamic import, so no build includes it) and
+    other hosts to the recorded fixtures, or nowhere without them. With `TEST_ROUTES=1` it also
+    mounts `/api/test/stand-in-fediverse/*` to drive it (rules, the authorize page, what it
+    received). CI's `.env` gains it and a per-run `RIVER_TOKEN_KEY`.
+- Why: fediverse-posting-1 item 1.2 lists the checks but not these readings.
+- Alternatives: wiring the stand-in into `getFetchGuard()` (every adapter would see it, and it
+  changes the guard's module); trusting the discovery document's endpoints (another host could
+  receive the client secret).
+- Thread / PR: A2 discovery PR
+
 ## 2026-10-27 — Mosaic ID's upkeep is its own job, identity-daily at 04:23 UTC (identity move, part 1)
 - Decision: `identity.daily_job(at)` (migration `20261027170000_identity_daily_job.sql`) purges
   `auth_requests` a day after expiry and releases addresses still unverified 24 hours after
