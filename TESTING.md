@@ -113,6 +113,11 @@ Newest first: date, slice, tests added, counts.
   NodeInfo, discovery, instance, the refusals), `env` (`TEST_STAND_IN_FEDIVERSE` refused on Vercel
   and in production); API `fediverseLink` (new: `POST /api/linked-accounts/fediverse/check`
   against the stand-in through the dev server).
+- 2026-10-27, identity move part 1: unit `schemaBoundaries` (new; no migration after the split
+  names both schemas, no River code names `identity.`, no identity code names `river.`); API db
+  `identityDailyJob` (new; as postgres, rolled back: the `identity-daily` cron entry, identity_app
+  refused, the auth_requests purge); `dailyJob` (identity steps moved out; live check that no
+  function or cron job crosses schemas); `emailReservation` (calls `identity.daily_job`).
 - 2026-10-27, identity move part 4: unit `health` (`/health/db` 503 without a database),
   `workflows` (keep-alive has no checkout, token or secret); API `health` (new; both dev servers'
   `/health/db` answer 200, no-store).
