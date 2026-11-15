@@ -8,6 +8,7 @@
 import type { DefaultCircle, Instance } from "../instances.js";
 import { isMode, MODE_DEFINITIONS, type Mode } from "../modes/index.js";
 import { FeedInputError, type FeedScope } from "./query.js";
+import { repeatRules, type RepeatRule } from "./repeats.js";
 import type { SpaceRow } from "./spaces.js";
 
 export { MODES, type Mode } from "../modes/index.js";
@@ -34,16 +35,20 @@ export interface ReaderView {
   circles: ReaderCircle[];
   /** Category of every followed space, for the civic mode's scope. */
   categories: Map<string, string | null>;
+  /** Followed fediverse accounts that repeat a hub the reader also follows (repeats.ts). */
+  repeats?: RepeatRule[];
 }
 
 /** The visitor's follows and circles, given the stored space for each followed name. */
 export function visitorView(instance: Instance, spaces: Map<string, SpaceRow>): ReaderView {
   const follows: ReaderFollow[] = [];
   const categories = new Map<string, string | null>();
+  const byId = new Map<string, SpaceRow>();
   for (const seed of instance.seedFollows) {
     const space = spaces.get(seed.url);
     if (!space) continue;
     categories.set(space.id, space.category);
+    byId.set(space.id, space);
     follows.push(seed.stream_key ? { spaceId: space.id, streamKey: seed.stream_key } : { spaceId: space.id });
   }
   const circles = instance.defaultCircles.map((circle: DefaultCircle) => ({
@@ -53,7 +58,7 @@ export function visitorView(instance: Instance, spaces: Map<string, SpaceRow>): 
     role: circle.role === "civic" ? ("civic" as const) : null,
     spaceIds: circle.members.map((m) => spaces.get(m)?.id).filter((id): id is string => Boolean(id)),
   }));
-  return { follows, circles, categories };
+  return { follows, circles, categories, repeats: repeatRules(follows, byId) };
 }
 
 export function parseMode(raw: string | undefined, instance: Instance): Mode {
@@ -87,6 +92,7 @@ export function scopeFor(view: ReaderView, mode: Mode, circleIds: readonly strin
     return true;
   };
   const scope: FeedScope = { spaceIds: [], streams: [], mutedStreams: [] };
+  if (view.repeats?.length) scope.repeats = view.repeats;
   for (const follow of view.follows) {
     if (!allowed(follow.spaceId)) continue;
     if (follow.streamKey) scope.streams.push({ spaceId: follow.spaceId, key: follow.streamKey });

@@ -20,6 +20,7 @@ import { waitUntil as vercelWaitUntil } from "@vercel/functions";
 import { forInstance, type ClientSource } from "../../db/context.js";
 import { getFetchGuard, type FetchGuard } from "../../shared/fetch/index.js";
 import { AdapterError, ADAPTER_MESSAGES, type Adapter, type NormalizedItem } from "../../shared/items/index.js";
+import { refreshedManifest } from "../adapters/civicHub/index.js";
 import { adapterNamed, adaptersFor, resolveWith } from "../adapters/index.js";
 import { riverNow } from "../clock.js";
 import { findSpaces, type SpaceRow, toSpaceRecord } from "./spaces.js";
@@ -31,6 +32,7 @@ import {
   markNotModified,
   recordFetchError,
   releaseClaim,
+  setManifest,
   storeItems,
   upsertSpace,
 } from "./store.js";
@@ -241,6 +243,19 @@ function errorMessage(err: unknown): string {
   return err instanceof AdapterError ? err.message : ADAPTER_MESSAGES.unreachable;
 }
 
+/**
+ * A hub's civic.json, read again at most once a day, for its fediverse account (repeats.ts). A
+ * failed read changes nothing.
+ */
+async function checkHubManifest(
+  space: SpaceRow,
+  db: <T>(fn: Parameters<typeof forInstance<T>>[1]) => Promise<T>,
+  deps: FullDeps,
+): Promise<void> {
+  const manifest = await refreshedManifest(toSpaceRecord(space), { guard: deps.guard, now: deps.now });
+  if (manifest) await db((tx) => setManifest(tx, space.id, manifest));
+}
+
 /** Fetches one claimed space and writes what came back. Always releases the claim. */
 export async function refreshSpace(instanceId: string, space: SpaceRow, options: RefreshDeps = {}): Promise<void> {
   return refreshOne(instanceId, space, withDefaults(options));
@@ -267,6 +282,7 @@ async function refreshOne(instanceId: string, space: SpaceRow, deps: FullDeps): 
     });
     if (result.notModified) {
       await db((tx) => markNotModified(tx, space.id));
+      if (space.adapter === "civic_hub") await checkHubManifest(space, db, deps);
       return;
     }
     // Items an adapter returned without passing through onPage are stored here too.
@@ -279,6 +295,7 @@ async function refreshOne(instanceId: string, space: SpaceRow, deps: FullDeps): 
     });
     if (space.adapter === "civic_hub") {
       await checkWithdrawnStreams(space, { instanceId, guard: deps.guard, now: deps.now, source: deps.source });
+      await checkHubManifest(space, db, deps);
     }
   } catch (err) {
     const blocked = err instanceof AdapterError && err.reason === "server_only";

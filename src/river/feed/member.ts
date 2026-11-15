@@ -12,6 +12,7 @@
 //     An ended mute keeps hiding (DECISIONS.md "Ended follows in the feed").
 import type { Db } from "../../db/context.js";
 import type { ReaderCircle, ReaderFollow, ReaderView } from "./visitor.js";
+import { repeatRules } from "./repeats.js";
 import { SPACE_COLUMNS, type SpaceRow } from "./spaces.js";
 
 export interface MemberView extends ReaderView {
@@ -68,5 +69,5 @@ export async function memberView(db: Db): Promise<MemberView> {
     role: c.role,
     spaceIds: c.space_ids,
   }));
-  return { follows, mutes, circles, categories, spaces: [...spaces.values()] };
+  return { follows, mutes, circles, categories, spaces: [...spaces.values()], repeats: repeatRules(follows, spaces) };
 }

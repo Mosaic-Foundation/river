@@ -97,6 +97,7 @@ async function readCivicJson(url: URL, ctx: Pick<FetchContext, "guard">): Promis
   // `icon` isn't in civic.json yet (spec: "optional future icon"); a string or {url}, https only.
   const iconUrl = httpsUrl(body.icon) ?? httpsUrl(record(body.icon)?.url);
   const origin = `https://${url.host.toLowerCase()}`;
+  const fediverse = hubFediverseAccount(body, origin);
   return {
     adapter: "civic_hub",
     canonicalUrl: origin,
@@ -109,8 +110,57 @@ async function readCivicJson(url: URL, ctx: Pick<FetchContext, "guard">): Promis
       spaceId,
       ...(spaceType ? { spaceType } : {}),
       ...(jurisdictions && jurisdictions.length ? { jurisdictions } : {}),
+      ...(fediverse ? { fediverse } : {}),
     },
   };
+}
+
+/**
+ * The hub's own fediverse account, from civic.json `features.fediverse` (civic-hub
+ * docs/FEDIVERSE.md "Following a hub both ways"). Kept in the hub space's manifest so the feed can
+ * tell that a followed fediverse account repeats this hub (src/river/feed/repeats.ts). Only an
+ * actor on the hub's own host counts: a hub can't claim someone else's account.
+ */
+export interface HubFediverseAccount {
+  actor: string;
+  handle?: string;
+}
+
+function hubFediverseAccount(body: Json, origin: string): HubFediverseAccount | undefined {
+  const fediverse = record(record(body.features)?.fediverse);
+  const actor = httpsUrl(fediverse?.actor);
+  if (!actor || new URL(actor).origin !== origin) return undefined;
+  const handle = typeof fediverse?.handle === "string" && /^@[^@\s]+@[^@\s]+$/.test(fediverse.handle)
+    ? fediverse.handle.slice(0, 300)
+    : undefined;
+  return { actor, ...(handle ? { handle } : {}) };
+}
+
+/** How often a refresh reads civic.json again for the hub's fediverse account. */
+export const CIVIC_JSON_RECHECK_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * The manifest after reading civic.json again, at most once a day, for a hub that turned its
+ * fediverse account on or off after it was followed. The refresh calls it after the hub's feed
+ * (src/river/feed/refresh.ts), like the withdrawn-stream probe. Undefined when it isn't time yet or the read
+ * failed: the stored manifest stays as it is.
+ */
+export async function refreshedManifest(
+  space: SpaceRecord,
+  ctx: Pick<FetchContext, "guard" | "now">,
+): Promise<Record<string, unknown> | undefined> {
+  const checked = typeof space.manifest.civicJsonCheckedAt === "string" ? Date.parse(space.manifest.civicJsonCheckedAt) : NaN;
+  if (!Number.isNaN(checked) && ctx.now.getTime() - checked < CIVIC_JSON_RECHECK_MS) return undefined;
+  let fresh: Omit<SpacePreview, "stream">;
+  try {
+    fresh = await readCivicJson(new URL(space.canonicalUrl), ctx);
+  } catch {
+    return undefined;
+  }
+  const rest: Record<string, unknown> = { ...space.manifest };
+  delete rest.fediverse;
+  const fediverse = fresh.manifest.fediverse;
+  return { ...rest, ...(fediverse ? { fediverse } : {}), civicJsonCheckedAt: ctx.now.toISOString() };
 }
 
 export interface StreamProbe {

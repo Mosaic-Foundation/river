@@ -8,6 +8,7 @@ import type { Db } from "../../db/context.js";
 import type { ItemEmbed, ItemKind } from "../../shared/items/index.js";
 import { readEmbed } from "../adapters/bluesky/index.js";
 import type { PluginItem } from "../plugins/api.js";
+import { alsoOnFor, ITEM_CONTEXT_SQL, repeatParams, type AlsoOn, type RepeatRule } from "./repeats.js";
 import type { SpaceRow } from "./spaces.js";
 
 export const PAGE_SIZE = 30;
@@ -91,6 +92,8 @@ export interface FeedScope {
   streams: Array<{ spaceId: string; key: string }>;
   /** Streams hidden inside `spaceIds` (a member's mutes). */
   mutedStreams?: Array<{ spaceId: string; key: string }>;
+  /** A hub's fediverse account whose posts repeat a hub the reader follows (repeats.ts). */
+  repeats?: RepeatRule[];
 }
 
 export interface FeedFilter {
@@ -160,6 +163,8 @@ export interface FeedItem {
   event?: { startTime?: string; location?: string };
   /** A Bluesky post's link card or quoted post (ADR-009 item 4), from raw.embed. */
   embed?: ItemEmbed;
+  /** A hub item the hub's fediverse account also posted, when the reader follows both (repeats.ts). */
+  alsoOn?: AlsoOn;
   /** Exactly one of Live (a real source) or Sample (seeded demo entry). */
   source: "live" | "sample";
   space: {
@@ -173,6 +178,7 @@ export interface FeedItem {
 
 interface ItemRow {
   id: string;
+  source_id: string;
   kind: ItemKind;
   published_at: Date;
   cursor_at: string;
@@ -210,6 +216,7 @@ function likePattern(q: string): string {
 function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values: unknown[] } {
   const q = filter.q?.trim() ? filter.q.trim().slice(0, 200) : null;
   const muted = scope.mutedStreams ?? [];
+  const repeats = repeatParams(scope.repeats ?? []);
   return {
     sql: `NOT i.hidden
         AND ((i.space_id = ANY($1::uuid[])
@@ -225,7 +232,10 @@ function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values:
         AND ($5::text IS NULL
              OR i.search @@ plainto_tsquery('simple', $5)
              OR s.name ILIKE $6)
-        AND ($7::timestamptz IS NULL OR (i.published_at, i.id) < ($7::timestamptz, $8::uuid))`,
+        AND ($7::timestamptz IS NULL OR (i.published_at, i.id) < ($7::timestamptz, $8::uuid))
+        AND NOT EXISTS (
+              SELECT 1 FROM unnest($14::uuid[], $15::text[]) AS r(space_id, context)
+               WHERE r.space_id = i.space_id AND (r.context IS NULL OR r.context = ${ITEM_CONTEXT_SQL}))`,
     values: [
       scope.spaceIds,
       scope.streams.map((st) => st.spaceId),
@@ -240,6 +250,8 @@ function feedWhere(scope: FeedScope, filter: FeedFilter): { sql: string; values:
       filter.adapters ?? null,
       filter.itemId ?? null,
       filter.spaceId ?? null,
+      repeats.spaceIds,
+      repeats.contexts,
     ],
   };
 }
@@ -260,7 +272,7 @@ export async function queryFeed(
     : "NULL::boolean AS read";
 
   const { rows } = await db.query<ItemRow>(
-    `SELECT i.id, i.kind, i.published_at, i.published_at::text AS cursor_at, i.title,
+    `SELECT i.id, i.source_id, i.kind, i.published_at, i.published_at::text AS cursor_at, i.title,
             st.title AS stream_title, i.summary, i.content_html, i.url, i.stream_key, i.author,
             i.media, i.boost_of, i.civic, i.is_final_result,
             CASE WHEN i.kind = 'event' THEN coalesce(i.raw ->> 'startTime', i.raw -> 'object' ->> 'startTime') END AS event_start,
@@ -280,8 +292,13 @@ export async function queryFeed(
 
   const page = rows.slice(0, limit);
   const last = page[page.length - 1];
+  const alsoOn = await alsoOnFor(db, scope.repeats ?? [], page);
   return {
-    items: page.map(toFeedItem),
+    items: page.map((row) => {
+      const item = toFeedItem(row);
+      const also = alsoOn.get(row.id);
+      return also ? { ...item, alsoOn: also } : item;
+    }),
     nextCursor: rows.length > limit && last ? encodeCursor({ at: last.cursor_at, id: last.id }) : null,
   };
 }
