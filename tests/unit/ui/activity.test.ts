@@ -1,6 +1,6 @@
 // Your activity's words (ui/src/lib/activity.ts; ADR-010 §7 and §9: messages name the other side).
 import { describe, expect, it } from "vitest";
-import { statusText, targetText, verbLabel, type ActivityEntry } from "../../../ui/src/lib/activity";
+import { canDelete, statusText, targetText, verbLabel, type ActivityEntry } from "../../../ui/src/lib/activity";
 
 function entry(overrides: Partial<ActivityEntry> = {}): ActivityEntry {
   return {
@@ -50,5 +50,16 @@ describe("Your activity", () => {
       "Didn't go. example.social says: <b>Too long</b>",
     );
     expect(statusText(entry({ status: "undone" }))).toBe("Undone");
+  });
+});
+
+describe("canDelete", () => {
+  it("only a fediverse post or reply that was sent (fediverse-posting-1 item 2.4)", () => {
+    expect(canDelete(entry({ verb: "post", status: "sent" }))).toBe(true);
+    expect(canDelete(entry({ verb: "reply", status: "sent" }))).toBe(true);
+    expect(canDelete(entry({ verb: "post", status: "unknown" }))).toBe(false);
+    expect(canDelete(entry({ verb: "post", status: "undone" }))).toBe(false);
+    expect(canDelete(entry({ verb: "boost", status: "sent" }))).toBe(false);
+    expect(canDelete(entry({ channel: "space", verb: "comment", status: "sent" }))).toBe(false);
   });
 });

@@ -8,7 +8,8 @@
 //      resolves, checks and hands the socket the one address it checked, so a DNS answer that
 //      changes between the pre-check and the connection (rebinding) can't reach anything else.
 //   3. Redirects by hand, at most 3, each one re-checked; `http:` refused at every hop. A request
-//      that carries a credential refuses every redirect instead (`redirect: "error"`).
+//      that carries a credential refuses every redirect instead (`redirect: "error"`), and so does
+//      every DELETE, whatever it asks for: the River only deletes with a member's token (ADR-011).
 //   4. Limits: 2 MB body, 6 s for the whole request including redirects and queueing, at most 2
 //      requests in flight per host, and a host's Retry-After (on 429 or 503) honored by refusing
 //      that host until then. No retries: the caller decides.
@@ -55,7 +56,8 @@ export interface FetchGuardOptions {
 }
 
 export interface GuardedRequest {
-  method?: "GET" | "HEAD" | "POST";
+  /** DELETE never follows a redirect (as if `redirect: "error"`). */
+  method?: "GET" | "HEAD" | "POST" | "DELETE";
   /** Added to the request; User-Agent is always the River's. */
   headers?: Record<string, string>;
   body?: string;
@@ -259,7 +261,7 @@ export function createFetchGuard(options: FetchGuardOptions = {}): FetchGuard {
       }
 
       const location = headers.get("location");
-      if (status >= 300 && status < 400 && init.redirect === "error") {
+      if (status >= 300 && status < 400 && (init.redirect === "error" || method === "DELETE")) {
         throw new FetchError("redirect_refused", "A redirect was refused for a request that carries a credential");
       }
       if (status >= 300 && status < 400 && location !== null) {
