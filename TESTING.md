@@ -69,6 +69,11 @@ are chosen (`npm run record-fixtures -- --media <address>`).
 
 Newest first: date, slice, tests added, counts.
 
+- 2026-11-15, A5 recorder: unit `fediversePostRecorder` (new, 9: `--fediverse-post` parsing, the
+  seed post from the recorded w3c outbox, a run against the stand-in recording 11 GETs with no
+  request headers and the token only on verify_credentials, search and relationships, nothing
+  written when an answer holds the token or the account has no post, `RECORD_MASTODON_TOKEN`
+  refused under CI and Vercel, the scan's patterns, every fixture in `tests/fixtures/http/` clean).
 - 2026-11-15, sticky Clear filters: e2e `filterClear` (2 new: the column at 1440×480 and the
   phone sheet at 390×600 scrolled to the end, the clear button still in view, pinned to the top,
   and clearing); the first test's order check now reads inside `sidebar-top`.

@@ -20,6 +20,33 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A5 part 1: the Mastodon posting recorder — 2026-11-15
+
+- Branch / PR: claude/a5-fediverse-recorder → #98 (merged when CI is green; no needs-adam trigger:
+  a recorder script and a test-only stand-in route, no app code or outbound host)
+- Migrations: none
+
+**What it does.** `RECORD_MASTODON_TOKEN=… npm run record-fixtures -- --fediverse-post
+@{handle}@mastodon.social` records, on Adam's machine, the GETs the River sends before posting,
+boosting or following (fediverse-posting-1.md item 9.3), through the River's own `findAccount`,
+`checkServer` and `verifyCredentials` and the same search and relationships URLs. It only reaches
+mastodon.social, keeps no request headers, and writes nothing if any answer holds the token or a
+credential-shaped field. A unit test scans every fixture in the repo the same way.
+
+**Keys.** `RECORD_MASTODON_TOKEN` (recording only; refused when `CI` or `VERCEL` is set).
+
+**Tests.** Unit `fediversePostRecorder` (new, 9: the handle argument, the seed post, a full run
+against the stand-in with no Authorization header and only GETs, nothing written when an answer
+holds the token or the account has no post, the variable refused under CI and Vercel, the scan's
+patterns and Mastodon's discovery document, every repo fixture clean). The stand-in gains
+`GET /api/v1/accounts/:id/statuses` and `issueToken()`. `npm run check`: 70 files, 1056 tests
+passed; UI built.
+
+### Follow-ups
+- Adam records from the test account and opens `Fixtures: record Mastodon posting GETs`; a thread
+  then replays the recorded answers in the API tests next to the stand-in's.
+- The Akkoma check (A5's other half; adding a supported server is needs-adam).
+
 ## Clear filters stays in reach while the filters scroll — 2026-11-15
 
 - Branch / PR: claude/sticky-clear-filters → #97 (merged when CI is green; no needs-adam trigger)

@@ -130,6 +130,19 @@ export const env = {
     return testOnlyVar("TEST_STAND_IN_FEDIVERSE") === "1";
   },
 
+  /**
+   * The mastodon.social test account's read-only token for `npm run record-fixtures --
+   * --fediverse-post` (fediverse-posting-1 item 9, A5). Set in the shell for that one command on
+   * Adam's machine, never in a file; refused under CI and on Vercel.
+   */
+  get recordMastodonToken(): string | undefined {
+    const value = envVar("RECORD_MASTODON_TOKEN");
+    if (value !== undefined && (envVar("CI") !== undefined || envVar("VERCEL") !== undefined)) {
+      throw new Error("RECORD_MASTODON_TOKEN is for recording on Adam's machine only; it must not be set in CI or on Vercel");
+    }
+    return value;
+  },
+
   // --- River (spec Appendix D) ---
 
   /** The River's own origin: the note's `aud`, the sign-in `redirect_uri`, Origin checks. */

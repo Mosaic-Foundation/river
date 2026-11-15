@@ -16,6 +16,15 @@ Format:
 
 Places where the spec looked contradictory or wrong, and the reading that was used.
 
+### 2026-11-15 — The recorder's secret scan and Mastodon's discovery document (A5)
+- Question: fediverse-posting-1 item 9.4 says the recorder checks every body for `access_token`
+  and `client_secret`. Mastodon's `/.well-known/oauth-authorization-server` lists
+  `client_secret_basic` and `client_secret_post`, so a literal check refuses a clean recording.
+- Reading used: the two names match only as JSON keys or form fields (`"client_secret":`,
+  `client_secret=`); `Bearer `, the token's value and any request header but `if-none-match` match
+  anywhere. Proposed spec wording: "for `access_token` and `client_secret` as fields".
+- Thread / PR: claude/a5-fediverse-recorder
+
 ### 2026-10-27 — "One daily job" now that Mosaic ID has its own (identity move, part 1)
 - Question: spec 4.5 says "One daily job ... deleting `auth_attempts` and `auth_requests`", and
   CLAUDE.md's Database section says "Scheduled work is one `pg_cron` job defined in a migration".
@@ -409,6 +418,23 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 - Thread / PR: M0 (claude/mosaic-river-v1-m0-8dyv4n), M7 (claude/m7-identity-host)
 
 ## Log
+
+## 2026-11-15 — The posting recorder: the River's own calls, a key-shaped secret scan (A5)
+- Decision (`scripts/recorders/fediversePost.ts`, `scripts/recorders/secretScan.ts`):
+  - The recorder calls the River's own `findAccount`, `checkServer` and `verifyCredentials`, and
+    builds search and relationships URLs exactly as `searchOnServer` and `relationship` do, so
+    the fixtures answer the requests the app really sends. It also reads the account's newest post
+    from `/api/v1/accounts/:id/statuses` (public, no token) to learn its URI for item 9.3's
+    "search for its own post"; that answer is recorded too.
+  - The seed post is the newest original post in the recorded w3c outbox, so a replayed feed card
+    and its search answer match.
+  - The scan matches `access_token` and `client_secret` as JSON keys or form fields, not as bare
+    words: Mastodon's discovery document lists `client_secret_basic` and `client_secret_post`, and
+    item 9.4 read literally would refuse it. `Bearer `, the token's value and any request header
+    other than `if-none-match` are refused anywhere.
+- Why: item 9.3 names the requests but not how the recorder reaches its own post or which seed post.
+- Spec question: logged under Spec questions (2026-11-15).
+- Thread / PR: claude/a5-fediverse-recorder
 
 ## 2026-11-15 — Clear filters pinned with search, not alone
 - Decision (`ui/src/components/Filters.tsx`, `.filter-top` in `river.css`): the column pins search
