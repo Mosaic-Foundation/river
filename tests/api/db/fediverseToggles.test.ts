@@ -232,6 +232,30 @@ describe("boost and favourite", () => {
   });
 });
 
+describe("the River's own toggles, for the cards", () => {
+  it("lists this member's sent boosts and favourites per item, without the undone ones, and which links have toggled", async () => {
+    const l = await linked();
+    const fresh = await fetch(`${API}/acts/fediverse/toggles?itemIds=${itemId},${boostId}`, { headers: { cookie: l.who.cookie } });
+    expect(await fresh.json()).toEqual({ items: {}, toggledLinks: [] });
+    await toggle(l, "boost");
+    await toggle(l, "favourite");
+    await toggle(l, "favourite", boostId);
+    await toggle(l, "unfavourite", boostId);
+    const before = (await standIn.requests()).length;
+    const res = await fetch(`${API}/acts/fediverse/toggles?itemIds=${itemId},${boostId}`, { headers: { cookie: l.who.cookie } });
+    expect(await res.json()).toEqual({ items: { [itemId]: { boost: [l.linkId], favourite: [l.linkId] } }, toggledLinks: [l.linkId] });
+    // Read from the River's rows only.
+    expect((await standIn.requests()).length).toBe(before);
+    const other = await logs.signIn();
+    expect(await (await fetch(`${API}/acts/fediverse/toggles?itemIds=${itemId}`, { headers: { cookie: other.cookie } })).json()).toEqual({
+      items: {},
+      toggledLinks: [],
+    });
+    const many = Array.from({ length: 101 }, () => randomUUID()).join(",");
+    expect((await fetch(`${API}/acts/fediverse/toggles?itemIds=${many}`, { headers: { cookie: l.who.cookie } })).status).toBe(400);
+  });
+});
+
 describe("follow on the server", () => {
   it("follows the space's actor as the linked account, reads following, and doesn't follow the space in the River (check 9)", async () => {
     const l = await linked();
