@@ -15,9 +15,10 @@ describe("workflows", () => {
     expect(workflows.map((w) => w.name).sort()).toEqual(expect.arrayContaining(["ci.yml", "deploy-migrations.yml"]));
   });
 
-  it.each(workflows.map((w) => [w.name, w.text]))("%s: every checkout has persist-credentials: false", (_name, text) => {
+  it.each(workflows.map((w) => [w.name, w.text]))("%s: every checkout has persist-credentials: false", (name, text) => {
     const checkouts = [...text.matchAll(/uses: actions\/checkout@[^\n]*\n((?:\s{8,}[^\n]*\n)*)/g)];
-    expect(checkouts.length).toBeGreaterThan(0);
+    // keep-alive only makes two requests, so it checks nothing out (asserted below).
+    if (name !== "keep-alive.yml") expect(checkouts.length).toBeGreaterThan(0);
     for (const [, block] of checkouts) expect(block).toMatch(/persist-credentials: false/);
   });
 
@@ -35,5 +36,12 @@ describe("workflows", () => {
       if (line.trimStart().startsWith("#")) continue;
       expect(line).toMatch(/^ {10}SUPABASE_[A-Z_]+: \$\{\{ secrets\.SUPABASE_[A-Z_]+ \}\}$/);
     }
+  });
+
+  it("keep-alive: no checkout, no token, no secrets", () => {
+    const text = workflows.find((w) => w.name === "keep-alive.yml")!.text;
+    expect(text).not.toMatch(/uses: /);
+    expect(text).toMatch(/^permissions: \{\}$/m);
+    expect(text).not.toMatch(/secrets\./);
   });
 });
