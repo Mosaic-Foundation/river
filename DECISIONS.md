@@ -410,6 +410,16 @@ Places where the spec looked contradictory or wrong, and the reading that was us
 
 ## Log
 
+## 2026-11-15 — Clear filters pinned with search, not alone
+- Decision (`ui/src/components/Filters.tsx`, `.filter-top` in `river.css`): the column pins search
+  and "Clear the filter" together at its top; the phone sheet pins search and "Clear all", and its
+  title scrolls away. Both use `position: sticky` inside the element that already scrolls (the
+  filter column, the sheet body), so nothing new scrolls and the button's place doesn't move.
+- Why: the handoff asked that Clear stay reachable while the column scrolls. Search sits right
+  above it in both places (ui-revisions-10 item 1), and pinning the pair keeps that order.
+- Alternatives: pinning Clear at the bottom (it would move away from search); a floating button.
+- Thread / PR: claude/sticky-clear-filters
+
 ## 2026-11-15 — Toggles in the UI: River's record first, the server's state on first touch (A4)
 - Decision (`ui/src/components/CardToggles.tsx`, `ServerFollow.tsx`, `UndoControl.tsx`;
   `GET /acts/fediverse/toggles` in `postRoutes.ts`):
