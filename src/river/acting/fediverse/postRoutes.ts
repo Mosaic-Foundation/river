@@ -8,6 +8,15 @@
 //   POST /acts/:id/retry                           → SendResult (Try again on an unknown post)
 //   POST /acts/:id/delete                          → DeleteResult (delete a post made from the River)
 //
+// Boost, favourite and follow (item 4, A4; toggles.ts), one click each, no preview:
+//   GET  /acts/fediverse/state?linkedAccountId=&itemId=          → { reblogged, favourited }
+//   POST /acts/fediverse/toggle  { linkedAccountId, itemId, verb: boost|unboost|favourite|unfavourite }
+//                                                                → ToggleResult
+//   GET  /acts/fediverse/relationship?linkedAccountId=&spaceId=  → { following, requested }
+//   POST /acts/fediverse/follow  { linkedAccountId, spaceId, verb: follow|unfollow } → ToggleResult
+//   POST /acts/:id/undo                                          → ToggleResult (undo a boost,
+//                                                                  favourite or follow from Your activity)
+//
 // Send and Try again answer 200 with what happened, since the act was attempted and recorded;
 // refusals before anything was sent answer 4xx or 5xx with { error, message, retryAt? }.
 import { Router, type NextFunction, type Request, type Response } from "express";
@@ -19,6 +28,7 @@ import type { Actor } from "../acts.js";
 import { deletePost } from "./deletes.js";
 import { fediverseGuard } from "./guard.js";
 import { composeInfo, PostError, previewPost, retryPost, sendPost, type PostInput } from "./posts.js";
+import { followSpace, relationship, statusState, togglePost, undoToggle } from "./toggles.js";
 
 const STATUS: Record<PostError["code"], number> = {
   bad_input: 400,
@@ -103,6 +113,50 @@ export function postRoutes(): Router {
     "/acts/:id/delete",
     ...member,
     handle(async (req, res) => deletePost(await fediverseGuard(), actor(res), req.params.id ?? "")),
+  );
+
+  /** A query parameter given once, or undefined. */
+  const one = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined);
+
+  router.get(
+    "/acts/fediverse/state",
+    ...member,
+    limitBy("actState", perAccount),
+    handle(async (req, res) => statusState(await fediverseGuard(), actor(res), one(req.query.linkedAccountId), one(req.query.itemId))),
+  );
+
+  router.post(
+    "/acts/fediverse/toggle",
+    ...member,
+    limitBy("actToggle", perAccount),
+    handle(async (req, res) => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      return togglePost(await fediverseGuard(), actor(res), { linkedAccountId: body.linkedAccountId, itemId: body.itemId, verb: body.verb });
+    }),
+  );
+
+  router.get(
+    "/acts/fediverse/relationship",
+    ...member,
+    limitBy("actState", perAccount),
+    handle(async (req, res) => relationship(await fediverseGuard(), actor(res), one(req.query.linkedAccountId), one(req.query.spaceId))),
+  );
+
+  router.post(
+    "/acts/fediverse/follow",
+    ...member,
+    limitBy("actToggle", perAccount),
+    handle(async (req, res) => {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      return followSpace(await fediverseGuard(), actor(res), { linkedAccountId: body.linkedAccountId, spaceId: body.spaceId, verb: body.verb });
+    }),
+  );
+
+  router.post(
+    "/acts/:id/undo",
+    ...member,
+    limitBy("actToggle", perAccount),
+    handle(async (req, res) => undoToggle(await fediverseGuard(), actor(res), req.params.id ?? "")),
   );
 
   return router;

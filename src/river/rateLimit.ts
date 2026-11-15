@@ -26,6 +26,14 @@ export const LIMITS = {
    * server (one request), and each stores a row (DECISIONS, A1: "rate-limit the preview route").
    */
   actPreview: { max: 60, windowMs: 10 * 60_000 },
+  /**
+   * Boost, favourite and follow, per account (A4): each resolves the post or account on the
+   * member's server before the act is written and counted, so a toggle refused there still costs
+   * a search. ADR-010 §9's limits (120 an hour) bind first for toggles that are sent.
+   */
+  actToggle: { max: 120, windowMs: 10 * 60_000 },
+  /** Reading a toggle's starting state (A4): one or two requests to the member's server each. */
+  actState: { max: 120, windowMs: 10 * 60_000 },
   /** GET /auth/signin per address: each one stores an auth_attempts row. */
   signin: { max: 60, windowMs: 10 * 60_000 },
   /** GET /auth/callback per address: each one can resolve a DID. */

@@ -45,6 +45,31 @@ filter). `npm run check`: 67 files, 1020 tests passed; UI built.
   `emptyMessage`). The "Also posted by" line has no link: the post's page is the hub item's own page.
 - Bluesky copies through Bridgy Fed (match on the bridged account), per the hub contract's "Later".
 
+## A4 part 1: boost, favourite and follow, and their undo, on the server — 2026-11-15
+
+- Branch / PR: claude/a4-toggles → PR (needs-adam: new outbound requests with members' tokens,
+  `POST /api/v1/statuses/:id/{reblog,unreblog,favourite,unfavourite}`,
+  `POST /api/v1/accounts/:id/{follow,unfollow}`, `GET /api/v1/accounts/relationships`, all
+  already named in ADR-011 item 6)
+- Migrations: none
+
+**What it does.** `POST /api/acts/fediverse/toggle` boosts, unboosts, favourites or unfavourites a
+live fediverse item as a linked account (a boost card acts on the boosted post), and
+`POST /api/acts/fediverse/follow` follows or unfollows a fediverse space's actor on the member's
+server, separate from following it in the River. `GET /api/acts/fediverse/state` and
+`/relationship` read the starting state from the member's server. `POST /api/acts/:id/undo` undoes
+a boost, favourite or follow from Your activity. Each is an act under ADR-010's limits, failures
+follow item 7's table, and a 401 revokes the link. The stand-in gains the toggles. No UI yet.
+
+**Keys.** None. New in-memory route limits `actToggle` and `actState`.
+
+**Tests.** Unit `standInMastodon` (3 new). API db `fediverseToggles` (new, 18). `npm run check`:
+67 files, 1035 tests passed; UI built.
+
+### Follow-ups
+- Part 2 (UI): Boost and Favourite on fediverse cards, Follow as … on Following rows and the
+  card's source menu, the first-use note, Undo in Your activity.
+
 ## A3 posts, part 3: delete from Your activity — 2026-10-27
 
 - Branch / PR: claude/modest-fermat-20y5r5-delete → PR #93 (needs-adam: a new outbound request,

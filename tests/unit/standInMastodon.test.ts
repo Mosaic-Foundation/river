@@ -347,3 +347,65 @@ describe("statuses and search (A3)", () => {
     expect(server.posted()).toHaveLength(1);
   });
 });
+
+describe("boosts, favourites and follows (A4)", () => {
+  function json(answer: { body: string }) {
+    return JSON.parse(answer.body) as Record<string, unknown>;
+  }
+  const POST_URI = encodeURIComponent("https://remote.example/users/a/statuses/1");
+
+  function resolve(auth: Record<string, string>): string {
+    const found = json(get(MASTODON_HOST, `/api/v2/search?q=${POST_URI}&resolve=true&type=statuses&limit=1`, auth));
+    return (found.statuses as Array<{ id: string }>)[0]?.id ?? "";
+  }
+
+  it("boost and favourite change what search reports for that account only, and undo puts them back", () => {
+    const ana = { authorization: `Bearer ${link(MASTODON_HOST, MASTODON_SCOPES).token}` };
+    const bob = { authorization: `Bearer ${link(MASTODON_HOST, MASTODON_SCOPES, "bob").token}` };
+    const id = resolve(ana);
+    const boost = post(MASTODON_HOST, `/api/v1/statuses/${id}/reblog`, { visibility: "public" }, ana);
+    expect(boost.status).toBe(200);
+    // The answer is the new boost; the boosted post is its `reblog`.
+    expect(json(boost).id).not.toBe(id);
+    expect(json(boost).reblog).toMatchObject({ id, reblogged: true });
+    expect(json(post(MASTODON_HOST, `/api/v1/statuses/${id}/favourite`, {}, ana))).toMatchObject({ id, favourited: true, reblogged: true });
+    const seen = json(get(MASTODON_HOST, `/api/v2/search?q=${POST_URI}&resolve=true&type=statuses&limit=1`, ana));
+    expect((seen.statuses as Array<Record<string, unknown>>)[0]).toMatchObject({ reblogged: true, favourited: true });
+    const bobSees = json(get(MASTODON_HOST, `/api/v2/search?q=${POST_URI}&resolve=true&type=statuses&limit=1`, bob));
+    expect((bobSees.statuses as Array<Record<string, unknown>>)[0]).toMatchObject({ reblogged: false, favourited: false });
+    expect(json(post(MASTODON_HOST, `/api/v1/statuses/${id}/unreblog`, {}, ana))).toMatchObject({ reblogged: false });
+    expect(json(post(MASTODON_HOST, `/api/v1/statuses/${id}/unfavourite`, {}, ana))).toMatchObject({ favourited: false });
+    expect(server.reblogs.size + server.favourites.size).toBe(0);
+  });
+
+  it("favourite needs write:favourites; an unknown status is 404", () => {
+    const narrow = { authorization: `Bearer ${link(MASTODON_HOST, "profile read:search write:statuses").token}` };
+    const id = resolve(narrow);
+    expect(post(MASTODON_HOST, `/api/v1/statuses/${id}/favourite`, {}, narrow).status).toBe(403);
+    expect(post(MASTODON_HOST, `/api/v1/statuses/${id}/reblog`, {}, narrow).status).toBe(200);
+    expect(post(MASTODON_HOST, "/api/v1/statuses/999/reblog", {}, narrow).status).toBe(404);
+  });
+
+  it("resolves accounts, follows (a locked one is requested), reports relationships and unfollows", () => {
+    const ana = { authorization: `Bearer ${link(MASTODON_HOST, MASTODON_SCOPES).token}` };
+    const find = (uri: string) =>
+      (json(get(MASTODON_HOST, `/api/v2/search?q=${encodeURIComponent(uri)}&resolve=true&type=accounts&limit=1`, ana)).accounts as Array<{ id: string; locked: boolean }>)[0];
+    const open = find("https://remote.example/users/open");
+    const locked = find("https://remote.example/users/locked");
+    expect(find("https://remote.example/users/missing")).toBeUndefined();
+    expect(open?.locked).toBe(false);
+    expect(locked?.locked).toBe(true);
+    expect(find("https://remote.example/users/open")?.id).toBe(open?.id);
+    expect(json(post(MASTODON_HOST, `/api/v1/accounts/${open?.id}/follow`, {}, ana))).toMatchObject({ following: true, requested: false });
+    expect(json(post(MASTODON_HOST, `/api/v1/accounts/${locked?.id}/follow`, {}, ana))).toMatchObject({ following: false, requested: true });
+    const rel = JSON.parse(get(MASTODON_HOST, `/api/v1/accounts/relationships?id[]=${open?.id}&id[]=${locked?.id}`, ana).body) as Array<Record<string, unknown>>;
+    expect(rel).toEqual([
+      expect.objectContaining({ id: open?.id, following: true }),
+      expect.objectContaining({ id: locked?.id, requested: true }),
+    ]);
+    expect(json(post(MASTODON_HOST, `/api/v1/accounts/${open?.id}/unfollow`, {}, ana))).toMatchObject({ following: false });
+    const narrow = { authorization: `Bearer ${link(MASTODON_HOST, "profile read:search").token}` };
+    expect(post(MASTODON_HOST, `/api/v1/accounts/${open?.id}/follow`, {}, narrow).status).toBe(403);
+    expect(get(MASTODON_HOST, `/api/v1/accounts/relationships?id[]=${open?.id}`, narrow).status).toBe(403);
+  });
+});

@@ -429,6 +429,33 @@ Places where the spec looked contradictory or wrong, and the reading that was us
   who follow only the account).
 - Thread / PR: claude/hub-repeats
 
+## 2026-11-15 — Boost, favourite and follow: one click, resolved first, undone by the same id (A4)
+- Decision (`src/river/acting/fediverse/toggles.ts`; routes in `postRoutes.ts`):
+  - A toggle resolves its target on the member's server first (`search` with `resolve=true`,
+    `type=statuses` for a card, the boosted post on a boost card; `type=accounts` with the space's
+    `actor_id` for a follow), then writes the act under the account's lock and sends it. A search
+    that fails sends nothing and writes no act, as ADR-010 §9 says for a failed resolve; the
+    routes' own per-account limiters (`actToggle`, `actState`, 120 per 10 minutes each) bound
+    those searches.
+  - The starting state is read on demand: `GET /acts/fediverse/state` answers the search's
+    `reblogged` and `favourited` (item 4), and `GET /acts/fediverse/relationship` answers
+    `relationships` for a space. The UI decides when to ask (the next PR). After each toggle the
+    answer carries the state the server reports (`on`, and `requested` for a locked account).
+  - Unboost, Unfavourite and Unfollow from a card or Following row point at the newest `sent`
+    act they undo (by item, or for a follow by its request URL) and mark it `undone` once the
+    server confirms; with no such act (done outside the River) they are sent with no `undoes_id`.
+    Undo from Your activity (`POST /acts/:id/undo`) sends the opposite request on the original's
+    stored server-local id, checked against the link's host, with no new search.
+  - A boost sends `{"visibility":"public"}` as JSON (item 4's table). Toggles carry no
+    `Idempotency-Key`: reblog, favourite and follow are idempotent on Mastodon, and a timeout is
+    `unknown` like a post's. `firstToggle` in the answer is true when the link had no toggle or
+    follow before, for item 4's one-time note.
+- Why: item 4 names the requests and the starting state but not when the state is read, and
+  reading it for every card on every load would search the member's server once per card.
+- Alternatives: reading every card's state with the feed (one search per card per load); keeping
+  the River's own rows as the only state (wrong for anything done on the server itself).
+- Thread / PR: claude/a4-toggles (A4, part 1)
+
 ## 2026-10-27 — Deleting a post from Your activity (A3)
 - Decision (`src/river/acting/fediverse/deletes.ts`; `POST /api/acts/:id/delete`;
   `ui/src/components/DeleteControl.tsx`):

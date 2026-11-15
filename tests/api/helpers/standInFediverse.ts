@@ -45,6 +45,14 @@ export const standIn = {
   async statuses(): Promise<StandInStatus[]> {
     return (await (await ok(await fetch(`${BASE}/statuses`))).json()) as StandInStatus[];
   },
+  /** Boosts and favourites as `{host}|{username}|{status id}`; follows by `{host}|{username}|{account id}`. */
+  async toggles(): Promise<{ reblogs: string[]; favourites: string[]; follows: Record<string, "following" | "requested"> }> {
+    return (await (await ok(await fetch(`${BASE}/toggles`))).json()) as {
+      reblogs: string[];
+      favourites: string[];
+      follows: Record<string, "following" | "requested">;
+    };
+  },
   async tokens(): Promise<string[]> {
     return (await (await ok(await fetch(`${BASE}/tokens`))).json()) as string[];
   },

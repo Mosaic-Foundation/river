@@ -74,6 +74,15 @@ Newest first: date, slice, tests added, counts.
   API db `hubRepeats` (new, 7: hub first and account first, folding among one process's items,
   roundups, account-only readers, other accounts and boosts, single-process follows, the Source
   filter). DERIVED: the recorded hubs don't post to the fediverse yet.
+- 2026-11-15, A4 toggles (server): unit `standInMastodon` (new describe, 3: boosts and favourites
+  per account in search, scopes and 404, accounts resolved with locked and missing, follow,
+  requested, relationships, unfollow); API db `fediverseToggles` (new, 18: boost with a public
+  reblog and the state read back, unboost undoing the River's boost, a boost card's boosted post,
+  refused items and verbs, 422 as text and 403, a failed search writing no act, 401 revoking the
+  link, a 401 on the reblog itself, Sign out everywhere, a timeout as unknown, a refused redirect
+  reaching nothing, follow and relationship, the River's own follow sending nothing, a
+  locked account's Requested, unfollow undoing the follow, a non-fediverse or unfindable account,
+  undo from Your activity with no new search, refused undos, visitors and another member's link).
 - 2026-10-27, A3 delete: API db `fediversePosts` (new, 5: DELETE with the token and the text erased,
   unknown then 404 counted as deleted, a refused redirect reaching nothing, the delete limit, another
   member); unit `ui/activity` (`canDelete`); e2e `composer` (new: post, then delete from Your
