@@ -14,9 +14,14 @@
 //
 // ADR-009: `npm run record-fixtures -- --bluesky` records only the Bluesky accounts
 // (scripts/recorders/bluesky.ts).
+//
+// A5: `RECORD_MASTODON_TOKEN=… npm run record-fixtures -- --fediverse-post @name@mastodon.social`
+// records only the posting GETs from the test account, on Adam's machine
+// (scripts/recorders/fediversePost.ts, fediverse-posting-1 item 9).
 import { blueskyRecorder } from "./recorders/bluesky.js";
 import { civicHubRecorders } from "./recorders/civicHub.js";
 import { fediverseRecorder } from "./recorders/fediverse.js";
+import { fediversePostHandle, fediversePostRecorder } from "./recorders/fediversePost.js";
 import { framesRecorder } from "./recorders/frames.js";
 import { mediaInputs, mediaRecorder } from "./recorders/media.js";
 
@@ -30,8 +35,11 @@ interface Recorder {
 const OUT_DIR = "tests/fixtures/http";
 
 const args = process.argv.slice(2);
-const media = mediaInputs(args.filter((a) => a !== "--frames" && a !== "--bluesky"));
-const recorders: Recorder[] = args.includes("--bluesky")
+const postHandle = fediversePostHandle(args);
+const media = postHandle ? [] : mediaInputs(args.filter((a) => a !== "--frames" && a !== "--bluesky"));
+const recorders: Recorder[] = postHandle
+  ? [fediversePostRecorder(postHandle)]
+  : args.includes("--bluesky")
   ? [blueskyRecorder]
   : args.includes("--frames")
   ? [framesRecorder]
