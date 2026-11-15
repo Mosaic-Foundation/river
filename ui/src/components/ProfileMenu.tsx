@@ -85,6 +85,7 @@ export function ProfileMenu({
   onSignOut,
   followingHref = "/following",
   activityHref = "/activity",
+  linkedAccountsHref = "/linked-accounts",
 }: {
   viewer: Viewer | null;
   /** `everywhere`: end every session of this account, on every device. */
@@ -93,6 +94,8 @@ export function ProfileMenu({
   followingHref?: string;
   /** Your activity (ADR-010 §7), keeping the mode. */
   activityHref?: string;
+  /** Settings → Linked accounts (fediverse-posting-1 item 1), keeping the mode. */
+  linkedAccountsHref?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -257,6 +260,15 @@ export function ProfileMenu({
           <h3 className="info-dialog-subtitle">Appearance</h3>
           <SchemeSwitch />
           <p className="card-muted">Saved in this browser. Until you choose, the River follows your device's setting.</p>
+          {viewer && (
+            <>
+              <h3 className="info-dialog-subtitle">Linked accounts</h3>
+              <p>
+                <a href={linkedAccountsHref}>Linked accounts</a>: reply, boost and post from the River as your
+                Mastodon or GoToSocial account.
+              </p>
+            </>
+          )}
         </InfoDialog>
       )}
     </div>

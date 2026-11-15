@@ -20,6 +20,190 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## A3 posts, part 3: delete from Your activity — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-delete → PR #93 (needs-adam: a new outbound request,
+  `DELETE /api/v1/statuses/:id` with members' tokens). #90, #91 and #92 have merged.
+- Migrations: none
+
+**What it does.** Your activity offers "Delete this post" (or reply) on fediverse posts sent from the
+River. After a confirmation that says other servers may keep copies, `POST /api/acts/:id/delete`
+writes a `delete` act (counted against the delete limit) and sends `DELETE` to the member's server.
+On success, or if the post is already gone, the original reads Undone and its stored text is erased.
+A3 is complete with this PR.
+
+**Keys.** None.
+
+**Tests.** API db `fediversePosts` (22). Unit `ui/activity`. e2e `composer` (5). `npm run check`:
+66 files, 1011 tests passed; UI built.
+
+### Follow-ups
+- A4: boost, favourite and follow, and their undo.
+
+## A3 posts, part 4: the composer — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-composer → PR #92 (UI only; part 2, #91, has merged)
+- Migrations: none
+
+**What it does.** Members with a linked account get "Post" in the top bar (and the phone's You
+tab) and "Reply" on live fediverse cards. Both open the composer (`ui/src/components/Composer.tsx`):
+choose the account, see the post being answered, add a content warning, write with a counter that
+follows the server's rules, choose the visibility, Preview (the post as followers see it, plus the
+exact request), then Send. The result step shows Posted with View ↗; a failure goes back to the
+text with the server's words; an unknown result shows Check on ↗ and, while it is safe, Try again.
+
+**Keys.** None.
+
+**Tests.** Unit `ui/compose` (new, 6). e2e `composer` (new, 4) and `linkedAccounts` (now using
+`fediverseHelpers.ts`). `npm run check`: 66 files, 1009 tests passed; UI built.
+
+### Follow-ups
+- Part 3: delete from Your activity, after #90 (the guard's DELETE).
+
+## A3 posts, part 2: preview, Send and Try again for posts and replies — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-posts → PR (needs-adam: new outbound requests with
+  members' tokens, `GET /api/v2/search` and `POST /api/v1/statuses`, ADR-011 item 6)
+- Migrations: none
+
+**What it does.** `GET /api/acts/fediverse/compose` gives the composer the member's links (defaults,
+character limit) and the post being answered. `POST /api/acts/fediverse/preview` resolves a reply's
+post on the member's server and stores the exact request as a preview. `POST /api/acts/:id/send`
+claims it (epoch, limits) and posts it with `Idempotency-Key`. `POST /api/acts/:id/retry` re-sends
+an `unknown` post on Mastodon within the hour. Outcomes follow item 7's table, and a 401 revokes
+the link. The stand-in gains search, statuses and a slow answer. No UI yet (part 4).
+
+**Keys.** None.
+
+**Tests.** Unit `standInMastodon` (24); API db `fediversePosts` (new, 17). `npm run check`: 65
+files, 1003 tests passed; UI built. River API files (local Supabase): 26 files, 272 passed.
+
+### Follow-ups
+- Part 3: delete from Your activity (needs the guard's DELETE, #90). Part 4: the composer.
+
+## A3 posts, part 1: DELETE in the fetch guard — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-guard-delete → PR (needs-adam: a fetch guard change,
+  ADR-011 item 7)
+- Migrations: none
+
+**What it does.** The fetch guard accepts `DELETE`, for deleting a post made from the River (A3).
+A `DELETE` never follows a redirect: any 3xx is `redirect_refused` even without
+`redirect: "error"`, so a member's token can't be re-sent elsewhere. Nothing calls it yet.
+
+**Keys.** None.
+
+**Tests.** Unit `fetchGuard` (new case). `npm run check`: 65 files, 999 tests passed; UI built.
+
+### Follow-ups
+- A3 part 2: the composer, previews and Send (posts and replies), on the stand-in.
+
+## A2 linking, part 6: Settings → Linked accounts — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-ui → PR (UI only, but stacked on parts 2 to 5, which
+  are needs-adam; merge after them)
+- Migrations: none
+
+**What it does.** `/linked-accounts` (`ui/src/LinkedAccounts.tsx`, words in
+`ui/src/lib/linkedAccounts.ts`) lists the member's linked accounts with what the River can do as
+each, Unlink with a confirmation, and "Link a fediverse account": Check, the item 1.3 explainer,
+"Continue to {server}", then back with a notice for the callback's result. The Settings dialog
+(members) and the phone's You tab link to it. A2 is complete with this PR.
+
+**Keys.** None.
+
+**Tests.** Unit `ui/linkedAccounts` (new, 4). e2e `linkedAccounts` (new, 5). `npm run check`: 65 files, 998 tests passed; UI built.
+
+### Follow-ups
+- A3 (posts and replies) needs the guard's `DELETE` first (its own needs-adam PR), then the composer.
+- A5's recordings replace nothing here; the stand-in stays for writes.
+
+## A2 linking, part 5: the list and unlinking — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-unlink → PR (needs-adam: `POST /oauth/revoke` to
+  members' servers when they unlink, and the handling of their tokens). Stacked on part 4.
+- Migrations: none
+
+**What it does.** `GET /api/linked-accounts` lists a member's fediverse links (active, revoked or
+lapsed) without any credential. `POST /api/linked-accounts/:id/unlink` revokes the token at the
+server (redirects refused), then deletes it whatever the answer and marks the row `unlinked`
+(kept for Your activity). It answers `revokedThere`, so the page can show "also remove it there"
+(`src/river/acting/fediverse/accounts.ts`).
+
+**Keys.** None.
+
+**Tests.** API db `fediverseLink` (29). `npm run check`: 64 files, 994 tests passed; UI built.
+
+### Follow-ups
+- Part 6: the Linked accounts page.
+
+## A2 linking, part 4: the callback stores the link — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-callback → PR (needs-adam: an auth flow that stores
+  members' tokens, and the token, verify_credentials and revoke requests). Stacked on part 3.
+- Migrations: none
+
+**What it does.** `GET /api/auth/fediverse/callback` checks the state against the
+`__Host-river-link` cookie, consumes the attempt, exchanges the code with the PKCE verifier and
+client secret, reads `verify_credentials`, checks the account is the one the member named
+(revoking the token if not), and stores the token sealed to the linked account's row with the
+account's handle, id, name, avatar, scopes and default visibility and language. It then
+redirects at once to `/linked-accounts?link={result}` with `Referrer-Policy: no-referrer`. Every
+credential-carrying request refuses redirects (`src/river/acting/fediverse/oauth.ts`).
+
+**Keys.** None.
+
+**Tests.** API db `fediverseLink` (23). `npm run check`: 64 files, 994 tests passed; UI built.
+
+### Follow-ups
+- Part 5: list and unlink. Part 6: the page at `/linked-accounts` (until then the callback lands on the 404 page).
+- `scripts/revoke-links` and `oauth.ts` each have a revoke request; fold them together when A3 touches either.
+
+## A2 linking, part 3: app registration and the authorize URL — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-start → PR (needs-adam: an auth flow, a new cookie,
+  and `POST /api/v1/apps` to members' servers). Stacked on part 2.
+- Migrations: none (uses `river.oauth_clients` and `river.acting_attempts` from A1)
+
+**What it does.** `POST /api/linked-accounts/fediverse/start` (members, Origin-checked, the
+linking limit) finds and checks the server again, reuses or registers the instance's app there
+(`src/river/acting/fediverse/apps.ts`; secret sealed per instance and host), stores an attempt
+with the PKCE verifier sealed to its row (`link.ts`), sets the 10-minute `__Host-river-link`
+state cookie and answers the server's `/oauth/authorize` URL with `state`, S256 and exactly item
+1.4's scopes. A fourth account is refused. Nothing yet receives the callback (part 4).
+
+**Keys.** None new (`RIVER_TOKEN_KEY` is now used when a member links).
+
+**Tests.** API db `fediverseLink` (moved into `db/`; 13). `npm run check`: 64 files, 994 tests passed; UI built.
+
+### Follow-ups
+- Part 4: the callback.
+- Adam: `RIVER_TOKEN_KEY` must be set in Production before this deploys (it is, per Adam).
+
+## A2 linking, part 2: finding the server, and the stand-in in the dev server — 2026-10-27
+
+- Branch / PR: claude/modest-fermat-20y5r5-discovery → PR (needs-adam: new outbound requests to
+  members' servers (ADR-011 item 6) and `.github/workflows/ci.yml`). Stacked on part 1.
+- Migrations: none
+
+**What it does.** `POST /api/linked-accounts/fediverse/check` (members, Origin-checked, 30 per
+account in 10 minutes) takes a handle or profile URL, runs WebFinger, then reads NodeInfo, Mastodon's
+discovery document and `/api/v2/instance` on the actor's host (`src/river/acting/fediverse/server.ts`),
+and answers the handle, server, software and character limit, or the refusal sentence (old
+Mastodon, no S256, Akkoma and others, unknown account, busy, unreachable). `fediverseGuard()`
+is the process's guard, or with the test-only `TEST_STAND_IN_FEDIVERSE=1` one that sends the
+stand-in hosts to the stand-in server; `TEST_ROUTES` adds `/api/test/stand-in-fediverse/*`. CI's
+`.env` gets both new values. DECISIONS.md has the readings.
+
+**Keys.** `TEST_STAND_IN_FEDIVERSE` (test-only, refused on Vercel and with NODE_ENV=production).
+
+**Tests.** Unit `fediverseLinkServer` (new, 16), `env`. API `fediverseLink` (new, 5).
+`npm run check`: 64 files, 994 tests passed; UI built. API (local Supabase, River dev server): all River files pass; the
+identity files need the identity dev server and weren't run.
+
+### Follow-ups
+- Part 3 registers the app and sends the member to the server's authorize page.
+
 ## Identity move, part 2: the plan for a migration history of its own — 2026-10-27
 
 - Branch / PR: claude/trusting-carson-y03109-history → PR (needs-adam: plan review before any

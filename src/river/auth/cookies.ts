@@ -1,10 +1,12 @@
-// The River's two cookies (spec 4.6 step 1, Appendix B "Sessions"). Both are HttpOnly, Secure,
+// The River's cookies (spec 4.6 step 1, Appendix B "Sessions"). All are HttpOnly, Secure,
 // SameSite=Lax, Path=/ and host-only (the __Host- prefix makes the browser refuse them otherwise),
-// and both are signed with SESSION_SECRET (HMAC-SHA256, a separate derived key per purpose). Their
+// and all are signed with SESSION_SECRET (HMAC-SHA256, a separate derived key per purpose). Their
 // names differ from anything the identity host could set: cookies ignore ports on localhost.
 //
 //   __Host-river-signin   the sign-in state, 10 minutes; ties the callback to the browser that
 //                         started the sign-in
+//   __Host-river-link     the state of a fediverse account link in progress, 10 minutes; ties the
+//                         server's callback to the browser that started it (fediverse-posting-1 1.5)
 //   __Host-river-session  the member's session, 30 days: a signed, stateless token
 //                         {v, instance, account, epoch, iat, exp} (DECISIONS, M8). epoch is the
 //                         account's session epoch when it was issued; "Sign out everywhere" raises
@@ -16,10 +18,11 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const STATE_COOKIE = "__Host-river-signin";
 export const SESSION_COOKIE = "__Host-river-session";
+export const LINK_STATE_COOKIE = "__Host-river-link";
 export const STATE_MAX_AGE_S = 10 * 60;
 export const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60;
 
-type Purpose = "signin-state" | "session";
+type Purpose = "signin-state" | "session" | "link-state";
 
 function key(secret: string, purpose: Purpose): Buffer {
   if (secret.length < 32) throw new Error("SESSION_SECRET must be at least 32 characters");

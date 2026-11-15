@@ -89,3 +89,27 @@ export function statusText(entry: ActivityEntry): string {
       return `Didn't go to ${entry.targetHost}${entry.errorCode ? ` (${entry.errorCode})` : ""}`;
   }
 }
+
+/** A post or reply sent from the River can be deleted from here (fediverse-posting-1 item 2.4). */
+export function canDelete(entry: ActivityEntry): boolean {
+  return entry.channel === "fediverse" && (entry.verb === "post" || entry.verb === "reply") && entry.status === "sent";
+}
+
+export interface DeleteAnswer {
+  ok: boolean;
+  status?: "sent" | "failed" | "unknown";
+  message: string;
+}
+
+/** POST /api/acts/{id}/delete: the server's words for what happened. */
+export async function deletePost(id: string): Promise<DeleteAnswer> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/acts/${encodeURIComponent(id)}/delete`, { method: "POST", headers: { Accept: "application/json" } });
+  } catch {
+    return { ok: false, message: "The River didn't answer. Check your connection; nothing was deleted." };
+  }
+  const body = (await res.json().catch(() => undefined)) as { status?: DeleteAnswer["status"]; message?: string } | undefined;
+  const message = typeof body?.message === "string" ? body.message : "That didn't work. Nothing was deleted.";
+  return { ok: res.ok && body?.status === "sent", ...(body?.status ? { status: body.status } : {}), message };
+}
