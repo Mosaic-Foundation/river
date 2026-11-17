@@ -108,9 +108,9 @@ describe("check 7: a member's Civic mode", () => {
     civicFeed = await feedOf(member, { mode: "civic" });
     expect(new Set(civicFeed.items.map((i) => i.space.id))).toEqual(new Set([longmont.id, club.id]));
 
-    // The panel: Coming up with the recorded voting_closes_at, then the two placeholders.
+    // The panel: Coming up with the recorded voting_closes_at, then the placeholder slots.
     const panel = civicFeed.first.surfaces?.["river.panel"] ?? [];
-    expect(panel.map((p) => p.id)).toEqual(["coming-up", "your-representatives", "elections-and-ballot"]);
+    expect(panel.map((p) => p.id)).toEqual(["coming-up", "your-representatives", "advisory-voting", "elections-and-ballot"]);
     const comingUp = comingUpOf(civicFeed.first)!;
     expect(comingUp.map((e) => e.date)).toContain(LONGMONT_DEADLINE);
     expect(comingUp.map((e) => e.date)).toEqual([...comingUp.map((e) => e.date)].sort());
@@ -131,7 +131,7 @@ describe("check 7: a member's Civic mode", () => {
     // No posts in a hub: an empty view, so no dates, but the slots still show.
     const posts = await memberFeed(instance, member, { mode: "civic", type: "posts" }, deps());
     expect(posts.items).toEqual([]);
-    expect(posts.surfaces?.["river.panel"]?.map((p) => p.id)).toEqual(["your-representatives", "elections-and-ballot"]);
+    expect(posts.surfaces?.["river.panel"]?.map((p) => p.id)).toEqual(["your-representatives", "advisory-voting", "elections-and-ballot"]);
 
     // A search that matches nothing with a deadline.
     const search = await memberFeed(instance, member, { mode: "civic", q: "zzzz-no-such-word" }, deps());
@@ -197,6 +197,7 @@ describe("check 8: an instance with modes_enabled = [civic]", () => {
     expect(feed.surfaces?.["river.panel"]?.map((p) => p.id)).toEqual([
       "coming-up",
       "your-representatives",
+      "advisory-voting",
       "elections-and-ballot",
     ]);
     await expect(visitorFeed(civicOnly, { mode: "everything" }, deps())).rejects.toThrow(FeedInputError);
@@ -207,6 +208,6 @@ describe("check 8: an instance with modes_enabled = [civic]", () => {
     clearInstanceCache();
     const off = (await instanceForHost(hostname, river))!;
     const feed = await visitorFeed(off, {}, deps());
-    expect(feed.surfaces?.["river.panel"]?.map((p) => p.id)).toEqual(["your-representatives", "elections-and-ballot"]);
+    expect(feed.surfaces?.["river.panel"]?.map((p) => p.id)).toEqual(["your-representatives", "advisory-voting", "elections-and-ballot"]);
   });
 });

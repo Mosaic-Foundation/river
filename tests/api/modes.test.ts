@@ -85,6 +85,7 @@ describe("modes on river.mosaic.social (check 7, API part)", () => {
     expect(panel.map((p) => [p.id, p.title])).toEqual([
       ["coming-up", "Coming up"],
       ["your-representatives", "Your representatives"],
+      ["advisory-voting", "Advisory voting"],
       ["elections-and-ballot", "Elections and ballot"],
     ]);
     const comingUp = panel[0]!.output;
@@ -104,7 +105,7 @@ describe("modes on river.mosaic.social (check 7, API part)", () => {
       text: "Who represents you at each level, and how to reach them.",
       waitingOn: ["Open States", "Geocodio", "Cicero"],
     });
-    expect(panel[2]!.output).toEqual({
+    expect(panel[3]!.output).toEqual({
       type: "placeholder",
       text: "Upcoming elections and what is on your ballot.",
       waitingOn: ["Democracy Works", "Ballotpedia"],
@@ -113,7 +114,7 @@ describe("modes on river.mosaic.social (check 7, API part)", () => {
 
   it("the panel follows the view's filters and comes with the first page only", async () => {
     const posts = await feed("?mode=civic&type=posts");
-    expect(posts.surfaces?.["river.panel"]?.map((p) => p.id)).toEqual(["your-representatives", "elections-and-ballot"]);
+    expect(posts.surfaces?.["river.panel"]?.map((p) => p.id)).toEqual(["your-representatives", "advisory-voting", "elections-and-ballot"]);
     const first = await feed("?mode=civic");
     if (first.nextCursor) {
       const next = await feed(`?mode=civic&cursor=${encodeURIComponent(first.nextCursor)}`);
@@ -154,6 +155,7 @@ describe("check 8 (API part): an instance with modes_enabled = [civic]", () => {
     expect(civic.surfaces?.["river.panel"]?.map((p) => p.id)).toEqual([
       "coming-up",
       "your-representatives",
+      "advisory-voting",
       "elections-and-ballot",
     ]);
     const everything = await get("/feed?mode=everything", hostname);

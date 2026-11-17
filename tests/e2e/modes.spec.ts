@@ -60,7 +60,7 @@ async function expectCivicPanel(page: Page): Promise<void> {
   const panel = page.getByRole("complementary", { name: "Civic panel" });
   await expect(panel).toBeVisible();
   const headings = panel.getByRole("heading", { level: 2 });
-  await expect(headings).toHaveText(["Coming up", "Your representatives", "Elections and ballot"]);
+  await expect(headings).toHaveText(["Coming up", "Your representatives", "Advisory voting", "Elections and ballot"]);
 
   const comingUp = panel.getByTestId("plugin-coming-up");
   const entries = comingUp.getByTestId("coming-up-entry");
