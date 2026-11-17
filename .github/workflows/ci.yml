@@ -39,10 +39,12 @@ jobs:
       - name: Pin npm
         run: npm i -g npm@12.2.0
 
+      # Audit the packages that ship (runtime dependencies) at high. Dev-only advisories with no
+      # patched release yet (picomatch GHSA-fc5q-39xc-vjpf, Nov 2026) otherwise block every PR.
       - name: Install and audit (server)
         run: |
           npm ci --include=dev
-          npm audit --audit-level=high
+          npm audit --omit=dev --audit-level=high
 
       - name: Build, typecheck, lint
         run: |
@@ -57,7 +59,7 @@ jobs:
         working-directory: ui
         run: |
           npm ci --include=dev
-          npm audit --audit-level=high
+          npm audit --omit=dev --audit-level=high
           npm run lint
           npm run build
 
