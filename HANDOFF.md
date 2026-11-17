@@ -20,6 +20,25 @@ Newest entry first. Every slice adds one entry at the top, in this shape:
 
 <!-- entries below -->
 
+## Civic panel: Advisory voting plugin slot — 2026-11-17
+
+- Branch / PR: claude/advisory-voting-slot (no needs-adam trigger: one static placeholder plugin)
+- Migrations: none
+
+**What it does.** Adds an "Advisory voting" placeholder slot to the Civic panel, between "Your
+representatives" and "Elections and ballot", reading "Tell your representatives how to vote on
+upcoming legislation." Built like the other two slots (`src/river/plugins/builtin/placeholders.ts`):
+no request, no items read. Added so Adam can show it in a demo.
+
+**Keys.** None.
+
+**Tests.** Updated the panel order in the unit, API and e2e mode tests and added a unit test for the
+new slot. `npm run check`: Test Files 70 passed (70), Tests 1057 passed (1057).
+
+### Follow-ups
+- Spec F9 still names two placeholder slots; update it when the advisory voting design is settled.
+- It has no data source yet, so it reads "Waiting on a data source."
+
 ## A5 part 1: the Mastodon posting recorder — 2026-11-15
 
 - Branch / PR: claude/a5-fediverse-recorder → #98 (merged when CI is green; no needs-adam trigger:

@@ -34,3 +34,21 @@ export const electionsPlugin: ViewPlugin = {
     waitingOn: ["Democracy Works", "Ballotpedia"],
   }),
 };
+
+// Advisory voting (added 2026-11-17 for a demo): where a member will tell their representatives
+// how they want them to vote on upcoming bills. No data source is chosen yet.
+export const advisoryVotingPlugin: ViewPlugin = {
+  manifest: {
+    id: "advisory-voting",
+    kind: "view",
+    version: "1.0.0",
+    surfaces: ["river.panel"],
+    title: "Advisory voting",
+    capabilities: [],
+  },
+  render: () => ({
+    type: "placeholder",
+    text: "Tell your representatives how to vote on upcoming legislation.",
+    waitingOn: [],
+  }),
+};

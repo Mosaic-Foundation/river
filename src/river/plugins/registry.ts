@@ -8,7 +8,7 @@
 // still answers.
 import type { PluginItem, PluginManifest, PluginOutput, Surface, ViewApi, ViewPlugin } from "./api.js";
 import { comingUpPlugin } from "./builtin/comingUp.js";
-import { electionsPlugin, representativesPlugin } from "./builtin/placeholders.js";
+import { advisoryVotingPlugin, electionsPlugin, representativesPlugin } from "./builtin/placeholders.js";
 import { validateManifest } from "./manifest.js";
 
 export interface PluginRegistry {
@@ -32,7 +32,12 @@ export function createRegistry(plugins: readonly ViewPlugin[]): PluginRegistry {
 }
 
 /** Every first-party plugin in v1. */
-export const BUILT_IN_PLUGINS: readonly ViewPlugin[] = [comingUpPlugin, representativesPlugin, electionsPlugin];
+export const BUILT_IN_PLUGINS: readonly ViewPlugin[] = [
+  comingUpPlugin,
+  representativesPlugin,
+  advisoryVotingPlugin,
+  electionsPlugin,
+];
 
 export const builtInRegistry: PluginRegistry = createRegistry(BUILT_IN_PLUGINS);
 

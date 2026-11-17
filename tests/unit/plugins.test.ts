@@ -7,7 +7,7 @@ import { parseMode, scopeFor, type ReaderView } from "../../src/river/feed/visit
 import { FeedInputError } from "../../src/river/feed/query.js";
 import type { PluginItem, ViewApi, ViewPlugin } from "../../src/river/plugins/api.js";
 import { COMING_UP_EMPTY, COMING_UP_LIMIT, comingUp, comingUpPlugin } from "../../src/river/plugins/builtin/comingUp.js";
-import { electionsPlugin, representativesPlugin } from "../../src/river/plugins/builtin/placeholders.js";
+import { advisoryVotingPlugin, electionsPlugin, representativesPlugin } from "../../src/river/plugins/builtin/placeholders.js";
 import { ManifestError, validateManifest } from "../../src/river/plugins/manifest.js";
 import {
   BUILT_IN_PLUGINS,
@@ -83,8 +83,8 @@ describe("plugin manifest (spec 4.7)", () => {
 });
 
 describe("plugin registry", () => {
-  it("holds the three v1 plugins with valid manifests", () => {
-    expect(builtInRegistry.manifests().map((m) => m.id)).toEqual(["coming-up", "your-representatives", "elections-and-ballot"]);
+  it("holds the built-in plugins with valid manifests", () => {
+    expect(builtInRegistry.manifests().map((m) => m.id)).toEqual(["coming-up", "your-representatives", "advisory-voting", "elections-and-ballot"]);
     for (const m of builtInRegistry.manifests()) {
       expect(validateManifest(m)).toEqual(m);
       expect(m.kind).toBe("view");
@@ -126,13 +126,13 @@ describe("runSurface: what a plugin may read", () => {
 
   it("runs a mode's plugins in order, leaving out unknown ids, other surfaces and turned-off plugins", () => {
     const items = [item({ deadline: "2026-11-08T05:00:47.238Z" })];
-    const ids = ["coming-up", "nope", "your-representatives", "elections-and-ballot"];
+    const ids = ["coming-up", "nope", "your-representatives", "advisory-voting", "elections-and-ballot"];
     const out = runSurface(builtInRegistry, "river.panel", ids, { items, now });
-    expect(out.map((o) => o.id)).toEqual(["coming-up", "your-representatives", "elections-and-ballot"]);
-    expect(out.map((o) => o.title)).toEqual(["Coming up", "Your representatives", "Elections and ballot"]);
+    expect(out.map((o) => o.id)).toEqual(["coming-up", "your-representatives", "advisory-voting", "elections-and-ballot"]);
+    expect(out.map((o) => o.title)).toEqual(["Coming up", "Your representatives", "Advisory voting", "Elections and ballot"]);
     expect(runSurface(builtInRegistry, "river.card-action", ids, { items, now })).toEqual([]);
     const off = runSurface(builtInRegistry, "river.panel", ids, { items, now, config: [{ id: "coming-up", enabled: false }] });
-    expect(off.map((o) => o.id)).toEqual(["your-representatives", "elections-and-ballot"]);
+    expect(off.map((o) => o.id)).toEqual(["your-representatives", "advisory-voting", "elections-and-ballot"]);
   });
 
   it("gives items only to plugins that declare read:items, frozen", () => {
@@ -259,6 +259,16 @@ describe("the placeholder slots (spec F9)", () => {
     });
     expect(BUILT_IN_PLUGINS).toContain(representativesPlugin);
   });
+
+  it("include an advisory voting slot with no data source yet", () => {
+    expect(advisoryVotingPlugin.render(api([]))).toEqual({
+      type: "placeholder",
+      text: "Tell your representatives how to vote on upcoming legislation.",
+      waitingOn: [],
+    });
+    expect(advisoryVotingPlugin.manifest.capabilities).toEqual([]);
+    expect(BUILT_IN_PLUGINS).toContain(advisoryVotingPlugin);
+  });
 });
 
 describe("modes (spec F9, 4.7)", () => {
@@ -267,7 +277,7 @@ describe("modes (spec F9, 4.7)", () => {
     expect(MODE_DEFINITIONS.civic).toMatchObject({
       theme: "civic",
       scope: "civic",
-      surfaces: { "river.panel": ["coming-up", "your-representatives", "elections-and-ballot"] },
+      surfaces: { "river.panel": ["coming-up", "your-representatives", "advisory-voting", "elections-and-ballot"] },
     });
   });
 

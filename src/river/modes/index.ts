@@ -42,7 +42,7 @@ export const MODE_DEFINITIONS: Readonly<Record<Mode, ModeDefinition>> = {
     title: "Civic",
     theme: "civic",
     scope: "civic",
-    surfaces: { "river.panel": ["coming-up", "your-representatives", "elections-and-ballot"] },
+    surfaces: { "river.panel": ["coming-up", "your-representatives", "advisory-voting", "elections-and-ballot"] },
     pluginReach: "view",
   },
 };
